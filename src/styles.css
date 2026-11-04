@@ -206,7 +206,7 @@
 
 
 /* Persistent five-section app navigation */
-.bottom-navigation{position:fixed;z-index:900;left:50%;bottom:max(12px,env(safe-area-inset-bottom));transform:translateX(-50%);width:min(560px,calc(100% - 28px));display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px;padding:8px;border:1px solid #ffffff20;border-radius:19px;background:rgba(11,11,11,.88);backdrop-filter:blur(24px) saturate(150%);-webkit-backdrop-filter:blur(24px) saturate(150%);box-shadow:0 15px 55px #0009}
+.bottom-navigation{position:fixed;z-index:1100;left:50%;bottom:max(12px,env(safe-area-inset-bottom));transform:translateX(-50%);width:min(560px,calc(100% - 28px));display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px;padding:8px;border:1px solid #ffffff20;border-radius:19px;background:rgba(11,11,11,.88);backdrop-filter:blur(24px) saturate(150%);-webkit-backdrop-filter:blur(24px) saturate(150%);box-shadow:0 15px 55px #0009}
 .bottom-nav-item{min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:8px 3px;border-radius:12px;color:#8c899b;text-decoration:none;font-size:10px;font-weight:650;transition:background .2s,color .2s}
 .bottom-nav-item.active{color:#d0c5ff;background:#a99bff18}
 .bottom-nav-item svg{flex:none}
@@ -431,7 +431,7 @@ body{padding-bottom:104px}
 .yt-video-feed{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:28px 18px}
 .yt-video-card{min-width:0;color:#f5f5f5}
 .yt-thumbnail{position:relative;width:100%;aspect-ratio:16/9;overflow:hidden;border-radius:13px;background:#0c0c0c}
-.yt-thumbnail iframe{width:100%;height:100%;display:block;border:0}
+.yt-thumbnail iframe{position:absolute;inset:0;width:100%;height:100%;max-width:100%;max-height:100%;display:block;border:0}
 .yt-thumbnail-button{position:absolute;inset:0;width:100%;height:100%;padding:0;border:0;background:#111;cursor:pointer;color:white}
 .yt-thumbnail-button img{display:block;width:100%;height:100%;object-fit:cover;transition:transform .25s}
 .yt-video-card:hover .yt-thumbnail-button img{transform:scale(1.025)}
