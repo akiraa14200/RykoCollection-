@@ -10,15 +10,22 @@ from PIL import Image, ImageDraw, ImageFont
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 LOGO = Image.open(ROOT / 'branding' / 'logo.png').convert('RGBA')
-# If the original binary logo could not be transferred, generate a clean fallback mark.
-if LOGO.width < 8 or LOGO.height < 8:
-    LOGO = Image.new('RGBA', (512, 512), (0, 0, 0, 255))
-    draw = ImageDraw.Draw(LOGO)
-    draw.ellipse((56, 56, 456, 456), outline=(232, 196, 92, 255), width=18)
+# The source PNG in this replica was a 1x1 transfer placeholder. Draw a proper
+# high-resolution RykoCollection mark so Android launcher icons are never blank.
+LOGO = Image.new('RGBA', (512, 512), (9, 9, 11, 255))
+draw = ImageDraw.Draw(LOGO)
+draw.rounded_rectangle((12, 12, 500, 500), radius=118, outline=(232, 196, 92, 255), width=18)
+draw.ellipse((72, 72, 440, 440), outline=(232, 196, 92, 110), width=5)
+try:
+    font = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf', 292)
+except OSError:
     font = ImageFont.load_default()
-    label = "R"
-    bounds = draw.textbbox((0, 0), label, font=font)
-    draw.text(((512 - (bounds[2] - bounds[0])) / 2, (512 - (bounds[3] - bounds[1])) / 2 - bounds[1]), label, fill=(255, 255, 255, 255), font=font)
+label = "R"
+bounds = draw.textbbox((0, 0), label, font=font, stroke_width=0)
+x = (512 - (bounds[2] - bounds[0])) / 2 - bounds[0]
+y = (512 - (bounds[3] - bounds[1])) / 2 - bounds[1] - 10
+draw.text((x, y), label, fill=(250, 246, 232, 255), font=font)
+draw.arc((350, 98, 438, 186), start=205, end=335, fill=(232, 196, 92, 255), width=13)
 RES = ROOT / 'android' / 'app' / 'src' / 'main' / 'res'
 if not RES.is_dir():
     sys.exit(f'Android res folder not found: {RES}')
