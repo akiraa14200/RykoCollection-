@@ -36,3 +36,8 @@
 .video-review-row .grow a{font-size:10px;color:#b9adff;margin-top:2px}
 .video-review-row .admin-primary,.video-review-row .admin-danger{flex:none;white-space:nowrap}
 @media(max-width:650px){.video-discovery-panel,.video-review-panel{padding:14px}.video-source-row{flex-wrap:wrap}.video-source-row .grow{flex:1 1 calc(100% - 60px)}.video-source-row .admin-action{margin-left:54px}.video-review-row{align-items:flex-start;flex-wrap:wrap}.video-review-row>img,.video-review-placeholder{width:96px}.video-review-row .grow{flex:1 1 calc(100% - 110px)}.video-review-row .admin-primary{margin-left:108px}.video-approval-title{align-items:flex-start;flex-direction:column}.video-approval-title select{max-width:100%;width:100%}}
+
+.video-source-suggestions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:2px 0 14px}
+.video-source-suggestions>span{font-size:10px;color:#858394;margin-right:4px}
+.video-source-suggestions button{border:1px solid #a99bff35;background:#a99bff0e;color:#c9c1ff;border-radius:8px;padding:7px 10px;font-size:10px}
+.video-source-suggestions button:hover{background:#a99bff20}
