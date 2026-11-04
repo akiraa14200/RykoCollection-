@@ -62,7 +62,7 @@ Deno.serve(async (req: Request) => {
       const channelPage = await fetch("https://www.youtube.com/" + key, { headers: { "User-Agent": "Mozilla/5.0 (compatible; RykoCollection/1.0)" } });
       if (!channelPage.ok) return Response.json({ error: "Could not resolve that YouTube channel handle." }, { status: 502, headers: corsHeaders });
       const html = (await channelPage.text()).slice(0, 3000000);
-      channelId = html.match(/"channelId"\\s*:\\s*"(UC[a-zA-Z0-9_-]{20,})"/)?.[1]
+      channelId = html.match(/"channelId"\s*:\s*"(UC[a-zA-Z0-9_-]{20,})"/)?.[1]nnelId"\\s*:\\s*"(UC[a-zA-Z0-9_-]{20,})"/)?.[1]
         || html.match(/itemprop=["']channelId["']\\s+content=["'](UC[a-zA-Z0-9_-]{20,})["']/i)?.[1]
         || "";
       if (!channelId) return Response.json({ error: "YouTube did not expose a channel ID for this handle. Try the channel ID instead." }, { status: 404, headers: corsHeaders });
