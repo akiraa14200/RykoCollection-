@@ -918,7 +918,7 @@ function BottomNavigation() {
   })}</nav>;
 }
 
-function AccountPage({ user }: { user: User | null }) {
+function AccountPage({ user, isAdmin }: { user: User | null; isAdmin: boolean }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
@@ -941,7 +941,7 @@ function AccountPage({ user }: { user: User | null }) {
     finally { setBusy(false); }
   };
   return <main className="content-page account-page"><div className="page-heading"><span className="eyebrow">YOUR RYKOCOLLECTION PROFILE</span><h1>Your <em>Account.</em></h1><p>Sign in to join discussions and keep your profile connected.</p></div>
-    {user ? <section className="account-card"><div className="account-avatar">{String(user.user_metadata?.display_name || user.email || 'R').slice(0,1).toUpperCase()}</div><div><span className="eyebrow">SIGNED IN</span><h2>{String(user.user_metadata?.display_name || user.email?.split('@')[0] || 'Anime fan')}</h2><p>{user.email}</p><button className="secondary-btn" onClick={()=>void supabase.auth.signOut()}>Sign out</button></div></section> :
+    {user ? <><section className="account-card"><div className="account-avatar">{String(user.user_metadata?.display_name || user.email || 'R').slice(0,1).toUpperCase()}</div><div><span className="eyebrow">SIGNED IN</span><h2>{String(user.user_metadata?.display_name || user.email?.split('@')[0] || 'Anime fan')}</h2><p>{user.email}</p><button className="secondary-btn" onClick={()=>void supabase.auth.signOut()}>Sign out</button></div></section>{isAdmin && <section className="account-admin-card"><div className="account-admin-icon"><ShieldCheck size={21}/></div><div className="account-admin-copy"><span className="eyebrow">OWNER ACCESS</span><h2>Admin workspace</h2><p>Manage the catalogue, videos, community moderation and app content.</p></div><Link className="primary-btn account-admin-link" to="/admin">Open workspace <ChevronRight size={16}/></Link></section>}</> :
     <form className="account-card account-form" onSubmit={submit}><div className="account-avatar"><UserRound/></div><h2>{mode==='signin'?'Welcome back':'Create your account'}</h2><p>{mode==='signin'?'Sign in to your RykoCollection account.':'Create a profile to participate in community features.'}</p>
       {mode==='signup' && <input value={displayName} onChange={event=>setDisplayName(event.target.value)} placeholder="Display name" autoComplete="nickname"/>}
       <input type="email" value={email} onChange={event=>setEmail(event.target.value)} placeholder="Email address" autoComplete="email" required/>
@@ -998,12 +998,12 @@ const isTabPath = (path: string): path is TabPath => (TAB_PATHS as readonly stri
  * open state, and each one is rendered with the last location it saw, so a hidden
  * tab never reacts to another tab's URL. Other routes (detail, admin, …) render normally.
  */
-function TabbedRoutes({ user }: { user: User | null }) {
+function TabbedRoutes({ user, isAdmin }: { user: User | null; isAdmin: boolean }) {
   const location = useLocation();
   const activeTab = isTabPath(location.pathname) ? location.pathname : null;
   const tabLocations = useRef<Partial<Record<TabPath, Location>>>({});
   if (activeTab) tabLocations.current[activeTab] = location;
-  const tabElement = (path: TabPath): ReactNode => path === '/' ? <Home/> : path === '/search' ? <SearchPage/> : path === '/video' ? <VideoPage/> : path === '/watchlist' ? <WatchlistPage/> : <AccountPage user={user}/>;
+  const tabElement = (path: TabPath): ReactNode => path === '/' ? <Home/> : path === '/search' ? <SearchPage/> : path === '/video' ? <VideoPage/> : path === '/watchlist' ? <WatchlistPage/> : <AccountPage user={user} isAdmin={isAdmin}/>;
   return <>
     <ScrollMemory scrollKey={activeTab ?? location.key}/>
     {TAB_PATHS.filter(path => tabLocations.current[path]).map(path => <div key={path} className="tab-keepalive" style={{display: path === activeTab ? 'contents' : 'none'}}>
@@ -1091,5 +1091,5 @@ export default function App() {
     return () => window.removeEventListener('online', retry);
   }, [user]);
   const signOut = () => { void supabase.auth.signOut(); };
-  return <><OfflineBanner/><Header user={user} isAdmin={isAdmin} onSignOut={signOut}/><TabbedRoutes user={user}/><BottomNavigation/><ToastHost/><footer className="footer"><Link to="/" className="brand"><img className="brand-mark brand-logo" src="/logo.svg" alt="" width="31" height="31" loading="lazy"/><span>RYKOCOLLECTION</span></Link><p>Discover stories. Find your next world.</p><span>Shared Ryko catalogue · Independent fan discovery project</span></footer></>;
+  return <><OfflineBanner/><Header user={user} isAdmin={isAdmin} onSignOut={signOut}/><TabbedRoutes user={user} isAdmin={isAdmin}/><BottomNavigation/><ToastHost/><footer className="footer"><Link to="/" className="brand"><img className="brand-mark brand-logo" src="/logo.svg" alt="" width="31" height="31" loading="lazy"/><span>RYKOCOLLECTION</span></Link><p>Discover stories. Find your next world.</p><span>Shared Ryko catalogue · Independent fan discovery project</span></footer></>;
 }
