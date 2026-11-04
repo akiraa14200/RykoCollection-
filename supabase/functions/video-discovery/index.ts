@@ -107,10 +107,10 @@ Deno.serve(async (req:Request) => {
         const description=String(snippet.description||"").slice(0,4000);
         const channel=String(snippet.channelTitle||"").slice(0,160);
         const score=relevance(query,title,description,channel);
-        return {video_id:id,video_url:`https://www.youtube.com/watch?v=${id}`,video_title:title,creator_name:channel||null,creator_avatar_url:avatarByChannel[snippet.channelId]||null,thumbnail_url:snippet.thumbnails?.high?.url||snippet.thumbnails?.medium?.url||null,category:classify(title+" "+description),relevance_score:score,description,view_count:Number(detail.statistics?.viewCount||0),published_at:snippet.publishedAt||null,duration:detail.contentDetails?.duration||null};
+        return {video_id:id,video_url:`https://www.youtube.com/watch?v=${id}`,video_title:title,creator_name:channel||null,creator_avatar_url:avatarByChannel[snippet.channelId]||null,thumbnail_url:snippet.thumbnails?.high?.url||snippet.thumbnails?.medium?.url||null,category:classify(title+" "+description),relevance_score:score,description,view_count:Number(detail.statistics?.viewCount||0),published_at:snippet.publishedAt||null,duration:detail.contentDetails?.duration||null,search_query:query,search_category:category};
       }).filter((v:any)=>v&&!publishedIds.has(v.video_id)&&v.relevance_score>=25)
         .sort((a:any,b:any)=>b.relevance_score-a.relevance_score);
-      return Response.json({ok:true,videos,count:videos.length,query,category},{headers:{...corsHeaders,"Cache-Control":"no-store"}});
+      await adminClient.from("video_discovery_runs").insert({run_type:"youtube_search",query,category,found_count:videos.length,queued_count:videos.length,status:"completed"});\n      return Response.json({ok:true,videos,count:videos.length,query,category},{headers:{...corsHeaders,"Cache-Control":"no-store"}});
     }
 
     const type=body?.source_type,key=String(body?.source_key||"").trim();
