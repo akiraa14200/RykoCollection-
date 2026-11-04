@@ -6,14 +6,6 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 const OWNER_ID = "4da14151-419b-4872-8e5b-6ec38185cdbf";
-const CATEGORY_TERMS: Record<string,string> = {
-  trailer: "official anime trailer teaser",
-  music: "anime opening ending song music video",
-  news: "anime news announcement",
-  review: "anime review explanation analysis",
-  production: "anime studio animation production behind the scenes",
-  amv: "anime AMV edit fan animation",
-};
 const decode = (value:string) => value.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g,"$1").replace(/&amp;/g,"&").replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&lt;/g,"<").replace(/&gt;/g,">").trim();
 
 function parseFeed(xml:string) {
@@ -63,57 +55,6 @@ Deno.serve(async (req:Request) => {
     if(!adminRow&&userData.user.id!==OWNER_ID)return Response.json({error:"Administrator access required"},{status:403,headers:corsHeaders});
 
     const body=await req.json();
-    if(body?.mode==="search") {
-      const apiKey=Deno.env.get("YOUTUBE_API_KEY");
-      if(!apiKey)return Response.json({error:"Global YouTube search is not configured yet. Add YOUTUBE_API_KEY to Supabase Edge Function secrets. RSS channel discovery remains available."},{status:503,headers:corsHeaders});
-      const query=String(body.query||"").trim().slice(0,180);
-      const category=String(body.category||"all");
-      if(query.length<2)return Response.json({error:"Enter an anime title or search phrase."},{status:400,headers:corsHeaders});
-      const maxResults=Math.max(5,Math.min(25,Number(body.max_results)||25));
-      const searchText=[query,CATEGORY_TERMS[category]||"anime"].join(" ");
-      const searchUrl=new URL("https://www.googleapis.com/youtube/v3/search");
-      searchUrl.searchParams.set("part","snippet");searchUrl.searchParams.set("type","video");
-      searchUrl.searchParams.set("maxResults",String(maxResults));searchUrl.searchParams.set("order","relevance");
-      searchUrl.searchParams.set("safeSearch","moderate");searchUrl.searchParams.set("q",searchText);
-      searchUrl.searchParams.set("key",apiKey);
-      const searchResponse=await fetch(searchUrl);
-      const searchData=await searchResponse.json();
-      if(!searchResponse.ok)return Response.json({error:searchData?.error?.message||"YouTube search request failed."},{status:502,headers:corsHeaders});
-      const items=Array.isArray(searchData.items)?searchData.items:[];
-      const ids=items.map((item:any)=>item.id?.videoId).filter((id:string)=>/^[a-zA-Z0-9_-]{6,32}$/.test(id));
-      if(!ids.length)return Response.json({ok:true,videos:[],count:0},{headers:{...corsHeaders,"Cache-Control":"no-store"}});
-      const detailsUrl=new URL("https://www.googleapis.com/youtube/v3/videos");
-      detailsUrl.searchParams.set("part","snippet,statistics,contentDetails");detailsUrl.searchParams.set("id",ids.join(","));detailsUrl.searchParams.set("key",apiKey);
-      const detailsResponse=await fetch(detailsUrl);
-      const detailsData=await detailsResponse.json();
-      if(!detailsResponse.ok)return Response.json({error:detailsData?.error?.message||"Could not load video metadata."},{status:502,headers:corsHeaders});
-      const channelIds=[...new Set((detailsData.items||[]).map((v:any)=>v.snippet?.channelId).filter(Boolean))];
-      const avatarByChannel:Record<string,string>={};
-      if(channelIds.length){
-        const channelUrl=new URL("https://www.googleapis.com/youtube/v3/channels");
-        channelUrl.searchParams.set("part","snippet");channelUrl.searchParams.set("id",channelIds.join(","));channelUrl.searchParams.set("key",apiKey);
-        const channelResponse=await fetch(channelUrl);
-        if(channelResponse.ok){const channelData=await channelResponse.json();for(const ch of channelData.items||[])avatarByChannel[ch.id]=ch.snippet?.thumbnails?.default?.url||"";}
-      }
-      const byId=new Map((detailsData.items||[]).map((v:any)=>[v.id,v]));
-      const existing=await adminClient.from("related_videos").select("video_url").eq("platform","youtube").limit(10000);
-      if(existing.error)throw existing.error;
-      const publishedIds=new Set((existing.data||[]).map((v:any)=>{try{const u=new URL(v.video_url);return u.hostname.includes("youtu.be")?u.pathname.slice(1):u.searchParams.get("v")||u.pathname.split("/").filter(Boolean).pop()||"";}catch{return "";}}));
-      const videos=items.map((item:any)=>{
-        const id=item.id?.videoId, detail=byId.get(id) as any;
-        if(!detail)return null;
-        const snippet=detail.snippet||item.snippet||{};
-        const title=String(snippet.title||"").slice(0,300);
-        const description=String(snippet.description||"").slice(0,4000);
-        const channel=String(snippet.channelTitle||"").slice(0,160);
-        const score=relevance(query,title,description,channel);
-        return {video_id:id,video_url:`https://www.youtube.com/watch?v=${id}`,video_title:title,creator_name:channel||null,creator_avatar_url:avatarByChannel[snippet.channelId]||null,thumbnail_url:snippet.thumbnails?.high?.url||snippet.thumbnails?.medium?.url||null,category:classify(title+" "+description),relevance_score:score,description,view_count:Number(detail.statistics?.viewCount||0),published_at:snippet.publishedAt||null,duration:detail.contentDetails?.duration||null,search_query:query,search_category:category};
-      }).filter((v:any)=>v&&!publishedIds.has(v.video_id)&&v.relevance_score>=25)
-        .sort((a:any,b:any)=>b.relevance_score-a.relevance_score);
-      await adminClient.from("video_discovery_runs").insert({run_type:"youtube_search",query,category,found_count:videos.length,queued_count:videos.length,status:"completed"});
-      return Response.json({ok:true,videos,count:videos.length,query,category},{headers:{...corsHeaders,"Cache-Control":"no-store"}});
-    }
-
     const type=body?.source_type,key=String(body?.source_key||"").trim();
     const validKey=type==="channel"?(/^[a-zA-Z0-9_-]{10,80}$/.test(key)||/^@[a-zA-Z0-9._-]{3,100}$/.test(key)):/^[a-zA-Z0-9_-]{10,80}$/.test(key);
     if(!["channel","playlist"].includes(type)||!validKey)return Response.json({error:"Enter a valid YouTube channel ID, handle, or playlist ID."},{status:400,headers:corsHeaders});
