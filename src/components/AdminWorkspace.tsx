@@ -10,7 +10,7 @@ type VideoRow = { id:string; title_id:string|null; video_url:string; platform:st
 type VideoReportRow = { id:string; video_id:string; video_url:string; video_title:string|null; reason:string; details:string|null; created_at:string };
 type VideoSourceRow = { id:string; source_type:'channel'|'playlist'; source_key:string; label:string; enabled:boolean; last_checked_at:string|null; created_at:string };
 type DiscoveredVideoRow = { id:string; video_id:string; video_url:string; video_title:string; creator_name:string|null; creator_avatar_url?:string|null; thumbnail_url:string|null; source_id:string|null; duration?:string|null; status:'pending'|'approved'|'rejected'; discovered_at:string; category?:string|null; relevance_score?:number|null; description?:string|null; view_count?:number|null; published_at?:string|null };
-type ReportRow = { id:string; comment_id:string; reporter_id:string; reason:string; details:string|null; created_at:string };
+type ReportRow = { id:string; comment_id:string; reporter_id:string; reason:string; details:string|null; created_at:string };\ntype DiscoveryRunRow = { id:string; run_type:string; query:string|null; category:string|null; source_label:string|null; found_count:number; queued_count:number; status:string; created_at:string };
 const blankTitle = { name:'', media_type:'Manga', status:'Ongoing', cover_url:'', banner_url:'', synopsis:'', genres:'', themes:'', alternative_names:'', release_year:'', rating:'', chapters:'', episodes:'', author:'', artist:'', studio:'', country:'', source_url:'', trailer_url:'', read_url:'', is_featured:false, is_trending:false };
 const blankCharacter = { title_id:'', name:'', role:'Main', description:'', image_url:'' };
 const blankVideo = { title_id:'', video_url:'', platform:'youtube', video_title:'', creator_name:'', creator_avatar_url:'', action_type:'watch', action_url:'', sort_order:'0' };
@@ -40,7 +40,7 @@ export function AdminWorkspace() {
   const [videoReports,setVideoReports] = useState<VideoReportRow[]>([]);
   const [videoReportsMissing,setVideoReportsMissing] = useState(false);
   const [videoSources,setVideoSources] = useState<VideoSourceRow[]>([]);
-  const [discoveredVideos,setDiscoveredVideos] = useState<DiscoveredVideoRow[]>([]);
+  const [discoveredVideos,setDiscoveredVideos] = useState<DiscoveredVideoRow[]>([]);\n  const [discoveryRuns,setDiscoveryRuns] = useState<DiscoveryRunRow[]>([]);
   const [sourceForm,setSourceForm] = useState({source_type:'channel' as 'channel'|'playlist',source_key:'',label:''});
   const [approvalTitle,setApprovalTitle] = useState('');
   const [discoveryTitle,setDiscoveryTitle] = useState('');
