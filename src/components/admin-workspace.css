@@ -41,3 +41,12 @@
 .video-source-suggestions>span{font-size:10px;color:#858394;margin-right:4px}
 .video-source-suggestions button{border:1px solid #a99bff35;background:#a99bff0e;color:#c9c1ff;border-radius:8px;padding:7px 10px;font-size:10px}
 .video-source-suggestions button:hover{background:#a99bff20}
+
+.account-admin-card{display:flex;align-items:center;gap:16px;margin:18px 0;padding:20px;border:1px solid rgba(169,155,255,.24);border-radius:18px;background:linear-gradient(125deg,rgba(169,155,255,.10),rgba(18,18,24,.94));box-shadow:0 12px 34px rgba(0,0,0,.16)}
+.account-admin-icon{width:46px;height:46px;display:grid;place-items:center;flex:none;border-radius:14px;background:rgba(169,155,255,.14);color:#c5baff}
+.account-admin-copy{min-width:0;flex:1}
+.account-admin-copy .eyebrow{font-size:10px;letter-spacing:.12em}
+.account-admin-copy h2{margin:5px 0;font-size:17px;color:#f3f0ff}
+.account-admin-copy p{margin:0;font-size:12px;line-height:1.55;color:#aaa6b7}
+.account-admin-link{display:inline-flex;align-items:center;justify-content:center;gap:8px;white-space:nowrap;text-decoration:none}
+@media(max-width:620px){.account-admin-card{align-items:flex-start;flex-wrap:wrap;padding:16px}.account-admin-copy{flex:1 1 calc(100% - 64px)}.account-admin-link{width:100%}}
