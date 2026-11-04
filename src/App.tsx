@@ -59,7 +59,7 @@ function Header({ user, isAdmin, onSignOut }: { user: User | null; isAdmin: bool
   useBackLayer(open, () => setOpen(false));
   const submit = (event: FormEvent) => { event.preventDefault(); navigate(term.trim() ? `/search?q=${encodeURIComponent(term.trim())}` : '/search'); setOpen(false); };
   return <header className="topbar"><div className="nav-wrap">
-    <Link to="/" className="brand"><img className="brand-mark brand-logo" src="/logo-192.png" alt="" width="31" height="31"/><span>RYKOCOLLECTION</span></Link>
+    <Link to="/" className="brand"><img className="brand-mark brand-logo" src="/logo.svg" alt="" width="31" height="31"/><span>RYKOCOLLECTION</span></Link>
     <nav className={open ? 'nav-links open' : 'nav-links'}>
       <Link to="/"><Compass size={16}/> Discover</Link><Link to="/search">Explore</Link><Link to="/watchlist"><Bookmark size={16}/> My list</Link><Link to="/video"><Tv size={16}/> Video</Link><Link to="/privacy"><ShieldCheck size={16}/> Privacy</Link>{isAdmin && <Link to="/admin"><ShieldCheck size={16}/> Admin workspace</Link>}
     </nav>
@@ -635,7 +635,7 @@ function videoEmbedUrl(video: RelatedVideo) {
       if (!id || !/^[a-zA-Z0-9_-]{6,}$/.test(id)) return '';
       // Match the known-working AniList trailer player exactly. Avoid enablejsapi/origin
       // parameters here: this app only needs plain iframe playback, not the JS player API.
-      return `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&playsinline=1&rel=0`;
+      return `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&playsinline=1&rel=0&fs=0`;
     }
 
     if (host === 'dai.ly' || host.endsWith('dailymotion.com')) {
@@ -719,7 +719,7 @@ function LazyVideoCard({ video, short, playing, onPlay, saved = false, onToggleS
       <div className="yt-video-info"><span className="yt-skeleton-avatar"/><div className="yt-video-text"><span className="yt-skeleton-line"/><span className="yt-skeleton-line"/></div></div>
     </> : <>
       <div ref={thumbRef} className="yt-thumbnail">
-        {playing&&embed?<iframe key={video.id} src={embed} title={video.videoTitle||video.titleName||'Ryko video'} loading="eager" allow="autoplay; accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerPolicy="origin"/>:
+        {playing&&embed?<iframe key={video.id} src={embed} title={video.videoTitle||video.titleName||'Ryko video'} loading="eager" allow="autoplay; accelerometer; clipboard-write; encrypted-media; gyroscope" referrerPolicy="origin"/>:
         <button className="yt-thumbnail-button" onClick={onPlay} aria-label={playing?'Close player':'Play video'}>
           {thumbnail?<img src={thumbnail} alt={video.videoTitle||video.titleName||'Video thumbnail'} loading="lazy" decoding="async" fetchPriority="low" onError={e=>{e.currentTarget.onerror=null;e.currentTarget.src=video.titleCover||'/placeholder-poster.svg';}}/>:<span className="yt-thumbnail-fallback"/>}
           <span className="yt-play-overlay"><Play size={short?24:30} fill="currentColor"/></span>
@@ -750,6 +750,21 @@ function VideoPage() {
   const [category,setCategory]=useState('All');
   const tabActive=useTabActive();
   useEffect(()=>{if(!tabActive)setPlayingId(null);},[tabActive]);
+  // Lock browser zoom only while the Video tab is active. Restore the site's normal
+  // viewport settings as soon as the user leaves this tab.
+  useEffect(()=>{
+    if(!tabActive)return;
+    const viewport=document.querySelector('meta[name="viewport"]');
+    if(!viewport)return;
+    const previous=viewport.getAttribute('content')||'width=device-width, initial-scale=1.0';
+    viewport.setAttribute('content','width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no');
+    const preventPinch=(event:TouchEvent)=>{if(event.touches.length>1)event.preventDefault();};
+    document.addEventListener('touchmove',preventPinch,{passive:false});
+    return()=>{
+      viewport.setAttribute('content',previous);
+      document.removeEventListener('touchmove',preventPinch);
+    };
+  },[tabActive]);
   const {savedVideos,toggleVideo}=useLibrary();
   const savedVideoIds=useMemo(()=>new Set(savedVideos.map(video=>video.id)),[savedVideos]);
 
@@ -864,7 +879,7 @@ function VideoPage() {
   </>;
 
   const searchBar=<header className="yt-topbar">
-    <div className="yt-brand"><span className="yt-brand-mark"><Play size={17} fill="currentColor"/></span><strong>Ryko<span>Tube</span></strong><small>Collection</small></div>
+    <div className="yt-brand"><img className="yt-brand-mark" src="/logo.svg" alt="" width="30" height="30"/><strong>Ryko<span>Tube</span></strong><small>Collection</small></div>
     <label className="yt-search"><Search size={19}/><input value={term} onChange={event=>setTerm(event.target.value)} placeholder="Search videos, creators or titles" autoComplete="off"/>{term&&<button onClick={()=>setTerm('')} aria-label="Clear search"><X size={16}/></button>}</label>
   </header>;
 
@@ -1076,5 +1091,5 @@ export default function App() {
     return () => window.removeEventListener('online', retry);
   }, [user]);
   const signOut = () => { void supabase.auth.signOut(); };
-  return <><OfflineBanner/><Header user={user} isAdmin={isAdmin} onSignOut={signOut}/><TabbedRoutes user={user}/><BottomNavigation/><ToastHost/><footer className="footer"><Link to="/" className="brand"><img className="brand-mark brand-logo" src="/logo-192.png" alt="" width="31" height="31" loading="lazy"/><span>RYKOCOLLECTION</span></Link><p>Discover stories. Find your next world.</p><span>Shared Ryko catalogue · Independent fan discovery project</span></footer></>;
+  return <><OfflineBanner/><Header user={user} isAdmin={isAdmin} onSignOut={signOut}/><TabbedRoutes user={user}/><BottomNavigation/><ToastHost/><footer className="footer"><Link to="/" className="brand"><img className="brand-mark brand-logo" src="/logo.svg" alt="" width="31" height="31" loading="lazy"/><span>RYKOCOLLECTION</span></Link><p>Discover stories. Find your next world.</p><span>Shared Ryko catalogue · Independent fan discovery project</span></footer></>;
 }
