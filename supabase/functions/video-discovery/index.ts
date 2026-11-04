@@ -51,11 +51,24 @@ Deno.serve(async (req: Request) => {
     const body = await req.json();
     const type = body?.source_type;
     const key = String(body?.source_key || "").trim();
-    if (!["channel", "playlist"].includes(type) || !/^[a-zA-Z0-9_-]{10,80}$/.test(key)) {
-      return Response.json({ error: "Enter a valid YouTube channel ID or playlist ID." }, { status: 400, headers: corsHeaders });
+    const validKey = type === "channel"
+      ? (/^[a-zA-Z0-9_-]{10,80}$/.test(key) || /^@[a-zA-Z0-9._-]{3,100}$/.test(key))
+      : /^[a-zA-Z0-9_-]{10,80}$/.test(key);
+    if (!["channel", "playlist"].includes(type) || !validKey) {
+      return Response.json({ error: "Enter a valid YouTube channel ID, handle, or playlist ID." }, { status: 400, headers: corsHeaders });
+    }
+    let channelId = key;
+    if (type === "channel" && key.startsWith("@")) {
+      const channelPage = await fetch("https://www.youtube.com/" + key, { headers: { "User-Agent": "Mozilla/5.0 (compatible; RykoCollection/1.0)" } });
+      if (!channelPage.ok) return Response.json({ error: "Could not resolve that YouTube channel handle." }, { status: 502, headers: corsHeaders });
+      const html = (await channelPage.text()).slice(0, 3000000);
+      channelId = html.match(/"channelId"\\s*:\\s*"(UC[a-zA-Z0-9_-]{20,})"/)?.[1]
+        || html.match(/itemprop=["']channelId["']\\s+content=["'](UC[a-zA-Z0-9_-]{20,})["']/i)?.[1]
+        || "";
+      if (!channelId) return Response.json({ error: "YouTube did not expose a channel ID for this handle. Try the channel ID instead." }, { status: 404, headers: corsHeaders });
     }
     const feedUrl = new URL("https://www.youtube.com/feeds/videos.xml");
-    feedUrl.searchParams.set(type === "channel" ? "channel_id" : "playlist_id", key);
+    feedUrl.searchParams.set(type === "channel" ? "channel_id" : "playlist_id", channelId);
     const response = await fetch(feedUrl, { headers: { "User-Agent": "RykoCollection/1.0", "Accept": "application/atom+xml, application/xml, text/xml" } });
     if (!response.ok) return Response.json({ error: `YouTube feed returned HTTP ${response.status}` }, { status: 502, headers: corsHeaders });
     const xml = await response.text();
