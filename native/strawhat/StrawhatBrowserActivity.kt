@@ -541,11 +541,12 @@ class StrawhatBrowserActivity : Activity() {
         var entries = cachedCatalogue(category)
         val box = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(18), dp(12), dp(18), dp(10))
-            background = darkGlassShape(0xE8171422.toInt(), 30)
+            setPadding(dp(20), dp(16), dp(20), dp(14))
+            background = darkGlassShape(0xF0181428.toInt(), 36)
+            elevation = dp(12).toFloat()
         }
-        val heading = text("SITE CATALOGUE", 17f, Color.WHITE, true).apply {
-            letterSpacing = .02f
+        val heading = text("Site Catalogue", 22f, Color.WHITE, true).apply {
+            letterSpacing = -.025f
             setPadding(dp(2), dp(2), dp(2), dp(12))
         }
         box.addView(heading, LinearLayout.LayoutParams(-1, -2))
@@ -556,14 +557,17 @@ class StrawhatBrowserActivity : Activity() {
         tabs.addView(mangaTab, LinearLayout.LayoutParams(0, dp(38), 1f).apply { leftMargin = dp(4) })
         val search = EditText(this).apply {
             hint = "Search sites"; setSingleLine(true); setTextColor(Color.WHITE); setHintTextColor(Color.GRAY)
-            background = darkGlassShape(0xCC29233B.toInt(), 18); setPadding(dp(14),0,dp(14),0)
+            background = darkGlassShape(0xD629223D.toInt(),22); setPadding(dp(14),0,dp(14),0)
+            textSize = 14f
         }
-        val info = text("",11f,Color.LTGRAY).apply { setPadding(dp(2),dp(8),dp(2),dp(8)) }
+        val info = text("",11f,secondaryText).apply { setPadding(dp(3),dp(10),dp(3),dp(9)) }
         val list = ListView(this).apply {
             divider = android.graphics.drawable.ColorDrawable(Color.argb(35, 210, 198, 255))
             dividerHeight = dp(1)
             selector = android.graphics.drawable.ColorDrawable(Color.argb(24, 190, 177, 255))
-            setPadding(0, dp(4), 0, dp(4))
+            setPadding(dp(5), dp(5), dp(5), dp(5))
+            background = darkGlassShape(0x601A1528,22)
+            clipToOutline = true
             isVerticalScrollBarEnabled = false
         }
         val filtered = entries.toMutableList()
@@ -589,8 +593,8 @@ class StrawhatBrowserActivity : Activity() {
             val matches=entries.filter { it.name.contains(q,true)||it.url.contains(q,true) }
             filtered.clear(); filtered.addAll(matches)
             adapter.clear(); adapter.addAll(matches.map { it.name })
-            animeTab.background=shape(if(which=="Anime") Color.rgb(190, 177, 255) else Color.rgb(29, 25, 43),14)
-            mangaTab.background=shape(if(which=="Manga") Color.rgb(190, 177, 255) else Color.rgb(29, 25, 43),14)
+            animeTab.background=darkGlassShape(if(which=="Anime") 0xFFE0D8FF.toInt() else 0xAA211B32.toInt(),24)
+            mangaTab.background=darkGlassShape(if(which=="Manga") 0xFFE0D8FF.toInt() else 0xAA211B32.toInt(),24)
             animeTab.setTextColor(if(which=="Anime") Color.rgb(13, 12, 17) else Color.rgb(211, 201, 255))
             mangaTab.setTextColor(if(which=="Manga") Color.rgb(13, 12, 17) else Color.rgb(211, 201, 255))
             info.text=if(entries.isEmpty()) "$which sheet is empty or unavailable" else "${matches.size} of ${entries.size} $which sites"
@@ -1037,13 +1041,27 @@ class StrawhatBrowserActivity : Activity() {
             .setNeutralButton("Terms") { _, _ -> showPolicy("Terms of use", "Use this browser lawfully. Respect website terms, copyright and access restrictions. Filtering is best-effort only and does not guarantee privacy, security, complete ad removal or uninterrupted access.") }
             .setNegativeButton("Close", null).create().also { it.show(); styleGlassDialog(it, 30) }
     }
-    private fun styleGlassDialog(dialog: AlertDialog, radius: Int = 26) {
-        dialog.window?.setBackgroundDrawable(darkGlassShape(0xF0161320.toInt(), radius))
-        dialog.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND)
-        dialog.window?.setDimAmount(.68f)
+    private fun styleGlassDialog(dialog: AlertDialog, radius: Int = 32) {
+        dialog.window?.apply {
+            setBackgroundDrawable(android.graphics.drawable.ColorDrawable(Color.TRANSPARENT))
+            addFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+            setDimAmount(.72f)
+        }
+        val decor = dialog.window?.decorView ?: return
+        decor.setBackground(darkGlassShape(0xF0161326.toInt(), radius))
+        decor.clipToOutline = true
+        val panelIds = intArrayOf(
+            resources.getIdentifier("parentPanel", "id", "android"),
+            resources.getIdentifier("topPanel", "id", "android"),
+            resources.getIdentifier("contentPanel", "id", "android"),
+            resources.getIdentifier("buttonPanel", "id", "android")
+        )
+        panelIds.filter { it != 0 }.forEach { id ->
+            decor.findViewById<View>(id)?.setBackgroundColor(Color.TRANSPARENT)
+        }
         dialog.findViewById<TextView>(android.R.id.alertTitle)?.setTextColor(Color.WHITE)
         dialog.findViewById<TextView>(android.R.id.message)?.apply {
-            setTextColor(Color.rgb(220, 215, 235))
+            setTextColor(Color.rgb(225, 220, 239))
             setLineSpacing(dp(3).toFloat(), 1f)
         }
         dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.setTextColor(lilac)
