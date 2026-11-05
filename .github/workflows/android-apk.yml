@@ -3,7 +3,7 @@ name: Build Android APK
 on:
   workflow_dispatch:
   push:
-    branches: [main, ryko-collection-catalogue-app, feature/hybrid-video-catalogue, hybrid-native-merge]
+    branches: [main, ryko-collection-catalogue-app, feature/hybrid-video-catalogue, hybrid-native-merge, ryko-ecosystem-upgrades]
     paths:
       - 'src/**'
       - 'package.json'
