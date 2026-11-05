@@ -637,7 +637,7 @@ function WatchlistPage() {
 function videoEmbedUrl(video: RelatedVideo) {
   try {
     const url = new URL(video.videoUrl);
-    const host = url.hostname.replace(/^www\./, '').toLowerCase();
+    const host = url.hostname.replace(/^www\./, '').replace(/^m\./, '').toLowerCase();
     const parts = url.pathname.split('/').filter(Boolean);
 
     // Detect the provider from the actual URL as well as the saved platform value.
@@ -661,6 +661,12 @@ function videoEmbedUrl(video: RelatedVideo) {
       const kind = ['p', 'reel', 'reels', 'tv'].includes(parts[0]) ? parts[0] : '';
       const id = kind ? parts[1] : '';
       return kind && id ? `https://www.instagram.com/${kind}/${id}/embed/` : '';
+    }
+
+    if (host === 'tiktok.com' || host.endsWith('.tiktok.com')) {
+      const videoIndex = parts.indexOf('video');
+      const id = videoIndex >= 0 ? parts[videoIndex + 1] : '';
+      return id && /^\\d+$/.test(id) ? `https://www.tiktok.com/embed/v2/${id}` : '';
     }
   } catch { return ''; }
   return '';
