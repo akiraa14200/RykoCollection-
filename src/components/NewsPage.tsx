@@ -12,7 +12,7 @@ const FEEDS = [
   { name: 'The Anime Daily', category: 'Anime', url: 'https://www.theanimedaily.com/feed/' }
 ];
 
-const cleanText = (value = '') => value.replace(/<[^>]*>/g, ' ').replace(/&nbsp;|&#160;/g, ' ').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;|&apos;/g, "'").replace(/\\s+/g, ' ').trim();
+const cleanText = (value = '') => value.replace(/<[^>]*>/g, ' ').replace(/&nbsp;|&#160;/g, ' ').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;|&apos;/g, "'").replace(/\s+/g, ' ').trim();
 const isRecent = (date: string) => { const time = Date.parse(date); return Number.isFinite(time) && time <= Date.now() + 86400000 && time >= Date.now() - 1000 * 60 * 60 * 24 * 45; };
 
 export function NewsPage() {
