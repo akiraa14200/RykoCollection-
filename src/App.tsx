@@ -19,9 +19,9 @@ import { App as CapApp } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
 import { ToastHost, OfflineBanner, ShareButton, formatCountdown, useNow, showToast, readRecentSearches, pushRecentSearch, clearRecentSearches } from './components/Extras';
 import './components/extras.css';
-import { CommunityHub } from './components/CommunityHub';
 import { LibraryStudio } from './components/LibraryStudio';
 import './components/community-library.css';
+import { EntryComments, EntryLikeButton, RykoTrendingPage } from './components/EntryEngagement';
 
 /** Calls onReach when the returned element scrolls near the viewport (infinite loading). */
 function useNearViewport(onReach: () => void, enabled: boolean) {
@@ -73,7 +73,7 @@ function Header({ user, isAdmin, onSignOut }: { user: User | null; isAdmin: bool
   return <header className="topbar"><div className="nav-wrap">
     <Link to="/" className="brand"><img className="brand-mark brand-logo" src="/logo.svg" alt="" width="31" height="31"/><span>RYKOCOLLECTION</span></Link>
     <nav className={open ? 'nav-links open' : 'nav-links'}>
-      <Link to="/"><Compass size={16}/> Discover</Link><Link to="/search">Explore</Link><Link to="/watchlist"><Bookmark size={16}/> My list</Link><Link to="/video"><Tv size={16}/> Video</Link><Link to="/privacy"><ShieldCheck size={16}/> Privacy</Link>{isAdmin && <Link to="/admin"><ShieldCheck size={16}/> Admin workspace</Link>}
+      <Link to="/"><Compass size={16}/> Discover</Link><Link to="/search">Explore</Link><Link to="/watchlist"><Bookmark size={16}/> My list</Link><Link to="/video"><Tv size={16}/> Video</Link><Link to="/trending"><Star size={16}/> Top trending</Link><Link to="/privacy"><ShieldCheck size={16}/> Privacy</Link>{isAdmin && <Link to="/admin"><ShieldCheck size={16}/> Admin workspace</Link>}
     </nav>
     <div className="topbar-catalogue-tools">
       <form className="nav-search topbar-explore-search" onSubmit={submit} onClick={() => { if (location.pathname !== '/search') openExplore(); }} role="search" aria-label="Open Browse and Explore">
@@ -383,13 +383,13 @@ function uniqueSourceLinks(links: { url: string; site: string; language?: string
     .filter(link => !seenLabel.has(link.label) && !!seenLabel.add(link.label)).slice(0, 14);
 }
 
-function DetailPage() {
+function DetailPage({ user }: { user: User | null }) {
   const { id } = useParams();
   const [anime, setAnime] = useState<Anime | null>(() => peekAnime(id || ''));
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [attempt, setAttempt] = useState(0);
-  const [activeTab, setActiveTab] = useState<'overview' | 'characters' | 'details'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'characters' | 'details' | 'comments'>('overview');
   const [selectedCharacter, setSelectedCharacter] = useState<AnimeCharacter | null>(null);
   const [characterPage, setCharacterPage] = useState(1);
   const [loadingCharacters, setLoadingCharacters] = useState(false);
@@ -448,6 +448,7 @@ function DetailPage() {
     { id: 'overview' as const, label: 'Overview', icon: <Info size={16}/> },
     { id: 'characters' as const, label: 'Characters', icon: <Users size={16}/>, count: anime.characters?.edges.length },
     { id: 'details' as const, label: 'Details', icon: <FileText size={16}/> },
+    { id: 'comments' as const, label: 'Comments', icon: <MessageCircle size={16}/> },
   ];
 
   return <main className="detail-page">
@@ -470,7 +471,7 @@ function DetailPage() {
           <div className="hero-actions">
             <button className="primary-btn" onClick={start}><Play size={16} fill="currentColor"/> Open player</button>
             <button className="secondary-btn" onClick={()=>toggle(anime)}>{isSaved ? <Heart size={16} fill="currentColor"/> : <Bookmark size={16}/>} {isSaved ? 'In my list' : 'Add to list'}</button>
-            {anime.siteUrl && <a className="secondary-btn" href={anime.siteUrl} target="_blank" rel="noreferrer">AniList <ExternalLink size={14}/></a>}
+            <EntryLikeButton animeId={anime.id} user={user}/>{anime.siteUrl && <a className="secondary-btn" href={anime.siteUrl} target="_blank" rel="noreferrer">AniList <ExternalLink size={14}/></a>}
             <ShareButton title={titleOf(anime)} url={anime.siteUrl || window.location.href}/>
           </div>
         </div>
@@ -535,6 +536,8 @@ function DetailPage() {
           </section>
         </div>}
       </section>}
+
+      {activeTab === 'comments' && <section className="entry-panel"><EntryComments animeId={anime.id} animeTitle={titleOf(anime)} user={user}/></section>}
 
       {activeTab === 'details' && <section className="entry-panel details-panel">
         <div className="entry-section-heading"><span className="eyebrow">ENTRY INFORMATION</span><h2>Details</h2></div>
@@ -1183,7 +1186,6 @@ function AccountPage({ user, isAdmin }: { user: User | null; isAdmin: boolean })
       <h2><Settings size={18}/> App & information</h2>
       <Link to="/settings" className="account-link-row"><span><Settings size={17}/><span><strong>Settings</strong><small>Playback, storage and app preferences</small></span></span><ChevronRight size={17}/></Link>
       <Link to="/activity" className="account-link-row"><span><Clock3 size={17}/><span><strong>Activity dashboard</strong><small>Watch, reading progress and monthly activity</small></span></span><ChevronRight size={17}/></Link>
-      <Link to="/community" className="account-link-row"><span><Users size={17}/><span><strong>Community & profile</strong><small>Guidelines, discussions and public reader profile</small></span></span><ChevronRight size={17}/></Link>
       <Link to="/library-studio" className="account-link-row"><span><Bookmark size={17}/><span><strong>Library studio</strong><small>Custom collections, private ratings and notes</small></span></span><ChevronRight size={17}/></Link>
       <Link to="/about" className="account-link-row"><span><Info size={17}/><span><strong>About RykoCollection</strong><small>Project details, credits and contact</small></span></span><ChevronRight size={17}/></Link>
       <Link to="/privacy" className="account-link-row"><span><ShieldCheck size={17}/><span><strong>Privacy policy</strong><small>How app data and external services work</small></span></span><ChevronRight size={17}/></Link>
@@ -1310,7 +1312,7 @@ function TabbedRoutes({ user, isAdmin }: { user: User | null; isAdmin: boolean }
         <Routes location={tabLocations.current[path]}><Route path={path} element={tabElement(path)}/></Routes>
       </TabActiveContext.Provider>
     </div>)}
-    {!activeTab && <Routes><Route path="/anime/:id" element={<DetailPage/>}/><Route path="/privacy" element={<PrivacyPage/>}/><Route path="/terms" element={<TermsPage/>}/><Route path="/settings" element={<AppSettings/>}/><Route path="/activity" element={<ActivityDashboard/>}/><Route path="/community" element={<CommunityHub user={user} isAdmin={isAdmin}/>}/><Route path="/library-studio" element={<LibraryStudio/>}/><Route path="/about" element={<AboutPage/>}/><Route path="/extensions" element={<Navigate to="/account" replace/>}/><Route path="/admin" element={<AdminWorkspace/>}/><Route path="*" element={<main className="content-page empty-state"><Search size={28}/><h1>Page not found</h1><p>This page may have moved. Start again from Home or explore the catalogue.</p><div className="empty-state-actions"><Link className="primary-btn" to="/">Go to Home</Link><Link className="secondary-btn" to="/search">Explore catalogue</Link></div></main>}/></Routes>}
+    {!activeTab && <Routes><Route path="/anime/:id" element={<DetailPage user={user}/>}/><Route path="/privacy" element={<PrivacyPage/>}/><Route path="/terms" element={<TermsPage/>}/><Route path="/settings" element={<AppSettings/>}/><Route path="/activity" element={<ActivityDashboard/>}/><Route path="/trending" element={<RykoTrendingPage/>}/><Route path="/library-studio" element={<LibraryStudio/>}/><Route path="/about" element={<AboutPage/>}/><Route path="/extensions" element={<Navigate to="/account" replace/>}/><Route path="/admin" element={<AdminWorkspace/>}/><Route path="*" element={<main className="content-page empty-state"><Search size={28}/><h1>Page not found</h1><p>This page may have moved. Start again from Home or explore the catalogue.</p><div className="empty-state-actions"><Link className="primary-btn" to="/">Go to Home</Link><Link className="secondary-btn" to="/search">Explore catalogue</Link></div></main>}/></Routes>}
   </>;
 }
 
