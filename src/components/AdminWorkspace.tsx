@@ -96,19 +96,26 @@ export function AdminWorkspace() {
     e.preventDefault();setDiscoveryBusy(true);setError('');
     try{
       let key=sourceForm.source_key.trim();
-      if(/^https?:\/\//i.test(key)){
+      let sourceType=sourceForm.source_type;
+      if(/^https?:\\/\\//i.test(key)){
         const u=new URL(key);
-        if(sourceForm.source_type==='channel'){
-          const channelId=u.pathname.match(/\/channel\/([a-zA-Z0-9_-]+)/)?.[1];
-          const handle=u.pathname.match(/\/@([a-zA-Z0-9._-]+)/)?.[1];
+        const host=u.hostname.replace(/^www\\./i,'').toLowerCase();
+        const playlistId=u.searchParams.get('list');
+        // Detect playlist URLs automatically, even when the source dropdown is still set to channel.
+        if(playlistId && (u.pathname.toLowerCase().includes('playlist') || host==='youtube.com' || host==='m.youtube.com')){
+          sourceType='playlist';
+          key=playlistId;
+        }else if(sourceType==='channel'){
+          const channelId=u.pathname.match(/\\/channel\\/([a-zA-Z0-9_-]+)/)?.[1];
+          const handle=u.pathname.match(/\\/@([a-zA-Z0-9._-]+)/)?.[1];
           key=channelId|| (handle?'@'+handle:'');
-        }else key=u.searchParams.get('list')||'';
+        }else key=playlistId||'';
       }
-      const valid=sourceForm.source_type==='channel'
+      const valid=sourceType==='channel'
         ? (/^[a-zA-Z0-9_-]{10,80}$/.test(key)||/^@[a-zA-Z0-9._-]{3,100}$/.test(key))
         : /^[a-zA-Z0-9_-]{10,80}$/.test(key);
-      if(!valid)throw new Error(sourceForm.source_type==='channel'?'Enter a YouTube channel ID or handle URL (for example @museindiachannel).':'Enter a valid YouTube playlist ID.');
-      const {error}=await supabase.from('video_discovery_sources').insert({source_type:sourceForm.source_type,source_key:key,label:sourceForm.label.trim()||key});
+      if(!valid)throw new Error(sourceType==='channel'?'Enter a YouTube channel ID or handle URL (for example @museindiachannel).':'Could not read a playlist ID. Paste the full YouTube playlist URL or its ID.');
+      const {error}=await supabase.from('video_discovery_sources').insert({source_type:sourceType,source_key:key,label:sourceForm.label.trim()||key});
       if(error)throw error;
       setSourceForm({source_type:'channel',source_key:'',label:''});
       await loadDiscovery();setNotice('YouTube source added. Run discovery to collect its recent uploads.');
