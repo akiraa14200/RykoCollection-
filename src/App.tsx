@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { Link, Navigate, Route, Routes, useNavigate, useParams, useLocation, type Location } from 'react-router-dom';
-import { Search, Compass, Bookmark, ShieldCheck, Play, Star, ChevronRight, ArrowLeft, Heart, Clock3, Menu, X, ExternalLink, Sparkles, Tv, Info, Users, FileText, Globe, Youtube, ListVideo, ChevronDown, RotateCw, MessageCircle, Home as HomeIcon, UserRound, ChevronLeft, Shuffle, Minus, Plus, Settings, Trash2, Clock, BookOpen, Mail, Shield, WandSparkles } from 'lucide-react';
+import { Search, Compass, Bookmark, ShieldCheck, Play, Star, ChevronRight, ArrowLeft, Heart, Clock3, Menu, X, ExternalLink, Sparkles, Tv, Info, Users, FileText, Globe, Youtube, ListVideo, ChevronDown, RotateCw, MessageCircle, Home as HomeIcon, UserRound, ChevronLeft, Shuffle, Minus, Plus, Settings, Trash2, Clock, BookOpen, Mail, Shield } from 'lucide-react';
 // The application UI and page components are defined below.
 import { Anime, AnimeCharacter, getAnime, peekAnime, rememberPreviews, applyCachedVideoMetadata, enrichVideoMetadataProgressive, getAnimeCharacters, getPopular, getPopularManga, getSeasonal, getTrending, getTrendingManga, getRelatedVideos, getRelatedShortVideos, searchRelatedVideos, getRelatedVideosBySourceIds, RelatedVideo, imageOf, searchAnime, titleOf } from './lib/catalogue';
 import type { User } from '@supabase/supabase-js';
@@ -1162,6 +1162,7 @@ function AppSettings() {
     <section className="settings-card"><h2><Shield size={18}/> Storage & privacy</h2>
       <div className="settings-row"><div><strong>Catalogue cache</strong><p>{(cacheSize / 1024).toFixed(0)} KB stored to make browsing faster. Clearing it does not remove your Library or progress.</p></div><button className="secondary-btn" onClick={clearCache}><Trash2 size={15}/> Clear cache</button></div>
       <div className="settings-row"><div><strong>Recent searches</strong><p>Remove the saved search suggestions on this device.</p></div><button className="secondary-btn" onClick={clearSearches}>Clear history</button></div>
+      <div className="settings-row"><div><strong>Welcome tour</strong><p>Replay the introduction to the main RykoCollection features.</p></div><button className="secondary-btn" onClick={()=>{try{localStorage.removeItem("rykoc-onboarding-complete");}catch{}window.location.reload();}}>Replay tour</button></div>
     </section>
     <section className="settings-card"><h2><Info size={18}/> App information</h2>
       <div className="settings-row"><div><strong>RykoCollection</strong><p>Installed app version</p></div><span className="version-pill">v1.0.0</span></div>
@@ -1175,7 +1176,7 @@ function AboutPage() {
   return <main className="content-page info-page">
     <div className="page-heading"><span className="eyebrow">THE PROJECT</span><h1>About <em>RykoCollection.</em></h1><p>Discover stories. Find your next world.</p></div>
     <section className="about-hero-card"><img src="/logo.svg" alt="RykoCollection logo"/><div><span className="eyebrow">INDEPENDENT FAN DISCOVERY PROJECT</span><h2>One place to explore your next story.</h2><p>RykoCollection brings anime, manga discovery, personal tracking and related video discovery together in one experience.</p><span className="version-pill">Version 1.0.0</span></div></section>
-    <section className="settings-card"><h2><WandSparkles size={18}/> What you can do</h2><div className="about-feature-grid"><div><Compass/><strong>Discover</strong><p>Explore anime, manga, manhwa and manhua catalogue entries.</p></div><div><Bookmark/><strong>Keep your Library</strong><p>Save titles, track progress and collect videos for later.</p></div><div><Play/><strong>Find videos</strong><p>Browse trailers and links from external video providers.</p></div><div><Globe/><strong>Browse with Strawhat</strong><p>Open the integrated browser in supported Android builds.</p></div></div></section>
+    <section className="settings-card"><h2><Sparkles size={18}/> What you can do</h2><div className="about-feature-grid"><div><Compass/><strong>Discover</strong><p>Explore anime, manga, manhwa and manhua catalogue entries.</p></div><div><Bookmark/><strong>Keep your Library</strong><p>Save titles, track progress and collect videos for later.</p></div><div><Play/><strong>Find videos</strong><p>Browse trailers and links from external video providers.</p></div><div><Globe/><strong>Browse with Strawhat</strong><p>Open the integrated browser in supported Android builds.</p></div></div></section>
     <section className="settings-card"><h2><BookOpen size={18}/> Credits & acknowledgements</h2>
       <div className="credit-row"><strong>AniList</strong><span>Public anime and manga catalogue metadata and artwork links.</span><a href="https://anilist.co" target="_blank" rel="noreferrer">Visit <ExternalLink size={13}/></a></div>
       <div className="credit-row"><strong>YouTube and video providers</strong><span>Video playback, trailers and creator content remain hosted by their respective providers.</span></div>
@@ -1223,7 +1224,7 @@ function TabbedRoutes({ user, isAdmin }: { user: User | null; isAdmin: boolean }
         <Routes location={tabLocations.current[path]}><Route path={path} element={tabElement(path)}/></Routes>
       </TabActiveContext.Provider>
     </div>)}
-    {!activeTab && <Routes><Route path="/anime/:id" element={<DetailPage user={user}/>}/><Route path="/privacy" element={<PrivacyPage/>}/><Route path="/terms" element={<TermsPage/>}/><Route path="/settings" element={<AppSettings/>}/><Route path="/about" element={<AboutPage/>}/><Route path="/extensions" element={<Navigate to="/account" replace/>}/><Route path="/admin" element={<AdminWorkspace/>}/><Route path="*" element={<main className="content-page empty-state"><h1>Page not found</h1><Link to="/">Return home</Link></main>}/></Routes>}
+    {!activeTab && <Routes><Route path="/anime/:id" element={<DetailPage user={user}/>}/><Route path="/privacy" element={<PrivacyPage/>}/><Route path="/terms" element={<TermsPage/>}/><Route path="/settings" element={<AppSettings/>}/><Route path="/about" element={<AboutPage/>}/><Route path="/extensions" element={<Navigate to="/account" replace/>}/><Route path="/admin" element={<AdminWorkspace/>}/><Route path="*" element={<main className="content-page empty-state"><Search size={28}/><h1>Page not found</h1><p>This page may have moved. Start again from Home or explore the catalogue.</p><div className="empty-state-actions"><Link className="primary-btn" to="/">Go to Home</Link><Link className="secondary-btn" to="/search">Explore catalogue</Link></div></main>}/></Routes>}
   </>;
 }
 
