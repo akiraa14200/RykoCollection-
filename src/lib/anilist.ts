@@ -184,6 +184,20 @@ export async function getTrailerCatalogue(page = 1): Promise<{ anime: Anime[]; m
   return { anime: data.anime?.media || [], manga: data.manga?.media || [] };
 }
 
+/** Search anime and manga together for entries that actually have YouTube trailers. */
+export async function searchTrailerCatalogue(search: string, page = 1): Promise<{ anime: Anime[]; manga: Anime[] }> {
+  const term = search.trim().slice(0, 80);
+  if (term.length < 2) return { anime: [], manga: [] };
+  const data = await query<{ anime: { media: Anime[] }; manga: { media: Anime[] } }>(
+    `query($search: String, $page: Int) {
+      anime: Page(page: $page, perPage: 20) { media(type: ANIME, search: $search, sort: SEARCH_MATCH, isAdult: false) { ${fields} } }
+      manga: Page(page: $page, perPage: 20) { media(type: MANGA, search: $search, sort: SEARCH_MATCH, isAdult: false) { ${fields} } }
+    }`,
+    { search: term, page }
+  );
+  return { anime: data.anime?.media || [], manga: data.manga?.media || [] };
+}
+
 /** Every AniList list shown on Home, fetched in a single request. */
 export async function getHomeCollections(): Promise<{ trending: Anime[]; popular: Anime[]; trendingManga: Anime[]; popularManga: Anime[] }> {
   const data = await query<Record<'trending' | 'popular' | 'trendingManga' | 'popularManga', { media: Anime[] }>>(
