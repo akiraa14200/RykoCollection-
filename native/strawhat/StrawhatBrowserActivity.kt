@@ -90,8 +90,8 @@ class StrawhatBrowserActivity : Activity() {
     }
 
     private fun applyBrowserSystemBars() {
-        window.statusBarColor = Color.rgb(16, 18, 20)
-        window.navigationBarColor = Color.rgb(16, 18, 20)
+        window.statusBarColor = Color.rgb(9, 9, 11)
+        window.navigationBarColor = Color.rgb(9, 9, 11)
         if (android.os.Build.VERSION.SDK_INT >= 30) {
             window.setDecorFitsSystemWindows(false)
         } else {
@@ -131,10 +131,10 @@ class StrawhatBrowserActivity : Activity() {
             if (bold) typeface = Typeface.DEFAULT_BOLD
         }
     private fun buildUi() {
-        val bg = Color.rgb(16, 18, 20)
-        val surface = Color.rgb(23, 33, 53)
-        val muted = Color.rgb(178, 183, 190)
-        val accent = Color.rgb(226, 229, 232)
+        val bg = Color.rgb(9, 9, 11)
+        val surface = Color.rgb(25, 22, 38)
+        val muted = Color.rgb(158, 153, 174)
+        val accent = Color.rgb(190, 177, 255)
 
         root = FrameLayout(this).apply { setBackgroundColor(bg) }
         contentLayout = LinearLayout(this).apply {
@@ -146,17 +146,17 @@ class StrawhatBrowserActivity : Activity() {
 
         headerBar = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL; setPadding(dp(2), 0, dp(2), dp(3)) }
         val brandMark = TextView(this).apply {
-            text = "🏴‍☠️"
-            textSize = 23f
+            text = "☠"
+            textSize = 22f
             gravity = Gravity.CENTER
             setTextColor(Color.WHITE)
-            background = shape(Color.rgb(43, 46, 49), 11)
+            background = shape(Color.rgb(42, 32, 68), 11)
             contentDescription = "Strawhat Pirate logo"
         }
         headerBar.addView(brandMark, LinearLayout.LayoutParams(dp(38), dp(38)))
         val brandText = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(8), 0, 0, 0) }
         brandText.addView(text("Strawhat Pirate", 16f, Color.WHITE, true))
-        brandText.addView(text("THE GRAND LINE BROWSER", 8f, muted, true))
+        brandText.addView(text("A RYKO BROWSER EXPERIENCE", 8f, muted, true))
         headerBar.addView(brandText)
         headerBar.addView(View(this), LinearLayout.LayoutParams(0, 1, 1f))
         lateinit var shield: TextView
@@ -176,7 +176,7 @@ class StrawhatBrowserActivity : Activity() {
         }
         addressBar.addView(text("⌕", 20f, accent, true).apply { gravity = Gravity.CENTER }, LinearLayout.LayoutParams(dp(26), dp(40)))
         url = EditText(this).apply {
-            hint = "Search or enter website"; setHintTextColor(Color.rgb(112, 128, 154)); setTextColor(Color.WHITE)
+            hint = "Search or enter website"; setHintTextColor(Color.rgb(126, 117, 157)); setTextColor(Color.WHITE)
             textSize = 12f; setSingleLine(true); setPadding(dp(3), 0, dp(3), 0); setBackgroundColor(Color.TRANSPARENT)
             imeOptions = android.view.inputmethod.EditorInfo.IME_ACTION_GO
             inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_URI
@@ -284,7 +284,7 @@ class StrawhatBrowserActivity : Activity() {
         }
 
         statusRow = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL; setPadding(dp(3), 0, dp(3), dp(2)) }
-        val statusDot = View(this).apply { background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(Color.rgb(104, 215, 163)) } }
+        val statusDot = View(this).apply { background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(Color.rgb(169, 155, 255)) } }
         statusRow.addView(statusDot, LinearLayout.LayoutParams(dp(6), dp(6)))
         status = text("  READY · Protection active", 9f, muted)
         statusRow.addView(status)
@@ -292,12 +292,12 @@ class StrawhatBrowserActivity : Activity() {
 
         homePanel = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER; setPadding(dp(18), dp(18), dp(18), dp(18))
-            background = GradientDrawable(GradientDrawable.Orientation.TL_BR, intArrayOf(Color.rgb(43, 46, 49), Color.rgb(25, 27, 29))).apply { cornerRadius = dp(24).toFloat(); setStroke(dp(1), Color.rgb(105, 109, 113)) }
+            background = GradientDrawable(GradientDrawable.Orientation.TL_BR, intArrayOf(Color.rgb(35, 27, 57), Color.rgb(10, 9, 14))).apply { cornerRadius = dp(24).toFloat(); setStroke(dp(1), Color.rgb(137, 112, 255)) }
         }
-        val heroIcon = TextView(this).apply { text = "🏴‍☠️"; textSize = 34f; gravity = Gravity.CENTER; setTextColor(accent); background = GradientDrawable().apply { setColor(Color.rgb(58, 61, 64)); cornerRadius = dp(20).toFloat() } }
+        val heroIcon = TextView(this).apply { text = "🏴‍☠️"; textSize = 34f; gravity = Gravity.CENTER; setTextColor(accent); background = GradientDrawable().apply { setColor(Color.rgb(43, 35, 65)); cornerRadius = dp(20).toFloat() } }
         homePanel.addView(heroIcon, LinearLayout.LayoutParams(dp(62), dp(62)).apply { gravity = Gravity.CENTER; bottomMargin = dp(14) })
         homePanel.addView(text("Set sail across the web.", 21f, Color.WHITE, true).apply { gravity = Gravity.CENTER })
-        homePanel.addView(text("Your browser, your choice. Strawhat Pirate filters known ad and tracker domains and helps stop unwanted redirects.", 12f, Color.rgb(164, 180, 207)).apply { gravity = Gravity.CENTER; setLineSpacing(dp(3).toFloat(), 1f); setPadding(dp(4), dp(9), dp(4), dp(16)) })
+        homePanel.addView(text("Your browser, your choice. Strawhat Pirate filters known ad and tracker domains and helps stop unwanted redirects.", 12f, Color.rgb(177, 169, 199)).apply { gravity = Gravity.CENTER; setLineSpacing(dp(3).toFloat(), 1f); setPadding(dp(4), dp(9), dp(4), dp(16)) })
         val featureRow = LinearLayout(this).apply { gravity = Gravity.CENTER }
         featureRow.addView(featureChip("◉ Tracker filter"), LinearLayout.LayoutParams(0, dp(34), 1f).apply { rightMargin = dp(4) })
         featureRow.addView(featureChip("↗ Redirect guard"), LinearLayout.LayoutParams(0, dp(34), 1f).apply { leftMargin = dp(4) })
@@ -320,8 +320,8 @@ class StrawhatBrowserActivity : Activity() {
             setTextColor(Color.WHITE)
             background = GradientDrawable().apply {
                 shape = GradientDrawable.OVAL
-                setColor(Color.rgb(210, 28, 42))
-                setStroke(dp(1), Color.argb(90, 255, 255, 255))
+                setColor(Color.rgb(137, 112, 255))
+                setStroke(dp(1), Color.rgb(190, 177, 255))
             }
             elevation = dp(20).toFloat()
             contentDescription = "Open floating music player"
@@ -503,7 +503,7 @@ class StrawhatBrowserActivity : Activity() {
         tabs.addView(mangaTab, LinearLayout.LayoutParams(0, dp(38), 1f).apply { leftMargin = dp(4) })
         val search = EditText(this).apply {
             hint = "Search sites"; setSingleLine(true); setTextColor(Color.WHITE); setHintTextColor(Color.GRAY)
-            background = shape(Color.rgb(48, 51, 54),12); setPadding(dp(12),0,dp(12),0)
+            background = shape(Color.rgb(42, 35, 62),12); setPadding(dp(12),0,dp(12),0)
         }
         val info = text("",11f,Color.LTGRAY).apply { setPadding(dp(2),dp(8),dp(2),dp(8)) }
         val list = ListView(this)
@@ -521,10 +521,10 @@ class StrawhatBrowserActivity : Activity() {
             val matches=entries.filter { it.name.contains(q,true)||it.url.contains(q,true) }
             filtered.clear(); filtered.addAll(matches)
             adapter.clear(); adapter.addAll(matches.map { it.name })
-            animeTab.background=shape(if(which=="Anime") Color.rgb(225, 228, 230) else Color.rgb(43, 46, 49),14)
-            mangaTab.background=shape(if(which=="Manga") Color.rgb(225, 228, 230) else Color.rgb(43, 46, 49),14)
-            animeTab.setTextColor(if(which=="Anime") Color.rgb(25, 27, 29) else Color.rgb(235, 237, 239))
-            mangaTab.setTextColor(if(which=="Manga") Color.rgb(25, 27, 29) else Color.rgb(235, 237, 239))
+            animeTab.background=shape(if(which=="Anime") Color.rgb(190, 177, 255) else Color.rgb(29, 25, 43),14)
+            mangaTab.background=shape(if(which=="Manga") Color.rgb(190, 177, 255) else Color.rgb(29, 25, 43),14)
+            animeTab.setTextColor(if(which=="Anime") Color.rgb(13, 12, 17) else Color.rgb(211, 201, 255))
+            mangaTab.setTextColor(if(which=="Manga") Color.rgb(13, 12, 17) else Color.rgb(211, 201, 255))
             info.text=if(entries.isEmpty()) "$which sheet is empty or unavailable" else "${matches.size} of ${entries.size} $which sites"
         }
         animeTab.setOnClickListener { render("Anime") }
@@ -545,7 +545,7 @@ class StrawhatBrowserActivity : Activity() {
             }
         }
         dialog.show()
-        dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.setTextColor(Color.rgb(205, 209, 212))
+        dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.setTextColor(Color.rgb(190, 177, 255))
         dialog.getButton(AlertDialog.BUTTON_NEGATIVE)?.setTextColor(Color.LTGRAY)
         render("Anime")
         if(cachedCatalogue("Anime").isEmpty() || cachedCatalogue("Manga").isEmpty()) refreshCatalogue(false)
@@ -583,7 +583,7 @@ class StrawhatBrowserActivity : Activity() {
         musicEmbedView = playerWeb
         val panel = FrameLayout(this).apply {
             background = GradientDrawable().apply {
-                setColor(Color.rgb(12, 13, 16))
+                setColor(Color.rgb(9, 9, 11))
                 cornerRadius = dp(22).toFloat()
                 setStroke(dp(1), Color.argb(65, 255, 255, 255))
             }
@@ -684,9 +684,9 @@ class StrawhatBrowserActivity : Activity() {
         gravity = Gravity.CENTER
         textSize = 10f
         typeface = Typeface.DEFAULT_BOLD
-        setTextColor(Color.rgb(215, 218, 221))
+        setTextColor(Color.rgb(220, 215, 238))
         background = GradientDrawable().apply {
-            setColor(Color.rgb(48, 51, 54))
+            setColor(Color.rgb(42, 35, 62))
             cornerRadius = dp(18).toFloat()
         }
     }
@@ -696,11 +696,11 @@ class StrawhatBrowserActivity : Activity() {
         gravity = Gravity.CENTER
         textSize = 12f
         typeface = Typeface.DEFAULT_BOLD
-        setTextColor(if (prominent) Color.rgb(25, 29, 34) else Color.rgb(242, 244, 246))
+        setTextColor(if (prominent) Color.rgb(18, 15, 27) else Color.rgb(244, 241, 255))
         background = GradientDrawable().apply {
-            setColor(if (prominent) Color.rgb(226, 229, 232) else 0x52FFFFFF)
+            setColor(if (prominent) Color.rgb(190, 177, 255) else 0x321A0F40)
             cornerRadius = dp(14).toFloat()
-            setStroke(dp(1), if (prominent) Color.rgb(245, 246, 247) else 0x88FFFFFF.toInt())
+            setStroke(dp(1), if (prominent) Color.rgb(205, 194, 255) else 0x887F6BC4.toInt())
         }
         setOnClickListener { click() }
     }
@@ -853,25 +853,25 @@ class StrawhatBrowserActivity : Activity() {
     private fun darkGlassShape(color: Int, radius: Int) = GradientDrawable(
         GradientDrawable.Orientation.TL_BR,
         intArrayOf(
-            Color.argb(238, 30, 33, 40),
+            Color.argb(238, 25, 21, 38),
             color,
-            Color.argb(220, 7, 9, 13)
+            Color.argb(220, 8, 7, 12)
         )
     ).apply {
         cornerRadius = dp(radius).toFloat()
-        setStroke(dp(1), 0x77FFFFFF)
+        setStroke(dp(1), 0x55B9A7FF)
     }
 
     private fun glassShape(color: Int, radius: Int) = GradientDrawable(
         GradientDrawable.Orientation.TL_BR,
         intArrayOf(
-            Color.argb(220, 111, 148, 194),
+            Color.argb(220, 107, 83, 174),
             color,
-            Color.argb(205, 18, 29, 48)
+            Color.argb(205, 20, 15, 34)
         )
     ).apply {
         cornerRadius = dp(radius).toFloat()
-        setStroke(dp(1), 0x99FFFFFF.toInt())
+        setStroke(dp(1), 0x88B9A7FF.toInt())
     }
 
     private fun showAbout() {
