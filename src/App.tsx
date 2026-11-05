@@ -694,13 +694,28 @@ function videoThumbnail(video: RelatedVideo) {
 }
 function detectVideoFormat(url:string) {
   try {
-    const u=new URL(String(url||'').trim()),host=u.hostname.toLowerCase().replace(/^www\./,'').replace(/^m\./,'');
-    const parts=u.pathname.split('/').filter(Boolean);
-    if((host==='youtube.com'||host==='youtube-nocookie.com')&&parts[0]==='shorts')return 'short';
-    if(host==='instagram.com'&&['reel','reels'].includes(parts[0]))return 'short';
-    if(host==='tiktok.com'&&parts.includes('video'))return 'short';
+    const u = new URL(String(url || '').trim());
+    const host = u.hostname.toLowerCase().replace(/^www\./, '').replace(/^m\./, '');
+    const parts = u.pathname.split('/').filter(Boolean).map(part => part.toLowerCase());
+
+    // YouTube Shorts have an explicit /shorts/ path. A youtu.be short link
+    // cannot be distinguished from a regular video URL by URL alone.
+    if ((host === 'youtube.com' || host.endsWith('.youtube.com') ||
+         host === 'youtube-nocookie.com' || host.endsWith('.youtube-nocookie.com')) &&
+        parts[0] === 'shorts' && !!parts[1]) return 'short';
+
+    // Instagram supports both /reel/ and legacy /reels/ paths.
+    if ((host === 'instagram.com' || host.endsWith('.instagram.com') || host === 'instagr.am') &&
+        ['reel', 'reels'].includes(parts[0] || '') && !!parts[1]) return 'short';
+
+    // TikTok video links use /@creator/video/<id>, including mobile subdomains.
+    if ((host === 'tiktok.com' || host.endsWith('.tiktok.com')) &&
+        parts.includes('video')) return 'short';
+
     return 'video';
-  } catch { return 'video'; }
+  } catch {
+    return 'video';
+  }
 }
 function LazyVideoCard({ video, short, playing, onPlay, saved = false, onToggleSave }: { video: RelatedVideo; short: boolean; playing: boolean; onPlay: () => void; saved?: boolean; onToggleSave?: () => void }) {
   const cardRef = useRef<HTMLElementTagNameMap['article'] | null>(null);
@@ -925,18 +940,22 @@ function VideoPage() {
     const blocks:{kind:'videos'|'shorts';items:RelatedVideo[]}[]=[];
     let videoIndex=0;
     let shortIndex=0;
-    while(videoIndex<recommendedRegular.length){
-      blocks.push({kind:'videos',items:recommendedRegular.slice(videoIndex,videoIndex+10)});
-      videoIndex+=10;
+
+    // Alternate 10 regular videos with 6–10 Shorts. Keep consuming both
+    // collections independently so a longer Shorts list is never truncated
+    // when regular videos run out (and Shorts-only feeds remain complete).
+    while(videoIndex<recommendedRegular.length || shortIndex<recommendedShorts.length){
+      if(videoIndex<recommendedRegular.length){
+        const batch=recommendedRegular.slice(videoIndex,videoIndex+10);
+        if(batch.length) blocks.push({kind:'videos',items:batch});
+        videoIndex+=batch.length;
+      }
       if(shortIndex<recommendedShorts.length){
         const batchSize=6+Math.floor(stableRandom('shorts-'+blocks.length)*5);
-        const count=Math.min(batchSize,recommendedShorts.length-shortIndex);
-        blocks.push({kind:'shorts',items:recommendedShorts.slice(shortIndex,shortIndex+count)});
-        shortIndex+=count;
+        const batch=recommendedShorts.slice(shortIndex,shortIndex+batchSize);
+        if(batch.length) blocks.push({kind:'shorts',items:batch});
+        shortIndex+=batch.length;
       }
-    }
-    if(!recommendedRegular.length&&recommendedShorts.length){
-      blocks.push({kind:'shorts',items:recommendedShorts.slice(0,10)});
     }
     return blocks;
   },[recommendedRegular,recommendedShorts]);
