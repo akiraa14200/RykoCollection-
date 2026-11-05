@@ -719,8 +719,21 @@ body{padding-bottom:104px}
  .topbar-catalogue-switch button{min-height:24px;padding:0 6px;font-size:9px}
  .topbar-catalogue-switch button svg{width:10px;height:10px}
 }
+@media(max-width:700px){
+ /* Reserve real horizontal space for the search control instead of letting the
+    logo and catalogue switch consume the entire mobile header row. */
+ .brand{flex:0 1 auto;min-width:0;gap:7px;font-size:11px;letter-spacing:.12em;white-space:nowrap}
+ .brand-mark{width:29px;height:29px;flex:0 0 29px}
+ .topbar-catalogue-tools{display:flex!important;flex:1 1 0;min-width:0;width:auto}
+ .topbar-explore-search{display:flex!important;flex:1 1 115px;min-width:88px;width:auto;margin:0;overflow:hidden}
+ .topbar-explore-search>svg{flex:0 0 14px;width:14px;height:14px}
+ .topbar-explore-search input{display:block;min-width:0;flex:1 1 auto}
+ .topbar-catalogue-switch{flex:0 0 auto;margin:0}
+ .topbar-catalogue-switch button{padding:0 5px}
+}
 @media(max-width:390px){
- .topbar-explore-search{flex-basis:70px}
+ .brand{font-size:10px;letter-spacing:.08em}
+ .topbar-explore-search{flex-basis:76px;min-width:64px;padding:0 7px}
  .topbar-explore-search input::placeholder{color:transparent}
  .topbar-catalogue-switch button span{display:none}
  .topbar-catalogue-switch button{width:25px;padding:0}
