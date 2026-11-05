@@ -28,14 +28,7 @@ data class AniListData(val Page: AniListPage? = null)
 data class AniListPage(val media: List<AniListMedia> = emptyList())
 
 @Serializable
-data class AniListMedia(
-    val id: Int,
-    val title: AniListTitle,
-    val coverImage: AniListCover? = null,
-    val averageScore: Int? = null,
-    val format: String? = null,
-    val seasonYear: Int? = null
-)
+data class AniListMedia(val id: Int, val title: AniListTitle, val coverImage: AniListCover? = null, val averageScore: Int? = null, val format: String? = null, val seasonYear: Int? = null)
 
 @Serializable
 data class AniListTitle(val english: String? = null, val romaji: String? = null, val native: String? = null) {
@@ -54,9 +47,9 @@ class AniListRepository {
 
     suspend fun trendingMedia(manga: Boolean = false): List<AniListMedia> {
         val query = """
-            query(${'type: MediaType!) {
+            query(${'$'}type: MediaType!) {
               Page(page: 1, perPage: 18) {
-                media(type: ${ '$' }type, sort: TRENDING_DESC, isAdult: false) {
+                media(type: ${'$'}type, sort: TRENDING_DESC, isAdult: false) {
                   id
                   title { english romaji native }
                   coverImage { large extraLarge }
@@ -68,70 +61,11 @@ class AniListRepository {
             }
         """.trimIndent()
 
-        val request = AniListGraphQLRequest(
-            query = query,
-            variables = AniListGraphQLVariables(type = if (manga) "MANGA" else "ANIME")
-        )
-
+        val request = AniListGraphQLRequest(query, AniListGraphQLVariables(if (manga) "MANGA" else "ANIME"))
         val response: AniListEnvelope = client.post("https://graphql.anilist.co") {
             contentType(ContentType.Application.Json)
             setBody(request)
         }.body()
-
-        return response.data?.Page?.media.orEmpty()
-    }
-
-    fun close() = client.close()
-}}type: MediaType!) {
-              Page(page: 1, perPage: 18) {
-                media(type: ${'type, sort: TRENDING_DESC, isAdult: false) {
-                  id
-                  title { english romaji native }
-                  coverImage { large extraLarge }
-                  averageScore
-                  format
-                  seasonYear
-                }
-              }
-            }
-        """.trimIndent()
-
-        val request = AniListGraphQLRequest(
-            query = query,
-            variables = AniListGraphQLVariables(type = if (manga) "MANGA" else "ANIME")
-        )
-
-        val response: AniListEnvelope = client.post("https://graphql.anilist.co") {
-            contentType(ContentType.Application.Json)
-            setBody(request)
-        }.body()
-
-        return response.data?.Page?.media.orEmpty()
-    }
-
-    fun close() = client.close()
-}}type, sort: TRENDING_DESC, isAdult: false) {
-                  id
-                  title { english romaji native }
-                  coverImage { large extraLarge }
-                  averageScore
-                  format
-                  seasonYear
-                }
-              }
-            }
-        """.trimIndent()
-
-        val request = AniListGraphQLRequest(
-            query = query,
-            variables = AniListGraphQLVariables(type = if (manga) "MANGA" else "ANIME")
-        )
-
-        val response: AniListEnvelope = client.post("https://graphql.anilist.co") {
-            contentType(ContentType.Application.Json)
-            setBody(request)
-        }.body()
-
         return response.data?.Page?.media.orEmpty()
     }
 
