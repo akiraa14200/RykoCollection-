@@ -82,6 +82,21 @@ const mapRelatedVideo = (row: RelatedVideoRow): RelatedVideo => ({
   creatorAvatarUrl: row.creator_avatar_url || '', actionType: row.action_type || 'watch',
   actionUrl: row.action_url || row.video_url, sortOrder: row.sort_order || 0, createdAt: row.created_at
 });
+export async function getRelatedVideosBySourceIds(sourceIds: string[], page = 1): Promise<RelatedVideo[]> {
+  const ids = [...new Set(sourceIds.filter(id =>
+    typeof id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id.trim())
+  ))];
+  if (!ids.length) return [];
+  const from = Math.max(0, page - 1) * 40;
+  const { data, error } = await supabase.from('related_videos')
+    .select('id,title_id,legacy_title_id,source_id,video_url,platform,video_title,creator_name,creator_avatar_url,action_type,action_url,sort_order,created_at')
+    .in('source_id', ids).eq('platform', 'youtube')
+    .order('sort_order', { ascending: true }).order('created_at', { ascending: false })
+    .range(from, from + 39);
+  throwIf(error);
+  return ((data || []) as RelatedVideoRow[]).map(mapRelatedVideo);
+}
+
 export async function getRelatedVideos(page = 1, titleId?: string): Promise<RelatedVideo[]> {
   const from = (page - 1) * 40;
   let request = supabase.from('related_videos').select('id,title_id,legacy_title_id,source_id,video_url,platform,video_title,creator_name,creator_avatar_url,action_type,action_url,sort_order,created_at').order('sort_order', { ascending: true }).order('created_at', { ascending: false }).range(from, from + 39);
