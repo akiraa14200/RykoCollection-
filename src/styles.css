@@ -738,3 +738,34 @@ body{padding-bottom:104px}
  .topbar-catalogue-switch button span{display:none}
  .topbar-catalogue-switch button{width:25px;padding:0}
 }
+
+
+/* Personal activity dashboard and release schedule */
+.activity-stats-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:22px 0}
+.activity-stat{padding:18px;border:1px solid rgba(196,181,255,.14);border-radius:17px;background:linear-gradient(145deg,rgba(39,33,55,.82),rgba(17,15,24,.88));box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
+.activity-stat span,.activity-stat small{display:block;color:#a49bb5;font-size:11px}
+.activity-stat strong{display:block;margin:9px 0 5px;color:#fff;font-size:29px;letter-spacing:-.04em}
+.activity-stat small{font-size:10px;color:#777181}
+.activity-calendar-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:20px}
+.activity-calendar-head h2{margin:5px 0;font-size:19px}
+.activity-calendar-head p{margin:0;color:#8f899b;font-size:11px}
+.calendar-controls{display:flex;align-items:center;gap:9px}
+.calendar-controls strong{font-size:12px;white-space:nowrap}
+.calendar-controls .icon-btn{width:31px;height:31px}
+.activity-calendar-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:7px}
+.activity-calendar-grid>span{display:grid;place-items:center;min-height:34px;border-radius:9px}
+.calendar-weekday{color:#827a90;font-size:10px}
+.calendar-day{background:rgba(255,255,255,.035);color:#c6bfd2;font-size:11px}
+.calendar-day.active{background:linear-gradient(135deg,rgba(157,137,235,.5),rgba(99,78,165,.45));color:#fff;box-shadow:inset 0 0 0 1px rgba(210,198,255,.22)}
+.genre-interest-list{display:grid;gap:12px}
+.genre-interest{position:relative;display:flex;justify-content:space-between;gap:10px;padding:0 0 10px;border-bottom:1px solid rgba(255,255,255,.06);font-size:12px;color:#e9e4f1}
+.genre-interest strong{color:#a99cce;font-size:10px}
+.genre-interest i{position:absolute;left:0;bottom:0;height:2px;border-radius:2px;background:linear-gradient(90deg,#9d89eb,#6750a7)}
+.release-schedule{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}
+.release-item{display:flex;align-items:center;gap:10px;min-width:0;padding:9px;border:1px solid rgba(196,181,255,.12);border-radius:13px;background:rgba(255,255,255,.035);color:#fff;text-decoration:none}
+.release-item img{width:43px;height:58px;object-fit:cover;border-radius:7px}
+.release-item>span{display:grid;gap:5px;min-width:0;flex:1}
+.release-item strong{font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.release-item small{font-size:10px;color:#8e879a}
+.release-item time{font-size:10px;color:#b9a9f0;white-space:nowrap}
+@media(max-width:700px){.activity-stats-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.activity-stat{padding:14px}.activity-stat strong{font-size:25px}.activity-calendar-head{align-items:flex-start;flex-direction:column}.calendar-controls{width:100%;justify-content:space-between}.activity-calendar-grid{gap:4px}.activity-calendar-grid>span{min-height:31px}.release-schedule{grid-template-columns:1fr}}
