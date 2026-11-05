@@ -362,13 +362,26 @@ class StrawhatBrowserActivity : Activity() {
             textSize = 23f
             gravity = Gravity.CENTER
             setTextColor(Color.WHITE)
-            background = GradientDrawable().apply {
-                shape = GradientDrawable.OVAL
-                setColor(Color.rgb(137, 112, 255))
-                setStroke(dp(1), Color.rgb(190, 177, 255))
+            // Opaque layered violet glass: readable, glossy and never a see-through flat button.
+            background = android.graphics.drawable.LayerDrawable(arrayOf(
+                GradientDrawable(GradientDrawable.Orientation.TL_BR, intArrayOf(
+                    Color.rgb(117, 91, 190), Color.rgb(83, 65, 145), Color.rgb(45, 35, 78)
+                )).apply {
+                    shape = GradientDrawable.OVAL
+                    setStroke(dp(1), Color.rgb(224, 216, 255))
+                },
+                GradientDrawable().apply {
+                    shape = GradientDrawable.OVAL
+                    setColor(0x22FFFFFF)
+                    setStroke(dp(2), 0x44FFFFFF)
+                }
+            )).apply {
+                setLayerInset(1, dp(4), dp(4), dp(4), dp(4))
             }
-            elevation = dp(20).toFloat()
+            elevation = dp(22).toFloat()
             contentDescription = "Open floating music player"
+            isClickable = true
+            isFocusable = true
         }
         val savedMusicX = prefs.getInt("music_fab_x", -1)
         val savedMusicY = prefs.getInt("music_fab_y", -1)
@@ -389,24 +402,37 @@ class StrawhatBrowserActivity : Activity() {
         var musicStartLeft = 0
         var musicStartTop = 0
         var musicDragged = false
+        val touchSlop = android.view.ViewConfiguration.get(this).scaledTouchSlop
+        val rootScreen = IntArray(2)
         musicFab?.setOnTouchListener { view, event ->
             when (event.actionMasked) {
                 MotionEvent.ACTION_DOWN -> {
-                    musicDownX = event.rawX; musicDownY = event.rawY
-                    val lp = view.layoutParams as FrameLayout.LayoutParams
-                    musicStartLeft = lp.leftMargin; musicStartTop = lp.topMargin
+                    root.getLocationOnScreen(rootScreen)
+                    musicDownX = event.rawX
+                    musicDownY = event.rawY
+                    musicStartLeft = view.left
+                    musicStartTop = view.top
                     musicDragged = false
                     true
                 }
                 MotionEvent.ACTION_MOVE -> {
                     val dx = (event.rawX - musicDownX).toInt()
                     val dy = (event.rawY - musicDownY).toInt()
-                    if (kotlin.math.abs(dx) > dp(6) || kotlin.math.abs(dy) > dp(6)) musicDragged = true
+                    if (!musicDragged && (kotlin.math.abs(dx) > touchSlop || kotlin.math.abs(dy) > touchSlop)) {
+                        musicDragged = true
+                        view.parent?.requestDisallowInterceptTouchEvent(true)
+                    }
                     if (musicDragged) {
                         val lp = view.layoutParams as FrameLayout.LayoutParams
+                        val availableWidth = (root.width - root.paddingLeft - root.paddingRight - view.width).coerceAtLeast(0)
+                        val availableHeight = (root.height - root.paddingTop - root.paddingBottom - view.height).coerceAtLeast(0)
+                        val localX = (event.rawX - rootScreen[0] - root.paddingLeft - view.width / 2f).toInt()
+                        val localY = (event.rawY - rootScreen[1] - root.paddingTop - view.height / 2f).toInt()
                         lp.gravity = Gravity.TOP or Gravity.START
-                        lp.leftMargin = (musicStartLeft + dx).coerceIn(0, (root.width - view.width).coerceAtLeast(0))
-                        lp.topMargin = (musicStartTop + dy).coerceIn(0, (root.height - view.height).coerceAtLeast(0))
+                        lp.leftMargin = localX.coerceIn(0, availableWidth)
+                        lp.topMargin = localY.coerceIn(0, availableHeight)
+                        lp.rightMargin = 0
+                        lp.bottomMargin = 0
                         view.layoutParams = lp
                     }
                     true
@@ -415,10 +441,16 @@ class StrawhatBrowserActivity : Activity() {
                     if (musicDragged) {
                         val lp = view.layoutParams as FrameLayout.LayoutParams
                         prefs.edit().putInt("music_fab_x", lp.leftMargin).putInt("music_fab_y", lp.topMargin).apply()
-                    } else view.performClick()
+                    } else {
+                        view.performClick()
+                    }
+                    view.parent?.requestDisallowInterceptTouchEvent(false)
                     true
                 }
-                MotionEvent.ACTION_CANCEL -> true
+                MotionEvent.ACTION_CANCEL -> {
+                    view.parent?.requestDisallowInterceptTouchEvent(false)
+                    true
+                }
                 else -> true
             }
         }
@@ -1046,10 +1078,28 @@ class StrawhatBrowserActivity : Activity() {
             setBackgroundDrawable(android.graphics.drawable.ColorDrawable(Color.TRANSPARENT))
             addFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND)
             setDimAmount(.72f)
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                addFlags(android.view.WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
+                attributes = attributes.apply { blurBehindRadius = dp(28) }
+            }
         }
         val decor = dialog.window?.decorView ?: return
-        decor.setBackground(darkGlassShape(0xF0161326.toInt(), radius))
+        // Rich, mostly opaque tinted glass with a soft blurred backdrop, not a transparent panel.
+        decor.setBackground(GradientDrawable(GradientDrawable.Orientation.TL_BR,
+            intArrayOf(Color.rgb(48, 39, 72), Color.rgb(31, 26, 48), Color.rgb(19, 17, 28))
+        ).apply {
+            cornerRadius = dp(radius).toFloat()
+            setStroke(dp(1), 0x99C7B8FF.toInt())
+        })
         decor.clipToOutline = true
+        fun forceReadableText(view: View) {
+            if (view is TextView) {
+                view.setTextColor(if (view.id == android.R.id.message) Color.rgb(238, 234, 248) else Color.WHITE)
+            } else if (view is ViewGroup) {
+                for (index in 0 until view.childCount) forceReadableText(view.getChildAt(index))
+            }
+        }
+        forceReadableText(decor)
         val panelIds = intArrayOf(
             resources.getIdentifier("parentPanel", "id", "android"),
             resources.getIdentifier("topPanel", "id", "android"),
@@ -1067,9 +1117,9 @@ class StrawhatBrowserActivity : Activity() {
             setTextColor(Color.rgb(225, 220, 239))
             setLineSpacing(dp(3).toFloat(), 1f)
         }
-        dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.setTextColor(lilac)
-        dialog.getButton(AlertDialog.BUTTON_NEGATIVE)?.setTextColor(secondaryText)
-        dialog.getButton(AlertDialog.BUTTON_NEUTRAL)?.setTextColor(lilac)
+        dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.setTextColor(Color.WHITE)
+        dialog.getButton(AlertDialog.BUTTON_NEGATIVE)?.setTextColor(Color.rgb(225, 220, 239))
+        dialog.getButton(AlertDialog.BUTTON_NEUTRAL)?.setTextColor(Color.WHITE)
     }
 
     private fun showPolicy(title: String, message: String) {
