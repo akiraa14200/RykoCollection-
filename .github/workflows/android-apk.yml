@@ -13,6 +13,7 @@ on:
       - 'public/**'
       - 'branding/**'
       - 'scripts/**'
+      - 'native/**'
       - '.github/workflows/android-apk.yml'
 
 permissions:
@@ -145,6 +146,11 @@ jobs:
           target = app / "src/main/kotlin/com/rykocollection/app/browser/StrawhatBrowserActivity.kt"
           target.parent.mkdir(parents=True, exist_ok=True)
           target.write_text(source)
+          if "package com.rykocollection.app.browser" not in source or "class StrawhatBrowserActivity : Activity()" not in source:
+              raise SystemExit("Strawhat activity package/class does not match the Android launcher")
+          if not target.is_file():
+              raise SystemExit("Strawhat Kotlin activity was not copied into the Kotlin source set")
+          print("Strawhat Kotlin source:", target)
           assets = app / "src/main/assets"
           assets.mkdir(parents=True, exist_ok=True)
           (assets / "music_player.html").write_text(Path("native/strawhat/music_player.html").read_text())
