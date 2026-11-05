@@ -13,15 +13,10 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
 @Serializable
-data class AniListGraphQLRequest(
-    val query: String,
-    val variables: AniListGraphQLVariables
-)
+data class AniListGraphQLRequest(val query: String, val variables: AniListGraphQLVariables)
 
 @Serializable
-data class AniListGraphQLVariables(
-    val type: String
-)
+data class AniListGraphQLVariables(val type: String)
 
 @Serializable
 data class AniListEnvelope(val data: AniListData? = null)
@@ -43,34 +38,79 @@ data class AniListMedia(
 )
 
 @Serializable
-data class AniListTitle(
-    val english: String? = null,
-    val romaji: String? = null,
-    val native: String? = null
-) {
+data class AniListTitle(val english: String? = null, val romaji: String? = null, val native: String? = null) {
     val display: String get() = english ?: romaji ?: native ?: "Untitled"
 }
 
 @Serializable
-data class AniListCover(
-    val large: String? = null,
-    val extraLarge: String? = null
-) {
+data class AniListCover(val large: String? = null, val extraLarge: String? = null) {
     val imageUrl: String? get() = extraLarge ?: large
 }
 
 class AniListRepository {
     private val client = HttpClient(Android) {
-        install(ContentNegotiation) {
-            json(Json { ignoreUnknownKeys = true })
-        }
+        install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
     }
 
     suspend fun trendingMedia(manga: Boolean = false): List<AniListMedia> {
         val query = """
-            query($type: MediaType!) {
+            query(${'type: MediaType!) {
               Page(page: 1, perPage: 18) {
-                media(type: $type, sort: TRENDING_DESC, isAdult: false) {
+                media(type: ${ '$' }type, sort: TRENDING_DESC, isAdult: false) {
+                  id
+                  title { english romaji native }
+                  coverImage { large extraLarge }
+                  averageScore
+                  format
+                  seasonYear
+                }
+              }
+            }
+        """.trimIndent()
+
+        val request = AniListGraphQLRequest(
+            query = query,
+            variables = AniListGraphQLVariables(type = if (manga) "MANGA" else "ANIME")
+        )
+
+        val response: AniListEnvelope = client.post("https://graphql.anilist.co") {
+            contentType(ContentType.Application.Json)
+            setBody(request)
+        }.body()
+
+        return response.data?.Page?.media.orEmpty()
+    }
+
+    fun close() = client.close()
+}}type: MediaType!) {
+              Page(page: 1, perPage: 18) {
+                media(type: ${'type, sort: TRENDING_DESC, isAdult: false) {
+                  id
+                  title { english romaji native }
+                  coverImage { large extraLarge }
+                  averageScore
+                  format
+                  seasonYear
+                }
+              }
+            }
+        """.trimIndent()
+
+        val request = AniListGraphQLRequest(
+            query = query,
+            variables = AniListGraphQLVariables(type = if (manga) "MANGA" else "ANIME")
+        )
+
+        val response: AniListEnvelope = client.post("https://graphql.anilist.co") {
+            contentType(ContentType.Application.Json)
+            setBody(request)
+        }.body()
+
+        return response.data?.Page?.media.orEmpty()
+    }
+
+    fun close() = client.close()
+}}type, sort: TRENDING_DESC, isAdult: false) {
                   id
                   title { english romaji native }
                   coverImage { large extraLarge }
