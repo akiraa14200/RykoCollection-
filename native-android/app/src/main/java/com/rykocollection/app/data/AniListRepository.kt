@@ -57,9 +57,9 @@ class AniListRepository {
 
     suspend fun trendingMedia(manga: Boolean = false): List<AniListMedia> {
         val query = """
-            query(\${'$'}type: MediaType!) {
+            query(${'$'}type: MediaType!) {
               Page(page: 1, perPage: 18) {
-                media(type: \${'$'}type, sort: TRENDING_DESC, isAdult: false) {
+                media(type: ${'$'}type, sort: TRENDING_DESC, isAdult: false) {
                   id
                   title { english romaji native }
                   coverImage { large extraLarge }
