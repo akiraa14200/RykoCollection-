@@ -20,6 +20,41 @@ function parseFeed(xml:string) {
   }).filter(Boolean);
 }
 
+function readInitialData(html:string):any {
+  const marker=html.match(/(?:var\s+ytInitialData|window\["ytInitialData"\])\s*=\s*/);
+  if(!marker||marker.index===undefined)return null;
+  const start=html.indexOf("{",marker.index+marker[0].length);
+  if(start<0)return null;
+  let depth=0,inString=false,escaped=false;
+  for(let i=start;i<html.length;i++){
+    const ch=html[i];
+    if(inString){if(escaped)escaped=false;else if(ch==="\\")escaped=true;else if(ch==='"')inString=false;continue;}
+    if(ch==='"'){inString=true;continue;}
+    if(ch==="{")depth++;
+    else if(ch==="}"&&--depth===0){try{return JSON.parse(html.slice(start,i+1));}catch{return null;}}
+  }
+  return null;
+}
+function parsePlaylistPage(html:string) {
+  const root=readInitialData(html);
+  if(!root)return [];
+  const found:any[]=[];
+  const walk=(value:any)=>{
+    if(!value||typeof value!=="object")return;
+    if(value.videoRenderer?.videoId){
+      const v=value.videoRenderer;
+      const title=v.title?.runs?.map((x:any)=>x.text||"").join("")||v.title?.simpleText||"";
+      const creator=v.shortBylineText?.runs?.map((x:any)=>x.text||"").join("")||v.ownerText?.runs?.map((x:any)=>x.text||"").join("")||"";
+      const thumbs=v.thumbnail?.thumbnails||[];
+      const thumbnail=thumbs.length?thumbs[thumbs.length-1].url||"": "";
+      if(title)found.push({video_id:v.videoId,video_url:\`https://www.youtube.com/watch?v=\${v.videoId}\`,video_title:title.slice(0,300),creator_name:creator.slice(0,160)||null,thumbnail_url:thumbnail.slice(0,2048)||null,category:"channel upload",relevance_score:50,description:null,view_count:null,published_at:null});
+    }
+    for(const child of Object.values(value))if(child&&typeof child==="object")walk(child);
+  };
+  walk(root);
+  return [...new Map(found.map(v=>[v.video_id,v])).values()].slice(0,100);
+}
+
 function classify(text:string) {
   const t=text.toLowerCase();
   if(/trailer|teaser|pv\b|official preview/.test(t))return "trailer";
@@ -68,9 +103,18 @@ Deno.serve(async (req:Request) => {
     }
     const feedUrl=new URL("https://www.youtube.com/feeds/videos.xml");
     feedUrl.searchParams.set(type==="channel"?"channel_id":"playlist_id",channelId);
-    const feed=await fetch(feedUrl,{headers:{"User-Agent":"RykoCollection/2.0","Accept":"application/atom+xml, application/xml, text/xml"}});
-    if(!feed.ok)return Response.json({error:`YouTube feed returned HTTP ${feed.status}`},{status:502,headers:corsHeaders});
-    const videos=parseFeed(await feed.text());
+    const feed=await fetch(feedUrl,{headers:{"User-Agent":"Mozilla/5.0 (compatible; RykoCollection/2.0)","Accept":"application/atom+xml, application/xml, text/xml"}});
+    let videos:any[]=[];
+    if(feed.ok)videos=parseFeed(await feed.text());
+    if(type==="playlist"&&(!feed.ok||videos.length===0)){
+      const page=await fetch(`https://www.youtube.com/playlist?list=${encodeURIComponent(key)}`,{headers:{"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0.0.0 Safari/537.36","Accept":"text/html"}});
+      if(!page.ok)return Response.json({error:`Playlist feed returned HTTP ${feed.status}; YouTube playlist page returned HTTP ${page.status}. Check that the playlist is public or unlisted.`},{status:502,headers:corsHeaders});
+      const html=(await page.text()).slice(0,12000000);
+      videos=parsePlaylistPage(html);
+      if(!videos.length)return Response.json({error:"YouTube opened the playlist, but did not expose any video entries. Make sure it is public or unlisted and contains videos."},{status:422,headers:corsHeaders});
+    }else if(!feed.ok){
+      return Response.json({error:`YouTube channel feed returned HTTP ${feed.status}`},{status:502,headers:corsHeaders});
+    }
     return Response.json({ok:true,videos,count:videos.length},{headers:{...corsHeaders,"Cache-Control":"no-store"}});
   }catch(error){
     return Response.json({error:error instanceof Error?error.message:"Discovery failed"},{status:500,headers:corsHeaders});
