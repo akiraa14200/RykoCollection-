@@ -612,3 +612,5 @@ body{padding-bottom:104px}
 .yt-source-directory-head button{border:0;background:transparent;color:#e8c875;font-size:10px;font-weight:700;cursor:pointer}
 
 .nav-links .nav-browser-link{font-size:13px;color:#d7d0ff;display:flex;gap:7px;align-items:center;background:#8b7cff18;border:1px solid #8b7cff55;border-radius:9px;padding:8px 11px;white-space:nowrap}.nav-links .nav-browser-link:hover{background:#8b7cff30;color:#fff}
+
+.bottom-nav-browser{border:0;background:transparent;font-family:inherit;cursor:pointer;-webkit-appearance:none;appearance:none}
