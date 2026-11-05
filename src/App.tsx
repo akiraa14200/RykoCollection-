@@ -139,6 +139,13 @@ const HOME_CACHE_KEY = 'home';
 const HOME_CACHE_AGE = 24 * 60 * 60 * 1000;
 
 function Home() {
+  const navigate = useNavigate();
+  const [homeSearchTerm, setHomeSearchTerm] = useState('');
+  const openBrowseSearch = (event: FormEvent) => {
+    event.preventDefault();
+    const query = homeSearchTerm.trim();
+    navigate(query ? `/search?q=${encodeURIComponent(query)}` : '/search');
+  };
   // Stale-while-revalidate: show the last good catalogue instantly, then refresh it.
   const [snapshot] = useState(() => { const value = readPersisted<HomeSnapshot>(HOME_CACHE_KEY, HOME_CACHE_AGE); if (value) Object.values(value).forEach(rememberPreviews); return value; });
   const [trending, setTrending] = useState<Anime[]>(snapshot?.trending || []);
@@ -187,6 +194,11 @@ function Home() {
     return () => window.clearInterval(timer);
   }, [featured.length, tabActive]);
   return <main className="page-shell">
+    <form className="nav-search home-search" role="search" onSubmit={openBrowseSearch} style={{ display: 'flex', width: 'min(100%, 680px)', margin: '0 auto 24px', minHeight: 48 }}>
+      <Search size={18}/>
+      <input value={homeSearchTerm} onChange={event => setHomeSearchTerm(event.target.value)} onFocus={() => navigate(homeSearchTerm.trim() ? `/search?q=${encodeURIComponent(homeSearchTerm.trim())}` : '/search')} placeholder="Search anime, manga & more..." aria-label="Search anime and manga" />
+      <button type="submit" aria-label="Open browse search" className="home-search-submit"><Search size={17}/></button>
+    </form>
     {hero && <section className="hero" aria-label="Featured anime carousel">
       <img className="hero-banner-image" src={hero.bannerImage || imageOf(hero)} alt="" fetchPriority="high" decoding="async"/>
       <div className="hero-copy"><span className="eyebrow"><Sparkles size={14}/> YOUR NEXT FAVORITE STARTS HERE</span><h1>Find your next<br/><em>anime obsession.</em></h1><p>Explore stories worth getting lost in. Discover trending series, seasonal gems and timeless favorites.</p><div className="hero-actions"><Link className="primary-btn" to={hero ? `/anime/${hero.id}` : '/search'}><Play size={16} fill="currentColor"/> Explore featured</Link><Link className="secondary-btn" to="/search">Browse library <ChevronRight size={16}/></Link></div><div className="hero-featured">{hero && <><span>FEATURED PICK · {heroIndex + 1}/5</span><strong>{titleOf(hero)}</strong></>}</div><div className="hero-carousel-controls"><button aria-label="Previous featured anime" onClick={() => setHeroIndex(i => (i + 4) % Math.max(1, featured.length))}><ChevronLeft size={16}/></button>{featured.map((item,index)=><button key={item.id} aria-label={`Show ${titleOf(item)}`} className={index===heroIndex?"active":""} onClick={()=>setHeroIndex(index)} />)}<button aria-label="Next featured anime" onClick={() => setHeroIndex(i => (i + 1) % Math.max(1, featured.length))}><ChevronRight size={16}/></button></div></div>
