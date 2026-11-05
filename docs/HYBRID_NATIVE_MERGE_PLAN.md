@@ -16,7 +16,7 @@ RykoCollection remains the product and frontend. The existing React + TypeScript
 
 The referenced Musify-App workflow artifact was built from the `StreamGurd` branch and outputs an Android app from `android/StreamGurd`. Its Gradle configuration identifies the app as `com.streamgurd.browser`, its manifest labels the launcher app `Strawhat Pirate`, and its listed app dependency is AndroidX WebKit. This is not evidence of a native music-player implementation. Do not import its app identity, browser screens, manifest branding, or unrelated Cloudflare transcription backend into RykoCollection.
 
-The StreamGurd Android project may be used as a reference for Gradle/Kotlin project configuration after its complete source is audited. Native media playback must be implemented against a verified Android media stack rather than assumed to exist in that project.
+The StreamGurd MainActivity source contains an in-app WebView and a YouTube Music search/embed panel that depends on a user-supplied YouTube Data API key. It does not establish a standalone native audio engine, Media3/ExoPlayer integration, or a foreground media playback service. Its browser activity and UI must not be transplanted into RykoCollection. Its Gradle/Kotlin configuration may be used only as a reference. Any native audio service must be designed and verified independently.
 
 ## Phased implementation
 
