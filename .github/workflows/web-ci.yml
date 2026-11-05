@@ -2,7 +2,7 @@ name: Web application checks
 
 on:
   push:
-    branches: [main, feature/hybrid-video-catalogue]
+    branches: [main, feature/hybrid-video-catalogue, ryko-ecosystem-upgrades]
   pull_request:
     branches: [main]
 
