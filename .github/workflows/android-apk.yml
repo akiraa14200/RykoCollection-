@@ -226,6 +226,24 @@ jobs:
           print("Integrated Strawhat Pirate browser activity, music asset and RykoNative launcher.")
           PY
 
+      - name: Make Gradle wrapper download resilient
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          wrapper = Path("android/gradle/wrapper/gradle-wrapper.properties")
+          if not wrapper.is_file():
+              raise SystemExit("Gradle wrapper properties were not generated")
+          content = wrapper.read_text()
+          content = re.sub(r"distributionUrl=.*gradle-([0-9.]+)-(?:all|bin)\\.zip", r"distributionUrl=https\\://services.gradle.org/distributions/gradle-\\1-bin.zip", content)
+          if "networkTimeout=" in content:
+              content = re.sub(r"networkTimeout=\\d+", "networkTimeout=120000", content)
+          else:
+              content += "\\nnetworkTimeout=120000\\n"
+          wrapper.write_text(content)
+          print("Configured Gradle binary distribution and 120-second download timeout")
+          PY
+
       - name: Build debug APK
         run: |
           chmod +x android/gradlew
