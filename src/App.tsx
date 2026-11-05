@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { Link, Navigate, Route, Routes, useNavigate, useParams, useLocation, type Location } from 'react-router-dom';
-import { Search, Compass, Bookmark, ShieldCheck, Play, Star, ChevronRight, ArrowLeft, Heart, Clock3, Menu, X, ExternalLink, Sparkles, Tv, Info, Users, FileText, Globe, Youtube, ListVideo, ChevronDown, RotateCw, Home as HomeIcon, UserRound, ChevronLeft, Shuffle, MessageCircle, Minus, Plus, Settings, Trash2, Clock, BookOpen, Mail, Shield } from 'lucide-react';
+import { Search, Compass, Bookmark, ShieldCheck, Play, Star, ChevronRight, ArrowLeft, Heart, Clock3, Menu, X, ExternalLink, Sparkles, Tv, Info, Users, FileText, Globe, Youtube, ListVideo, ChevronDown, RotateCw, Home as HomeIcon, UserRound, ChevronLeft, Shuffle, MessageCircle, Minus, Plus, Settings, Trash2, Clock, BookOpen, Mail, Shield, Newspaper } from 'lucide-react';
 // The application UI and page components are defined below.
 // Home recommendations replace the seasonal shelf; release countdowns remain in their own schedule.
 import { Anime, AnimeCharacter, getAnime, peekAnime, rememberPreviews, applyCachedVideoMetadata, enrichVideoMetadataProgressive, getAnimeCharacters, getPopular, getPopularManga, getSeasonal, getTrending, getTrendingManga, getRelatedVideos, getRelatedShortVideos, searchRelatedVideos, getRelatedVideosBySourceIds, RelatedVideo, imageOf, searchAnime, titleOf } from './lib/catalogue';
@@ -22,6 +22,7 @@ import './components/extras.css';
 import { LibraryStudio } from './components/LibraryStudio';
 import './components/community-library.css';
 import { EntryComments, EntryLikeButton, RykoTrendingPage } from './components/EntryEngagement';
+import { NewsPage } from './components/NewsPage';
 
 /** Calls onReach when the returned element scrolls near the viewport (infinite loading). */
 function useNearViewport(onReach: () => void, enabled: boolean) {
@@ -72,22 +73,37 @@ function Header({ user, isAdmin, onSignOut }: { user: User | null; isAdmin: bool
   const submit = (event: FormEvent) => { event.preventDefault(); openExplore(); setOpen(false); };
   return <header className="topbar"><div className="nav-wrap">
     <Link to="/" className="brand"><img className="brand-mark brand-logo" src="/logo.svg" alt="" width="31" height="31"/><span>RYKOCOLLECTION</span></Link>
-    <nav className={open ? 'nav-links open' : 'nav-links'}>
-      <Link to="/"><Compass size={16}/> Discover</Link><Link to="/search">Explore</Link><Link to="/watchlist"><Bookmark size={16}/> My list</Link><Link to="/video"><Tv size={16}/> Video</Link><Link to="/trending"><Star size={16}/> Top trending</Link><Link to="/privacy"><ShieldCheck size={16}/> Privacy</Link>{isAdmin && <Link to="/admin"><ShieldCheck size={16}/> Admin workspace</Link>}
-    </nav>
     <div className="topbar-catalogue-tools">
       <form className="nav-search topbar-explore-search" onSubmit={submit} onClick={() => { if (location.pathname !== '/search') openExplore(); }} role="search" aria-label="Open Browse and Explore">
         <Search size={16}/>
         <input value={term} onChange={e => setTerm(e.target.value)} onFocus={() => { if (location.pathname !== '/search') openExplore(); setOpen(false); }} placeholder="Search & explore..." aria-label="Search and explore anime or manga"/>
         <kbd>↵</kbd>
       </form>
-      <div className="topbar-catalogue-switch" role="group" aria-label="Switch home catalogue">
-        <button type="button" className={catalogueMode === 'anime' ? 'active' : ''} aria-pressed={catalogueMode === 'anime'} onClick={() => chooseCatalogue('anime')}><Tv size={12}/><span>Anime</span></button>
-        <button type="button" className={catalogueMode === 'manga' ? 'active' : ''} aria-pressed={catalogueMode === 'manga'} onClick={() => chooseCatalogue('manga')}><BookOpen size={12}/><span>Manga</span></button>
+      <div className="topbar-menu-wrap">
+        <button type="button" className="icon-btn topbar-menu-button" aria-label="Open Ryko menu" aria-expanded={open} onClick={() => setOpen(value => !value)}>{open ? <X size={19}/> : <Menu size={19}/>}</button>
+        {open && <div className="topbar-menu-panel" role="menu" aria-label="RykoCollection menu">
+          <div className="topbar-menu-heading">Catalogue mode</div>
+          <div className="topbar-menu-mode">
+            <button type="button" className={catalogueMode === 'anime' ? 'active' : ''} aria-pressed={catalogueMode === 'anime'} onClick={() => { chooseCatalogue('anime'); setOpen(false); }}><Tv size={15}/> Anime</button>
+            <button type="button" className={catalogueMode === 'manga' ? 'active' : ''} aria-pressed={catalogueMode === 'manga'} onClick={() => { chooseCatalogue('manga'); setOpen(false); }}><BookOpen size={15}/> Manga</button>
+          </div>
+          <div className="topbar-menu-divider"/>
+          <Link role="menuitem" to="/"><Compass size={16}/> Discover</Link>
+          <Link role="menuitem" to="/search"><Search size={16}/> Explore</Link>
+          <Link role="menuitem" to="/watchlist"><Bookmark size={16}/> My list</Link>
+          <Link role="menuitem" to="/video"><Tv size={16}/> RykoTube</Link>
+          <Link role="menuitem" to="/trending"><Star size={16}/> Ryko Top Trending</Link>
+          <Link role="menuitem" to="/news"><Newspaper size={16}/> Anime & Manga News</Link>
+          <Link role="menuitem" to="/library-studio"><BookOpen size={16}/> Library studio</Link>
+          <Link role="menuitem" to="/settings"><Settings size={16}/> Settings</Link>
+          <Link role="menuitem" to="/about"><Info size={16}/> About Ryko</Link>
+          <Link role="menuitem" to="/privacy"><ShieldCheck size={16}/> Privacy</Link>
+          {isAdmin && <Link role="menuitem" to="/admin"><ShieldCheck size={16}/> Admin workspace</Link>}
+          {user && <button type="button" className="topbar-menu-signout" onClick={() => { setOpen(false); onSignOut(); }}>Sign out</button>}
+        </div>}
       </div>
     </div>
-    {user && <div className="nav-account"><span>{String(user.user_metadata?.display_name || "Reader")}</span><button onClick={onSignOut}>Sign out</button></div>}
-    <button className="icon-btn mobile-menu" onClick={() => setOpen(!open)} aria-label="Toggle menu">{open ? <X/> : <Menu/>}</button>
+    {user && <div className="nav-account"><span>{String(user.user_metadata?.display_name || "Reader")}</span></div>}
   </div></header>;
 }
 
@@ -1312,7 +1328,7 @@ function TabbedRoutes({ user, isAdmin }: { user: User | null; isAdmin: boolean }
         <Routes location={tabLocations.current[path]}><Route path={path} element={tabElement(path)}/></Routes>
       </TabActiveContext.Provider>
     </div>)}
-    {!activeTab && <Routes><Route path="/anime/:id" element={<DetailPage user={user}/>}/><Route path="/privacy" element={<PrivacyPage/>}/><Route path="/terms" element={<TermsPage/>}/><Route path="/settings" element={<AppSettings/>}/><Route path="/activity" element={<ActivityDashboard/>}/><Route path="/trending" element={<RykoTrendingPage/>}/><Route path="/library-studio" element={<LibraryStudio/>}/><Route path="/about" element={<AboutPage/>}/><Route path="/extensions" element={<Navigate to="/account" replace/>}/><Route path="/admin" element={<AdminWorkspace/>}/><Route path="*" element={<main className="content-page empty-state"><Search size={28}/><h1>Page not found</h1><p>This page may have moved. Start again from Home or explore the catalogue.</p><div className="empty-state-actions"><Link className="primary-btn" to="/">Go to Home</Link><Link className="secondary-btn" to="/search">Explore catalogue</Link></div></main>}/></Routes>}
+    {!activeTab && <Routes><Route path="/anime/:id" element={<DetailPage user={user}/>}/><Route path="/privacy" element={<PrivacyPage/>}/><Route path="/terms" element={<TermsPage/>}/><Route path="/settings" element={<AppSettings/>}/><Route path="/activity" element={<ActivityDashboard/>}/><Route path="/trending" element={<RykoTrendingPage/>}/><Route path="/news" element={<NewsPage/>}/><Route path="/library-studio" element={<LibraryStudio/>}/><Route path="/about" element={<AboutPage/>}/><Route path="/extensions" element={<Navigate to="/account" replace/>}/><Route path="/admin" element={<AdminWorkspace/>}/><Route path="*" element={<main className="content-page empty-state"><Search size={28}/><h1>Page not found</h1><p>This page may have moved. Start again from Home or explore the catalogue.</p><div className="empty-state-actions"><Link className="primary-btn" to="/">Go to Home</Link><Link className="secondary-btn" to="/search">Explore catalogue</Link></div></main>}/></Routes>}
   </>;
 }
 
