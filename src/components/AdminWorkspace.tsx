@@ -99,8 +99,8 @@ export function AdminWorkspace() {
     else if(host==='dailymotion.com'||host.endsWith('.dailymotion.com')||host==='dai.ly')detected='dailymotion';
     if(!detected)throw new Error('Supported links: YouTube, Instagram Reels, TikTok and Dailymotion.');
     if(detected!==videoForm.platform)throw new Error('This link belongs to '+detected+'. Select '+detected+' as the platform and save again.');
-    if(detected==='instagram'&&!/\\/(reel|reels|p)\\//i.test(parsed.pathname))throw new Error('Paste a direct Instagram Reel URL, not a profile or homepage.');
-    if(detected==='youtube'&&!(/\\/(shorts|watch|embed|live)\\//i.test(parsed.pathname)||parsed.searchParams.has('v')||host==='youtu.be'))throw new Error('Paste a direct YouTube video or Shorts URL.');
+    if(detected==='instagram'&&!parsed.pathname.match(/^\/(reel|reels|p)\//i))throw new Error('Paste a direct Instagram Reel URL, not a profile or homepage.');
+    if(detected==='youtube'&&!(/^\/(shorts|watch|embed|live)\//i.test(parsed.pathname)||parsed.searchParams.has('v')||host==='youtu.be'))throw new Error('Paste a direct YouTube video or Shorts URL.');
     const {data:existing,error:duplicateError}=await supabase.from('related_videos').select('id').eq('video_url',raw).maybeSingle();
     if(duplicateError)throw duplicateError;
     if(existing)throw new Error('This video link is already in the RykoTube catalogue.');
