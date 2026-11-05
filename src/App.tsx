@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef,
 import { Link, Navigate, Route, Routes, useNavigate, useParams, useLocation, type Location } from 'react-router-dom';
 import { Search, Compass, Bookmark, ShieldCheck, Play, Star, ChevronRight, ArrowLeft, Heart, Clock3, Menu, X, ExternalLink, Sparkles, Tv, Info, Users, FileText, Globe, Youtube, ListVideo, ChevronDown, RotateCw, MessageCircle, Home as HomeIcon, UserRound, ChevronLeft, Shuffle, Minus, Plus, Settings, Trash2, Clock } from 'lucide-react';
 // The application UI and page components are defined below.
-import { Anime, AnimeCharacter, getAnime, peekAnime, rememberPreviews, applyCachedVideoMetadata, enrichVideoMetadataProgressive, getAnimeCharacters, getPopular, getPopularManga, getSeasonal, getTrending, getTrendingManga, getRelatedVideos, RelatedVideo, imageOf, searchAnime, titleOf } from './lib/catalogue';
+import { Anime, AnimeCharacter, getAnime, peekAnime, rememberPreviews, applyCachedVideoMetadata, enrichVideoMetadataProgressive, getAnimeCharacters, getPopular, getPopularManga, getSeasonal, getTrending, getTrendingManga, getRelatedVideos, getRelatedVideosBySourceIds, RelatedVideo, imageOf, searchAnime, titleOf } from './lib/catalogue';
 import type { User } from '@supabase/supabase-js';
 import { supabase } from './lib/supabase';
 import { AnimeComments } from './components/AnimeComments';
@@ -770,6 +770,13 @@ function VideoPage() {
   },[tabActive]);
   const {savedVideos,toggleVideo}=useLibrary();
   const savedVideoIds=useMemo(()=>new Set(savedVideos.map(video=>video.id)),[savedVideos]);
+  const sourceFilteredIds=useMemo(()=>{
+    if(selectedSource)return [selectedSource];
+    if(sourceTypeFilter==='all')return [];
+    return videoSources.filter(source=>source.source_type===sourceTypeFilter).map(source=>source.id);
+  },[selectedSource,sourceTypeFilter,videoSources]);
+  const sourceFilterActive=!!selectedSource||sourceTypeFilter!=='all';
+
 
   // Patch titles/channels into cards as each background batch arrives (order never changes).
   const enrich=(list:RelatedVideo[],isActive:()=>boolean)=>{
@@ -801,22 +808,43 @@ function VideoPage() {
 
   useEffect(()=>{
     let active=true;
-    // Instant first paint from the last visit, then refresh in the background.
-    const snapshot=readPersisted<RelatedVideo[]>('video-feed',12*60*60*1000);
-    if(snapshot?.length){setVideos(applyCachedVideoMetadata(snapshot));setLoading(false);}
-    getRelatedVideos(1).then(data=>{
-      if(!active)return;
-      // Show cards right away (with any titles cached on this device); fetch the rest progressively.
-      setVideos(applyCachedVideoMetadata(data));
-      setHasMore(data.length>0);
-      setLoading(false);
-      writePersisted('video-feed',data);
-      enrich(data,()=>active);
-    }).catch(e=>{
-      if(active&&!snapshot?.length)setError(e instanceof Error?e.message:'Could not load videos.');
-    }).finally(()=>{if(active)setLoading(false);});
+    setPage(1);
+    setLoading(true);
+    setError('');
+    if(sourceFilterActive){
+      // Source filters query the complete source-linked set in Supabase.
+      // Filtering only the first global 40 rows hid older channel/playlist videos.
+      if(!sourceFilteredIds.length){
+        setVideos([]);
+        setHasMore(false);
+        setLoading(false);
+        return()=>{active=false;};
+      }
+      getRelatedVideosBySourceIds(sourceFilteredIds,1).then(data=>{
+        if(!active)return;
+        setVideos(applyCachedVideoMetadata(data));
+        setHasMore(data.length===40);
+        setLoading(false);
+        enrich(data,()=>active);
+      }).catch(e=>{
+        if(active)setError(e instanceof Error?e.message:'Could not load source videos.');
+      }).finally(()=>{if(active)setLoading(false);});
+    }else{
+      const snapshot=readPersisted<RelatedVideo[]>('video-feed',12*60*60*1000);
+      if(snapshot?.length){setVideos(applyCachedVideoMetadata(snapshot));setLoading(false);}
+      getRelatedVideos(1).then(data=>{
+        if(!active)return;
+        setVideos(applyCachedVideoMetadata(data));
+        setHasMore(data.length===40);
+        setLoading(false);
+        writePersisted('video-feed',data);
+        enrich(data,()=>active);
+      }).catch(e=>{
+        if(active&&!snapshot?.length)setError(e instanceof Error?e.message:'Could not load videos.');
+      }).finally(()=>{if(active)setLoading(false);});
+    }
     return()=>{active=false;};
-  },[]);
+  },[selectedSource,sourceTypeFilter,sourceFilteredIds.join(','),sourceFilterActive]);
 
   const filtered=useMemo(()=>{
     const query=term.trim().toLowerCase();
@@ -881,7 +909,9 @@ function VideoPage() {
     setLoadingMore(true);
     setError('');
     try{
-      const raw=await getRelatedVideos(page+1);
+      const raw=sourceFilterActive
+        ? await getRelatedVideosBySourceIds(sourceFilteredIds,page+1)
+        : await getRelatedVideos(page+1);
       const data=applyCachedVideoMetadata(raw);
       setVideos(old=>{const ids=new Set(old.map(video=>video.id));return [...old,...data.filter(video=>!ids.has(video.id))];});
       setPage(current=>current+1);
