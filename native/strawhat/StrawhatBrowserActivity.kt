@@ -401,6 +401,8 @@ class StrawhatBrowserActivity : Activity() {
         var musicDownY = 0f
         var musicStartLeft = 0
         var musicStartTop = 0
+        var musicGrabOffsetX = 0f
+        var musicGrabOffsetY = 0f
         var musicDragged = false
         val touchSlop = android.view.ViewConfiguration.get(this).scaledTouchSlop
         val rootScreen = IntArray(2)
@@ -412,6 +414,8 @@ class StrawhatBrowserActivity : Activity() {
                     musicDownY = event.rawY
                     musicStartLeft = view.left
                     musicStartTop = view.top
+                    musicGrabOffsetX = event.rawX - rootScreen[0] - root.paddingLeft - view.left
+                    musicGrabOffsetY = event.rawY - rootScreen[1] - root.paddingTop - view.top
                     musicDragged = false
                     true
                 }
@@ -426,8 +430,8 @@ class StrawhatBrowserActivity : Activity() {
                         val lp = view.layoutParams as FrameLayout.LayoutParams
                         val availableWidth = (root.width - root.paddingLeft - root.paddingRight - view.width).coerceAtLeast(0)
                         val availableHeight = (root.height - root.paddingTop - root.paddingBottom - view.height).coerceAtLeast(0)
-                        val localX = (event.rawX - rootScreen[0] - root.paddingLeft - view.width / 2f).toInt()
-                        val localY = (event.rawY - rootScreen[1] - root.paddingTop - view.height / 2f).toInt()
+                        val localX = (event.rawX - rootScreen[0] - root.paddingLeft - musicGrabOffsetX).toInt()
+                        val localY = (event.rawY - rootScreen[1] - root.paddingTop - musicGrabOffsetY).toInt()
                         lp.gravity = Gravity.TOP or Gravity.START
                         lp.leftMargin = localX.coerceIn(0, availableWidth)
                         lp.topMargin = localY.coerceIn(0, availableHeight)
