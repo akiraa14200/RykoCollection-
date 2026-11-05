@@ -98,7 +98,14 @@ export async function getRelatedVideos(page = 1, titleId?: string): Promise<Rela
   // values are text identifiers, not PostgreSQL UUIDs; never pass them to .in('id', ...).
   const isDatabaseUuid = (value: unknown): value is string =>
     typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value.trim());
-  const titleIds = [...new Set(videos.map(video => video.titleId.trim()).filter(isDatabaseUuid))];
+  // Build UUID lookups only from the actual UUID-typed title_id column.
+  // legacy_title_id is text and can contain AniList IDs or empty strings; it must
+  // never be sent to Postgres' UUID comparison, even if a legacy row is malformed.
+  const titleIds = [...new Set(((data || []) as RelatedVideoRow[])
+    .flatMap(row => {
+      const id = typeof row.title_id === 'string' ? row.title_id.trim() : '';
+      return isDatabaseUuid(id) ? [id] : [];
+    }))];
   if (titleIds.length) {
     const { data: titles, error: titleError } = await supabase.from('titles')
       .select('id,name,cover_url,media_type,release_year,genres')
