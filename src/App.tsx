@@ -5,7 +5,6 @@ import { Search, Compass, Bookmark, ShieldCheck, Play, Star, ChevronRight, Arrow
 import { Anime, AnimeCharacter, getAnime, peekAnime, rememberPreviews, applyCachedVideoMetadata, enrichVideoMetadataProgressive, getAnimeCharacters, getPopular, getPopularManga, getSeasonal, getTrending, getTrendingManga, getRelatedVideos, getRelatedShortVideos, searchRelatedVideos, getRelatedVideosBySourceIds, RelatedVideo, imageOf, searchAnime, titleOf } from './lib/catalogue';
 import type { User } from '@supabase/supabase-js';
 import { supabase } from './lib/supabase';
-import { AnimeComments } from './components/AnimeComments';
 import { AdminWorkspace } from './components/AdminWorkspace';
 import './components/admin-workspace.css';
 import { useAmbientGlow } from './components/AmbientGlow';
@@ -317,13 +316,13 @@ function uniqueSourceLinks(links: { url: string; site: string; language?: string
     .filter(link => !seenLabel.has(link.label) && !!seenLabel.add(link.label)).slice(0, 14);
 }
 
-function DetailPage({ user }: { user: User | null }) {
+function DetailPage() {
   const { id } = useParams();
   const [anime, setAnime] = useState<Anime | null>(() => peekAnime(id || ''));
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [attempt, setAttempt] = useState(0);
-  const [activeTab, setActiveTab] = useState<'overview' | 'characters' | 'details' | 'comments'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'characters' | 'details'>('overview');
   const [selectedCharacter, setSelectedCharacter] = useState<AnimeCharacter | null>(null);
   const [characterPage, setCharacterPage] = useState(1);
   const [loadingCharacters, setLoadingCharacters] = useState(false);
@@ -382,7 +381,6 @@ function DetailPage({ user }: { user: User | null }) {
     { id: 'overview' as const, label: 'Overview', icon: <Info size={16}/> },
     { id: 'characters' as const, label: 'Characters', icon: <Users size={16}/>, count: anime.characters?.edges.length },
     { id: 'details' as const, label: 'Details', icon: <FileText size={16}/> },
-    { id: 'comments' as const, label: 'Comments', icon: <MessageCircle size={16}/> }
   ];
 
   return <main className="detail-page">
@@ -487,7 +485,6 @@ function DetailPage({ user }: { user: User | null }) {
         <div className="entry-source-links"><h3><Globe size={17}/> Source links</h3><div>{anime.siteUrl && <a href={anime.siteUrl} target="_blank" rel="noreferrer">AniList entry <ExternalLink size={13}/></a>}{sourceLinks.map(link=><a key={link.url} href={link.url} target="_blank" rel="noreferrer">{link.label} <ExternalLink size={13}/></a>)}{loading&&!sourceLinks.length&&<span className="fine-print">Loading links…</span>}</div></div>
       </section>}
 
-      {activeTab === 'comments' && <div className="entry-comments-panel"><AnimeComments animeId={anime.id} animeTitle={titleOf(anime)} user={user}/></div>}
 
       {showPlayer && <div className="player-panel"><div className="section-head"><div><h2>Watch panel</h2><p>Use a video URL you are authorized to access.</p></div><button className="icon-btn" onClick={()=>setShowPlayer(false)} aria-label="Close player"><X/></button></div><div className="source-input"><input value={source} onChange={e=>setSource(e.target.value)} placeholder="Paste an authorized HTTPS video URL"/><button className="primary-btn" onClick={()=>{if(source.startsWith('https://')) window.open(source,'_blank','noopener,noreferrer');}}>Open source</button></div><p className="fine-print">RykoCollection does not host episodes or provide unauthorized streams. Playback and advertising behavior on external providers is controlled by those providers.</p></div>}
     </div>
@@ -1211,7 +1208,7 @@ function TabbedRoutes({ user, isAdmin }: { user: User | null; isAdmin: boolean }
         <Routes location={tabLocations.current[path]}><Route path={path} element={tabElement(path)}/></Routes>
       </TabActiveContext.Provider>
     </div>)}
-    {!activeTab && <Routes><Route path="/anime/:id" element={<DetailPage user={user}/>}/><Route path="/privacy" element={<PrivacyPage/>}/><Route path="/terms" element={<TermsPage/>}/><Route path="/settings" element={<AppSettings/>}/><Route path="/about" element={<AboutPage/>}/><Route path="/extensions" element={<Navigate to="/account" replace/>}/><Route path="/admin" element={<AdminWorkspace/>}/><Route path="*" element={<main className="content-page empty-state"><Search size={28}/><h1>Page not found</h1><p>This page may have moved. Start again from Home or explore the catalogue.</p><div className="empty-state-actions"><Link className="primary-btn" to="/">Go to Home</Link><Link className="secondary-btn" to="/search">Explore catalogue</Link></div></main>}/></Routes>}
+    {!activeTab && <Routes><Route path="/anime/:id" element={<DetailPage/>}/><Route path="/privacy" element={<PrivacyPage/>}/><Route path="/terms" element={<TermsPage/>}/><Route path="/settings" element={<AppSettings/>}/><Route path="/about" element={<AboutPage/>}/><Route path="/extensions" element={<Navigate to="/account" replace/>}/><Route path="/admin" element={<AdminWorkspace/>}/><Route path="*" element={<main className="content-page empty-state"><Search size={28}/><h1>Page not found</h1><p>This page may have moved. Start again from Home or explore the catalogue.</p><div className="empty-state-actions"><Link className="primary-btn" to="/">Go to Home</Link><Link className="secondary-btn" to="/search">Explore catalogue</Link></div></main>}/></Routes>}
   </>;
 }
 
