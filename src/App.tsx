@@ -15,6 +15,8 @@ import { readPersisted, writePersisted } from './lib/persist';
 import { isAmbientEnabled, setAmbientEnabled } from './lib/ambient';
 import { VideoActionMenu, flushPendingReports } from './components/VideoActions';
 import { useAppBackNavigation, useBackLayer } from './lib/backNav';
+import { App as CapApp } from '@capacitor/app';
+import { Capacitor } from '@capacitor/core';
 import { ToastHost, OfflineBanner, ShareButton, formatCountdown, useNow, showToast, readRecentSearches, pushRecentSearch, clearRecentSearches } from './components/Extras';
 import './components/extras.css';
 
@@ -753,6 +755,29 @@ function VideoPage() {
   const [sourceTypeFilter,setSourceTypeFilter]=useState<'all'|'channel'|'playlist'>('all');
   const tabActive=useTabActive();
   useEffect(()=>{if(!tabActive)setPlayingId(null);},[tabActive]);
+  // Never leave an embedded player running after Android backgrounds the app.
+  // Playback is intentionally not auto-resumed when the app becomes active again.
+  useEffect(()=>{
+    if(!tabActive)return;
+    let mounted=true;
+    let nativeListener:{remove:()=>Promise<void>}|undefined;
+    const pausePlayback=()=>setPlayingId(null);
+    const onVisibilityChange=()=>{if(document.visibilityState!=='visible')pausePlayback();};
+    document.addEventListener('visibilitychange',onVisibilityChange);
+    if(Capacitor.isNativePlatform()){
+      void CapApp.addListener('appStateChange',state=>{
+        if(!state.isActive)pausePlayback();
+      }).then(listener=>{
+        if(mounted)nativeListener=listener;
+        else void listener.remove();
+      }).catch(error=>console.warn('Could not attach native app lifecycle listener.',error));
+    }
+    return()=>{
+      mounted=false;
+      document.removeEventListener('visibilitychange',onVisibilityChange);
+      if(nativeListener)void nativeListener.remove();
+    };
+  },[tabActive]);
   // Lock browser zoom only while the Video tab is active. Restore the site's normal
   // viewport settings as soon as the user leaves this tab.
   useEffect(()=>{
