@@ -71,7 +71,7 @@ function Header({ user, isAdmin, onSignOut }: { user: User | null; isAdmin: bool
       <Link to="/"><Compass size={16}/> Discover</Link><Link to="/search">Explore</Link><Link to="/watchlist"><Bookmark size={16}/> My list</Link><Link to="/video"><Tv size={16}/> Video</Link><Link to="/privacy"><ShieldCheck size={16}/> Privacy</Link>{isAdmin && <Link to="/admin"><ShieldCheck size={16}/> Admin workspace</Link>}
     </nav>
     <div className="topbar-catalogue-tools">
-      <form className="nav-search topbar-explore-search" onSubmit={submit} role="search">
+      <form className="nav-search topbar-explore-search" onSubmit={submit} onClick={() => { if (location.pathname !== '/search') navigate(term.trim() ? `/search?q=${encodeURIComponent(term.trim())}` : '/search'); }} role="search" aria-label="Open Browse and Explore">
         <Search size={16}/>
         <input value={term} onChange={e => setTerm(e.target.value)} onFocus={() => { navigate(term.trim() ? `/search?q=${encodeURIComponent(term.trim())}` : "/search"); setOpen(false); }} placeholder="Search & explore..." aria-label="Search and explore anime or manga"/>
         <kbd>↵</kbd>
