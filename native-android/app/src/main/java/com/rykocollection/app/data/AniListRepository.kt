@@ -13,6 +13,17 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
 @Serializable
+data class AniListGraphQLRequest(
+    val query: String,
+    val variables: AniListGraphQLVariables
+)
+
+@Serializable
+data class AniListGraphQLVariables(
+    val type: String
+)
+
+@Serializable
 data class AniListEnvelope(val data: AniListData? = null)
 
 @Serializable
@@ -57,9 +68,9 @@ class AniListRepository {
 
     suspend fun trendingMedia(manga: Boolean = false): List<AniListMedia> {
         val query = """
-            query(${'$'}type: MediaType!) {
+            query($type: MediaType!) {
               Page(page: 1, perPage: 18) {
-                media(type: ${'$'}type, sort: TRENDING_DESC, isAdult: false) {
+                media(type: $type, sort: TRENDING_DESC, isAdult: false) {
                   id
                   title { english romaji native }
                   coverImage { large extraLarge }
@@ -71,14 +82,14 @@ class AniListRepository {
             }
         """.trimIndent()
 
+        val request = AniListGraphQLRequest(
+            query = query,
+            variables = AniListGraphQLVariables(type = if (manga) "MANGA" else "ANIME")
+        )
+
         val response: AniListEnvelope = client.post("https://graphql.anilist.co") {
             contentType(ContentType.Application.Json)
-            setBody(
-                mapOf(
-                    "query" to query,
-                    "variables" to mapOf("type" to if (manga) "MANGA" else "ANIME")
-                )
-            )
+            setBody(request)
         }.body()
 
         return response.data?.Page?.media.orEmpty()
