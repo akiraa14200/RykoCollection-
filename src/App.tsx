@@ -1073,6 +1073,7 @@ function AppSettings() {
     <h2 id="settings-title"><Settings size={18}/> App settings</h2>
     <div className="settings-row"><div><strong>Ambient mode</strong><p>Soft light from the video glows behind the player.</p></div><button className={ambient?'toggle active':'toggle'} onClick={toggleAmbient} aria-label="Toggle ambient mode" aria-pressed={ambient}><span/></button></div>
     <div className="settings-row"><div><strong>Cached catalogue</strong><p>{(cacheSize / 1024).toFixed(0)} KB saved for faster loading. Library, progress and Watch later are not affected.</p></div><button className="secondary-btn" onClick={clearCache}><Trash2 size={15}/> Clear</button></div>
+    <div className="settings-row"><div><strong>Strawhat Pirate browser</strong><p>Open the native browser with saved websites, browsing history, redirect protection and YouTube Music search.</p></div><button className="secondary-btn" onClick={() => { const native = (window as Window & { RykoNative?: { openStrawhatBrowser?: () => void } }).RykoNative; if (native?.openStrawhatBrowser) native.openStrawhatBrowser(); else showToast('Strawhat Browser is available in the Android app.'); }}>Open browser</button></div>
   </section>;
 }
 
