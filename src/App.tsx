@@ -748,6 +748,8 @@ function VideoPage() {
   const [term,setTerm]=useState('');
   const [format,setFormat]=useState<'all'|'video'|'short'>('all');
   const [category,setCategory]=useState('All');
+  const [videoSources,setVideoSources]=useState<Array<{id:string;source_type:'channel'|'playlist';label:string;source_key:string}>>([]);
+  const [selectedSource,setSelectedSource]=useState('');
   const tabActive=useTabActive();
   useEffect(()=>{if(!tabActive)setPlayingId(null);},[tabActive]);
   // Lock browser zoom only while the Video tab is active. Restore the site's normal
@@ -777,6 +779,14 @@ function VideoPage() {
   };
   useEffect(()=>{
     let active=true;
+    supabase.from('video_discovery_sources').select('id,source_type,label,source_key').eq('enabled',true).order('label').then(({data,error})=>{
+      if(active&&!error)setVideoSources((data||[]) as Array<{id:string;source_type:'channel'|'playlist';label:string;source_key:string}>);
+    });
+    return()=>{active=false;};
+  },[]);
+
+  useEffect(()=>{
+    let active=true;
     // Instant first paint from the last visit, then refresh in the background.
     const snapshot=readPersisted<RelatedVideo[]>('video-feed',12*60*60*1000);
     if(snapshot?.length){setVideos(applyCachedVideoMetadata(snapshot));setLoading(false);}
@@ -799,9 +809,10 @@ function VideoPage() {
     return videos.filter(video=>{
       const matchesText=!query||[video.videoTitle,video.creatorName,video.titleName].join(' ').toLowerCase().includes(query);
       const matchesCategory=category==='All'||(video.titleFormat||'').toLowerCase()===category.toLowerCase();
-      return matchesText&&matchesCategory;
+      const matchesSource=!selectedSource||video.sourceId===selectedSource;
+      return matchesText&&matchesCategory&&matchesSource;
     });
-  },[videos,term,category]);
+  },[videos,term,category,selectedSource]);
 
   // Build a lightweight taste profile from the user's own saved titles and history.
   const {recommendedRegular,recommendedShorts}=useMemo(()=>{
@@ -883,11 +894,26 @@ function VideoPage() {
     <label className="yt-search"><Search size={19}/><input value={term} onChange={event=>setTerm(event.target.value)} placeholder="Search videos, creators or titles" autoComplete="off"/>{term&&<button onClick={()=>setTerm('')} aria-label="Clear search"><X size={16}/></button>}</label>
   </header>;
 
-  const empty=<div className="yt-empty"><Play size={28}/><h3>{term||category!=='All'?'No matching videos':'No videos yet'}</h3><p>Try changing your search or filters.</p><button className="secondary-btn" onClick={()=>{setTerm('');setCategory('All');setFormat('all');}}>Clear filters</button></div>;
+  const sourceDirectory=<section className="yt-source-directory" aria-label="Browse YouTube channels and playlists">
+    {([{type:'channel',label:'Channels',icon:<Youtube size={16}/>},{type:'playlist',label:'Playlists',icon:<ListVideo size={16}/>} ] as const).map(group=>{
+      const items=videoSources.filter(source=>source.source_type===group.type);
+      return <div className="yt-source-group" key={group.type}>
+        <div className="yt-source-group-head">{group.icon}<strong>{group.label}</strong><span>{items.length}</span></div>
+        <div className="yt-source-chips">
+          <button type="button" className={!selectedSource?'active':''} onClick={()=>setSelectedSource('')}>All {group.label.toLowerCase()}</button>
+          {items.map(source=><button type="button" key={source.id} className={selectedSource===source.id?'active':''} onClick={()=>setSelectedSource(source.id)}>{source.label}</button>)}
+          {!items.length&&<span className="yt-source-empty">No {group.label.toLowerCase()} added yet</span>}
+        </div>
+      </div>;
+    })}
+  </section>;
+
+  const empty=<div className="yt-empty"><Play size={28}/><h3>{term||category!=='All'?'No matching videos':'No videos yet'}</h3><p>Try changing your search or filters.</p><button className="secondary-btn" onClick={()=>{setTerm('');setCategory('All');setFormat('all');setSelectedSource('');}}>Clear filters</button></div>;
   const videoCard=(video:RelatedVideo,short:boolean)=><LazyVideoCard key={video.id} video={video} short={short} playing={playingId===video.id} onPlay={()=>setPlayingId(current=>current===video.id?null:video.id)} saved={savedVideoIds.has(video.id)} onToggleSave={()=>toggleVideo(video)}/>;
 
   return <main className="video-page yt-page">
     {searchBar}
+    {sourceDirectory}
     {filterBar}
     {error&&<div className="notice">{error}</div>}
     {loading?<div className="yt-loading-grid" aria-label="Loading videos">{Array.from({length:4},(_,index)=><div className="yt-skeleton-card" key={index}><div className="yt-skeleton-thumb"/><div className="yt-skeleton-meta"><div className="yt-skeleton-avatar"/><div className="yt-skeleton-copy"><span className="yt-skeleton-line"/><span className="yt-skeleton-line"/></div></div></div>)}</div>
