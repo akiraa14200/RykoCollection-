@@ -220,15 +220,13 @@ function Home() {
   const animeSeasonal = seasonal.filter(isAnimeCatalogueEntry);
   const activeTrending = catalogueMode === 'anime' ? animeTrending : trendingManga;
   const savedGenres = new Set(saved.flatMap(item => item.genres || []).map(value => value.toLowerCase()));
-  const savedThemes = new Set(saved.flatMap(item => item.tags?.map(tag => tag.name) || []).map(value => value.toLowerCase()));
   const recentIds = new Set(history.map(item => item.id));
   const candidatePool = [...(catalogueMode === 'anime' ? animePopular : popularManga), ...activeTrending, ...(catalogueMode === 'anime' ? animeSeasonal : [])];
   const recommendations = [...new Map(candidatePool.map(item => [item.id, item])).values()]
     .filter(item => !saved.some(entry => entry.id === item.id) && !recentIds.has(item.id))
     .map(item => {
       const genreMatches = (item.genres || []).filter(genre => savedGenres.has(genre.toLowerCase())).length;
-      const themeMatches = (item.tags || []).filter(tag => savedThemes.has(tag.name.toLowerCase())).length;
-      const score = genreMatches * 5 + themeMatches * 3 + (item.averageScore || 0) / 20;
+      const score = genreMatches * 5 + (item.averageScore || 0) / 20;
       return { item, score };
     })
     .sort((a,b)=>b.score-a.score || (b.item.averageScore || 0)-(a.item.averageScore || 0))
