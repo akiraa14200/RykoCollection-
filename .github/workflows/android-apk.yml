@@ -133,6 +133,83 @@ jobs:
           }
           GRADLE
 
+      - name: Integrate Strawhat Pirate native browser
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          root = Path("android")
+          app = root / "app"
+          source = Path("native/strawhat/StrawhatBrowserActivity.kt").read_text()
+          target = app / "src/main/java/com/rykocollection/app/browser/StrawhatBrowserActivity.kt"
+          target.parent.mkdir(parents=True, exist_ok=True)
+          target.write_text(source)
+          assets = app / "src/main/assets"
+          assets.mkdir(parents=True, exist_ok=True)
+          (assets / "music_player.html").write_text(Path("native/strawhat/music_player.html").read_text())
+
+          # The generated Capacitor Android project normally includes Kotlin support.
+          root_gradle = root / "build.gradle"
+          if not root_gradle.exists():
+              root_gradle = root / "build.gradle.kts"
+          root_text = root_gradle.read_text()
+          if "kotlin-gradle-plugin" not in root_text:
+              if root_gradle.suffix == ".kts":
+                  root_text = re.sub(r"dependencies\\s*\\{", 'dependencies {\\n        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.0.21")', root_text, count=1)
+              else:
+                  root_text = re.sub(r"dependencies\\s*\\{", 'dependencies {\\n        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:2.0.21"', root_text, count=1)
+              root_gradle.write_text(root_text)
+
+          app_gradle = app / "build.gradle"
+          if not app_gradle.exists():
+              app_gradle = app / "build.gradle.kts"
+          app_text = app_gradle.read_text()
+          if "kotlin-android" not in app_text and "org.jetbrains.kotlin.android" not in app_text:
+              if app_gradle.suffix == ".kts":
+                  app_text = 'plugins { id("org.jetbrains.kotlin.android") }\\n' + app_text
+              else:
+                  app_text = app_text.replace("apply plugin: 'com.android.application'", "apply plugin: 'com.android.application'\\napply plugin: 'kotlin-android'", 1)
+              app_gradle.write_text(app_text)
+
+          manifest = app / "src/main/AndroidManifest.xml"
+          xml = manifest.read_text()
+          activity = '<activity android:name=".browser.StrawhatBrowserActivity" android:exported="false" android:configChanges="orientation|screenSize|keyboardHidden" />'
+          if "StrawhatBrowserActivity" not in xml:
+              xml = xml.replace("</application>", "        " + activity + "\\n    </application>")
+          manifest.write_text(xml)
+
+          # Expose one narrowly-scoped bridge method to open the browser activity from Ryko settings.
+          java_files = list((app / "src/main/java").rglob("MainActivity.java"))
+          if not java_files:
+              raise SystemExit("Capacitor MainActivity.java not found")
+          main = java_files[0]
+          java = main.read_text()
+          bridge_code = """
+                  if (bridge != null && bridge.getWebView() != null) {
+                      bridge.getWebView().addJavascriptInterface(new Object() {
+                          @android.webkit.JavascriptInterface
+                          public void openStrawhatBrowser() {
+                              MainActivity.this.runOnUiThread(() ->
+                                  MainActivity.this.startActivity(new android.content.Intent(
+                                      MainActivity.this,
+                                      com.rykocollection.app.browser.StrawhatBrowserActivity.class
+                                  ))
+                              );
+                          }
+                      }, "RykoNative");
+                  }
+          """
+          if 'addJavascriptInterface(new Object()' not in java or '"RykoNative"' not in java:
+              match = re.search(r"(super\\.onCreate\\(savedInstanceState\\);)", java)
+              if not match:
+                  raise SystemExit("Could not find Capacitor MainActivity onCreate")
+              java = java[:match.end()] + "\\n" + bridge_code + java[match.end():]
+              main.write_text(java)
+
+          print("Integrated Strawhat Pirate browser activity, music asset and RykoNative launcher.")
+          PY
+
       - name: Build debug APK
         run: |
           chmod +x android/gradlew
