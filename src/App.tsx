@@ -63,7 +63,7 @@ function Header({ user, isAdmin, onSignOut }: { user: User | null; isAdmin: bool
   return <header className="topbar"><div className="nav-wrap">
     <Link to="/" className="brand"><img className="brand-mark brand-logo" src="/logo.svg" alt="" width="31" height="31"/><span>RYKOCOLLECTION</span></Link>
     <nav className={open ? 'nav-links open' : 'nav-links'}>
-      <Link to="/"><Compass size={16}/> Discover</Link><Link to="/search">Explore</Link><Link to="/watchlist"><Bookmark size={16}/> My list</Link><Link to="/video"><Tv size={16}/> Video</Link><Link to="/privacy"><ShieldCheck size={16}/> Privacy</Link>{isAdmin && <Link to="/admin"><ShieldCheck size={16}/> Admin workspace</Link>}
+      <Link to="/"><Compass size={16}/> Discover</Link><Link to="/search">Explore</Link><Link to="/watchlist"><Bookmark size={16}/> My list</Link><Link to="/video"><Tv size={16}/> Video</Link><button type="button" className="nav-browser-link" onClick={() => { const native = (window as Window & { RykoNative?: { openStrawhatBrowser?: () => void } }).RykoNative; if (native?.openStrawhatBrowser) native.openStrawhatBrowser(); else showToast("Strawhat Pirate is available in the Android APK."); }}><Globe size={16}/> Strawhat Browser</button><Link to="/privacy"><ShieldCheck size={16}/> Privacy</Link>{isAdmin && <Link to="/admin"><ShieldCheck size={16}/> Admin workspace</Link>}
     </nav>
     <form className="nav-search" onSubmit={submit}><Search size={17}/><input value={term} onChange={e => setTerm(e.target.value)} placeholder="Search anime..." aria-label="Search anime"/><kbd>↵</kbd></form>
     {user && <div className="nav-account"><span>{String(user.user_metadata?.display_name || "Reader")}</span><button onClick={onSignOut}>Sign out</button></div>}
