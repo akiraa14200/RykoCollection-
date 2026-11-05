@@ -6,7 +6,7 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 const OWNER_ID = "4da14151-419b-4872-8e5b-6ec38185cdbf";
-const headers = {
+const requestHeaders = {
   "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124.0.0.0 Safari/537.36",
   "Accept": "application/atom+xml, application/rss+xml, application/xml, text/xml, text/html;q=0.9, */*;q=0.8",
 };
@@ -21,23 +21,23 @@ function decodeXml(value: string): string {
 }
 
 function readTag(xml: string, tag: string): string {
-  const safe = tag.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const safe = tag.replace(/[.*+?^\${}()|[\]\\]/g, "\\$&");
   const match = xml.match(new RegExp("<" + safe + "(?:\\s[^>]*)?>([\\s\\S]*?)</" + safe + ">", "i"));
   return decodeXml(match?.[1] || "");
 }
 
 function parseFeed(xml: string): any[] {
-  const entries = [...xml.matchAll(/<(?:entry|item)\\b[\\s\\S]*?<\\/(?:entry|item)>/gi)];
+  const entries = [...xml.matchAll(/<(?:entry|item)\b[\s\S]*?<\/(?:entry|item)>/gi)];
   const output: any[] = [];
   for (const match of entries) {
     const entry = match[0];
     const title = readTag(entry, "title");
     const creator = readTag(entry, "name") || readTag(entry, "author") || readTag(entry, "dc:creator");
-    const rawLink = entry.match(/<link\\b[^>]*href=["']([^"']+)["']/i)?.[1] || readTag(entry, "link");
+    const rawLink = entry.match(/<link\b[^>]*href=["']([^"']+)["']/i)?.[1] || readTag(entry, "link");
     const id = readTag(entry, "yt:videoId") ||
-      entry.match(/<id>yt:video:([^<]+)<\\/id>/i)?.[1] ||
-      rawLink.match(/(?:v=|youtu\\.be\\/|youtube\\.com\\/shorts\\/)([A-Za-z0-9_-]{6,32})/)?.[1] || "";
-    const thumbnail = entry.match(/<(?:media:thumbnail|thumbnail)\\b[^>]*(?:url|href)=["']([^"']+)["']/i)?.[1] || "";
+      entry.match(/<id>yt:video:([^<]+)<\/id>/i)?.[1] ||
+      rawLink.match(/(?:v=|youtu\.be\/|youtube\.com\/shorts\/)([A-Za-z0-9_-]{6,32})/)?.[1] || "";
+    const thumbnail = entry.match(/<(?:media:thumbnail|thumbnail)\b[^>]*(?:url|href)=["']([^"']+)["']/i)?.[1] || "";
     if (!/^[A-Za-z0-9_-]{6,32}$/.test(id) || !title) continue;
     output.push({
       video_id: id,
@@ -57,7 +57,7 @@ function parseFeed(xml: string): any[] {
 
 async function fetchText(url: string): Promise<{ok:boolean;status:number;text:string;error?:string}> {
   try {
-    const response = await fetch(url, { headers, redirect: "follow", signal: AbortSignal.timeout(12000) });
+    const response = await fetch(url, { headers: requestHeaders, redirect: "follow", signal: AbortSignal.timeout(12000) });
     const text = await response.text();
     return { ok: response.ok, status: response.status, text: text.slice(0, 14000000) };
   } catch (error) {
@@ -88,7 +88,6 @@ async function discoverFeed(type: "channel" | "playlist", key: string): Promise<
     if (page.ok) channelId = extractChannelId(page.text);
     else diagnostics.push("YouTube channel page: " + (page.status || page.error));
     if (!channelId) {
-      // RSSHub supports handle-based user routes even when YouTube blocks page resolution.
       const routes = [
         "https://rsshub.app/youtube/user/" + encodeURIComponent(key),
         "https://rsshub.app/youtube/user/" + encodeURIComponent(key.slice(1)),
@@ -124,7 +123,6 @@ async function discoverFeed(type: "channel" | "playlist", key: string): Promise<
     diagnostics.push("RSSHub returned no parseable entries");
   } else diagnostics.push("RSSHub: " + (alternate.status || alternate.error));
 
-  // Last playlist fallback: parse videoRenderer nodes from YouTube's playlist page.
   if (type === "playlist") {
     const page = await fetchText("https://www.youtube.com/playlist?list=" + encodeURIComponent(key));
     if (page.ok) {
@@ -133,9 +131,9 @@ async function discoverFeed(type: "channel" | "playlist", key: string): Promise<
       let match: RegExpExecArray | null;
       while ((match = idPattern.exec(page.text)) !== null && found.length < 100) {
         const id = match[1];
-        const start = Math.max(0, match.index - 1200);
-        const fragment = page.text.slice(start, Math.min(page.text.length, match.index + 3000));
-        const title = decodeXml(fragment.match(/"title"\s*:\s*\{"(?:runs":\[\{"text"|simpleText")\s*:\s*"([^"]+)/)?.[1] || "");
+        const fragment = page.text.slice(Math.max(0, match.index - 1200), Math.min(page.text.length, match.index + 3000));
+        const titleMatch = fragment.match(/"title"\s*:\s*\{"(?:runs":\[\{"text"|simpleText")\s*:\s*"([^"]+)/);
+        const title = decodeXml(titleMatch?.[1] || "");
         if (!title || found.some(v => v.video_id === id)) continue;
         found.push({
           video_id: id, video_url: "https://www.youtube.com/watch?v=" + id,
@@ -158,7 +156,7 @@ Deno.serve(async (req: Request) => {
   if (req.method !== "POST") return Response.json({ error: "Method not allowed" }, { status: 405, headers: corsHeaders });
 
   try {
-    const token = (req.headers.get("Authorization") || "").replace(/^Bearer\\s+/i, "");
+    const token = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
     if (!token) return Response.json({ error: "Sign in required" }, { status: 401, headers: corsHeaders });
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
@@ -177,7 +175,7 @@ Deno.serve(async (req: Request) => {
     if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(sourceId)) {
       return Response.json({ error: "The saved source ID is missing or invalid. Refresh the workspace and try again." }, { status: 400, headers: corsHeaders });
     }
-    const { data: source, error: sourceError } = await adminClient.from("video_discovery_sources").select("id,source_type,source_key,enabled").eq("id", sourceId).maybeSingle();
+    const { data: source, error: sourceError } = await adminClient.from("video_discovery_sources").select("id,source_type,source_key,label,enabled").eq("id", sourceId).maybeSingle();
     if (sourceError) throw sourceError;
     if (!source || !source.enabled) return Response.json({ error: "This source was removed or disabled. Refresh the source list." }, { status: 404, headers: corsHeaders });
 
@@ -195,7 +193,7 @@ Deno.serve(async (req: Request) => {
     if (publishedError) throw new Error("Could not check existing published videos: " + publishedError.message);
     const publishedIds = new Set((publishedRows || []).map((row: any) => {
       const url = String(row.video_url || "");
-      return url.match(/(?:v=|youtu\\.be\\/|shorts\\/)([A-Za-z0-9_-]{6,32})/)?.[1] || "";
+      return url.match(/(?:v=|youtu\.be\/|shorts\/)([A-Za-z0-9_-]{6,32})/)?.[1] || "";
     }).filter(Boolean));
 
     const rows = result.videos
@@ -218,7 +216,6 @@ Deno.serve(async (req: Request) => {
       ok: true, source_id: source.id, source_type: type, source_label: source.label,
       fetched: result.videos.length, added: inserted,
       already_published: result.videos.filter(v => publishedIds.has(v.video_id)).length,
-      already_discovered: result.videos.length - rows.length - result.videos.filter(v => publishedIds.has(v.video_id)).length,
       provider: result.provider,
     }, { headers: { ...corsHeaders, "Cache-Control": "no-store" } });
   } catch (error) {
