@@ -201,10 +201,12 @@ jobs:
                   }
           """
           if 'addJavascriptInterface(new Object()' not in java or '"RykoNative"' not in java:
-              match = re.search(r"(super\.onCreate\(savedInstanceState\);)", java)
-              if not match:
+              needle = "super.onCreate(savedInstanceState);"
+              position = java.find(needle)
+              if position < 0:
                   raise SystemExit("Could not find Capacitor MainActivity onCreate")
-              java = java[:match.end()] + "\n" + bridge_code + java[match.end():]
+              insert_at = position + len(needle)
+              java = java[:insert_at] + "\n" + bridge_code + java[insert_at:]
               main.write_text(java)
 
           print("Integrated Strawhat Pirate browser activity, music asset and RykoNative launcher.")
