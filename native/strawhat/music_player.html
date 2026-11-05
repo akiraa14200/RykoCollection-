@@ -145,14 +145,12 @@ button:focus-visible,input:focus-visible,.item:focus-visible{outline:2px solid v
   <div class="list" id="list"><div class="empty"><div class="ic">🎵</div><div>Search YouTube Music</div><div style="font-size:11px;margin-top:6px;color:rgba(255,255,255,0.25)">Search YouTube Music to build your queue</div></div></div>
   <div class="np" id="np">
     <div class="np-top"><img id="npImg" src=""><div class="np-info"><div class="np-tt" id="npTt">-</div><div class="np-ar" id="npAr">-</div></div><div class="bars" id="bars" style="display:none"><span></span><span></span><span></span></div></div>
-    <div class="progress-wrap" aria-label="Track progress">
-      <span class="progress-time" id="elapsed">0:00</span>
-      <div class="progress-track" id="progressTrack"><div class="progress-fill" id="progressFill"></div></div>
-      <span class="progress-time" id="duration">0:00</span>
-    </div>
-    <div class="progress-wrap" id="progressWrap">
-      <div class="progress-track" id="progressTrack" role="slider" aria-label="Playback position" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" tabindex="0"><div class="progress-fill" id="progressFill"></div></div>
-      <div class="progress-times"><span id="currentTime">0:00</span><span id="totalTime">0:00</span></div>
+    <div class="progress-wrap" id="progressWrap" aria-label="Track progress">
+      <span class="progress-time" id="currentTime">0:00</span>
+      <div class="progress-track" id="progressTrack" role="slider" aria-label="Playback position" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" tabindex="0">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+      <span class="progress-time" id="totalTime">0:00</span>
     </div>
     <div class="ctrls"><button class="ctrl prev" id="prev">⏮</button><button class="ctrl play" id="play">Pause</button><button class="ctrl next" id="next">⏭</button><button class="ctrl stop" id="stop">✕</button></div>
   </div>
@@ -197,67 +195,47 @@ function onYouTubeIframeAPIReady(){
 window.onYouTubeIframeAPIReady = onYouTubeIframeAPIReady;
 
 function formatTime(seconds){
-  if(!Number.isFinite(seconds) || seconds < 0) return '0:00';
-  const value = Math.floor(seconds);
-  return Math.floor(value/60)+':'+String(value%60).padStart(2,'0');
+  const value = Math.max(0, Math.floor(Number(seconds) || 0));
+  return Math.floor(value / 60) + ':' + String(value % 60).padStart(2, '0');
 }
+const progressTrack = document.getElementById('progressTrack');
+const progressFill = document.getElementById('progressFill');
+const currentTimeLabel = document.getElementById('currentTime');
+const totalTimeLabel = document.getElementById('totalTime');
 function updateProgress(){
-  if(!ytPlayer || typeof ytPlayer.getDuration!=='function') return;
+  if(!ytPlayer || typeof ytPlayer.getCurrentTime !== 'function') return;
   try{
-    const duration = Number(ytPlayer.getDuration()) || 0;
     const current = Number(ytPlayer.getCurrentTime()) || 0;
-    const percent = duration > 0 ? Math.max(0,Math.min(100,(current/duration)*100)) : 0;
-    document.getElementById('progressFill').style.width = percent+'%';
-    document.getElementById('elapsed').textContent = formatTime(current);
-    document.getElementById('duration').textContent = formatTime(duration);
+    const duration = Number(ytPlayer.getDuration()) || 0;
+    const percent = duration > 0 ? Math.min(100, Math.max(0, current / duration * 100)) : 0;
+    progressFill.style.width = percent + '%';
+    currentTimeLabel.textContent = formatTime(current);
+    totalTimeLabel.textContent = formatTime(duration);
+    progressTrack.setAttribute('aria-valuenow', String(Math.round(percent)));
   }catch(_){}
 }
 function startProgressUpdates(){
   if(progressTimer) clearInterval(progressTimer);
-  progressTimer = setInterval(updateProgress,500);
-}
-document.getElementById('progressTrack').addEventListener('click',event=>{
-  if(!ytPlayer || typeof ytPlayer.getDuration!=='function') return;
-  const duration = Number(ytPlayer.getDuration()) || 0;
-  if(duration <= 0) return;
-  const rect = event.currentTarget.getBoundingClientRect();
-  const ratio = Math.max(0,Math.min(1,(event.clientX-rect.left)/rect.width));
-  try{ ytPlayer.seekTo(duration*ratio,true); updateProgress(); }catch(_){}
-});
-function formatTime(seconds){
-  const value = Math.max(0, Math.floor(Number(seconds) || 0));
-  return Math.floor(value / 60) + ':' + String(value % 60).padStart(2, '0');
-}
-function updateProgress(){
-  if(!ytPlayer || typeof ytPlayer.getCurrentTime !== 'function') return;
-  try{
-    const current = ytPlayer.getCurrentTime() || 0;
-    const duration = ytPlayer.getDuration() || 0;
-    const percent = duration > 0 ? Math.min(100, Math.max(0, current / duration * 100)) : 0;
-    document.getElementById('progressFill').style.width = percent + '%';
-    document.getElementById('currentTime').textContent = formatTime(current);
-    document.getElementById('totalTime').textContent = formatTime(duration);
-    document.getElementById('progressTrack').setAttribute('aria-valuenow', String(Math.round(percent)));
-  }catch{}
+  progressTimer = setInterval(updateProgress, 500);
 }
 function seekFromPointer(event){
   if(!ytPlayer || typeof ytPlayer.seekTo !== 'function') return;
-  const track = document.getElementById('progressTrack');
-  const rect = track.getBoundingClientRect();
+  const duration = Number(ytPlayer.getDuration()) || 0;
+  const rect = progressTrack.getBoundingClientRect();
+  if(duration <= 0 || rect.width <= 0) return;
   const ratio = Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width));
-  const duration = ytPlayer.getDuration() || 0;
-  if(duration > 0) ytPlayer.seekTo(ratio * duration, true);
+  ytPlayer.seekTo(ratio * duration, true);
   updateProgress();
 }
-document.getElementById('progressTrack').addEventListener('click', seekFromPointer);
-document.getElementById('progressTrack').addEventListener('keydown', event=>{
+progressTrack.addEventListener('click', seekFromPointer);
+progressTrack.addEventListener('keydown', event=>{
   if(event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
   event.preventDefault();
-  const duration = ytPlayer?.getDuration?.() || 0;
-  const current = ytPlayer?.getCurrentTime?.() || 0;
+  const duration = Number(ytPlayer?.getDuration?.()) || 0;
+  const current = Number(ytPlayer?.getCurrentTime?.()) || 0;
   if(duration > 0) ytPlayer.seekTo(Math.min(duration, Math.max(0, current + (event.key === 'ArrowRight' ? 5 : -5))), true);
 });
-setInterval(updateProgress, 500);
+startProgressUpdates();
 function setMiniMode(on){ if(on){ if(window.StreamGurd?.collapsePlayer) StreamGurd.collapsePlayer(); } else { document.body.classList.remove('mini'); document.getElementById('minimize').style.display='inline-block'; document.getElementById('expand').style.display='none'; } }
 document.getElementById('minimize').onclick=()=>setMiniMode(true);
 document.getElementById('expand').onclick=()=>setMiniMode(false);
@@ -339,8 +317,8 @@ function playAt(i){
   if(i<0 || i>=queue.length) return;
   curIdx = i;
   document.getElementById('progressFill').style.width = '0%';
-  document.getElementById('currentTime').textContent = '0:00';
-  document.getElementById('totalTime').textContent = '0:00';
+  currentTimeLabel.textContent = '0:00';
+  totalTimeLabel.textContent = '0:00';
   const s = queue[i];
   document.querySelectorAll('.item').forEach((e,idx)=> e.classList.toggle('on', idx===i));
   
@@ -415,8 +393,8 @@ document.getElementById('stop').onclick = ()=>{
   document.getElementById('np').classList.remove('on');
   document.getElementById('bars').style.display='none';
   document.getElementById('progressFill').style.width='0%';
-  document.getElementById('elapsed').textContent='0:00';
-  document.getElementById('duration').textContent='0:00';
+  currentTimeLabel.textContent='0:00';
+  totalTimeLabel.textContent='0:00';
   isPlaying=false;
   badge.textContent='Stopped';
   document.querySelectorAll('.item').forEach(e=>e.classList.remove('on'));
