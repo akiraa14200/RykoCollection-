@@ -140,6 +140,12 @@ const HOME_CACHE_AGE = 24 * 60 * 60 * 1000;
 function Home() {
   const navigate = useNavigate();
   const [homeSearchTerm, setHomeSearchTerm] = useState('');
+  const [catalogueMode, setCatalogueMode] = useState<'anime' | 'manga'>(() => localStorage.getItem('rykoc-home-catalogue-mode') === 'manga' ? 'manga' : 'anime');
+  const changeCatalogueMode = (mode: 'anime' | 'manga') => {
+    setCatalogueMode(mode);
+    localStorage.setItem('rykoc-home-catalogue-mode', mode);
+    setHeroIndex(0);
+  };
   const openBrowseSearch = (event: FormEvent) => {
     event.preventDefault();
     const query = homeSearchTerm.trim();
@@ -180,8 +186,9 @@ function Home() {
     return () => { active = false; };
   }, []);
   const [heroIndex, setHeroIndex] = useState(0);
-  const featured = trending.slice(0, 5);
-  const hero = featured[heroIndex] || trending[0];
+  const activeTrending = catalogueMode === 'anime' ? trending : trendingManga;
+  const featured = activeTrending.slice(0, 5);
+  const hero = featured[heroIndex] || activeTrending[0];
   const tabActive = useTabActive();
   useEffect(() => {
     if (featured.length < 2 || !tabActive) return;
@@ -193,23 +200,33 @@ function Home() {
     return () => window.clearInterval(timer);
   }, [featured.length, tabActive]);
   return <main className="page-shell">
+    <div className="home-catalogue-header">
+      <div className="home-catalogue-heading"><span className="eyebrow">EXPLORE RYKO</span><strong>{catalogueMode === 'anime' ? 'Anime catalogue' : 'Manga universe'}</strong></div>
+      <div className="catalogue-switch" role="group" aria-label="Choose catalogue">
+        <button type="button" className={catalogueMode === 'anime' ? 'active' : ''} aria-pressed={catalogueMode === 'anime'} onClick={() => changeCatalogueMode('anime')}><Tv size={15}/> Anime</button>
+        <button type="button" className={catalogueMode === 'manga' ? 'active' : ''} aria-pressed={catalogueMode === 'manga'} onClick={() => changeCatalogueMode('manga')}><BookOpen size={15}/> Manga</button>
+      </div>
+    </div>
     <form className="nav-search home-search" role="search" onSubmit={openBrowseSearch} style={{ display: 'flex', width: 'min(100%, 680px)', margin: '0 auto 24px', minHeight: 48 }}>
       <Search size={18}/>
-      <input value={homeSearchTerm} onChange={event => setHomeSearchTerm(event.target.value)} onFocus={() => navigate(homeSearchTerm.trim() ? `/search?q=${encodeURIComponent(homeSearchTerm.trim())}` : '/search')} placeholder="Search anime, manga & more..." aria-label="Search anime and manga" />
+      <input value={homeSearchTerm} onChange={event => setHomeSearchTerm(event.target.value)} onFocus={() => navigate(homeSearchTerm.trim() ? `/search?q=${encodeURIComponent(homeSearchTerm.trim())}` : '/search')} placeholder={catalogueMode === 'anime' ? 'Search anime...' : 'Search manga, manhwa & manhua...'} aria-label={catalogueMode === 'anime' ? 'Search anime' : 'Search manga, manhwa and manhua'} />
       <button type="submit" aria-label="Open browse search" className="home-search-submit"><Search size={17}/></button>
     </form>
-    {hero && <section className="hero" aria-label="Featured anime carousel">
+    {hero && <section className="hero" aria-label={catalogueMode === 'anime' ? 'Featured anime carousel' : 'Featured manga carousel'}>
       <img className="hero-banner-image" src={hero.bannerImage || imageOf(hero)} alt="" fetchPriority="high" decoding="async"/>
-      <div className="hero-copy"><span className="eyebrow"><Sparkles size={14}/> YOUR NEXT FAVORITE STARTS HERE</span><h1>Find your next<br/><em>anime obsession.</em></h1><p>Explore stories worth getting lost in. Discover trending series, seasonal gems and timeless favorites.</p><div className="hero-actions"><Link className="primary-btn" to={hero ? `/anime/${hero.id}` : '/search'}><Play size={16} fill="currentColor"/> Explore featured</Link><Link className="secondary-btn" to="/search">Browse library <ChevronRight size={16}/></Link></div><div className="hero-featured">{hero && <><span>FEATURED PICK · {heroIndex + 1}/5</span><strong>{titleOf(hero)}</strong></>}</div><div className="hero-carousel-controls"><button aria-label="Previous featured anime" onClick={() => setHeroIndex(i => (i + 4) % Math.max(1, featured.length))}><ChevronLeft size={16}/></button>{featured.map((item,index)=><button key={item.id} aria-label={`Show ${titleOf(item)}`} className={index===heroIndex?"active":""} onClick={()=>setHeroIndex(index)} />)}<button aria-label="Next featured anime" onClick={() => setHeroIndex(i => (i + 1) % Math.max(1, featured.length))}><ChevronRight size={16}/></button></div></div>
+      <div className="hero-copy"><span className="eyebrow"><Sparkles size={14}/> YOUR NEXT FAVORITE STARTS HERE</span><h1>Find your next<br/><em>{catalogueMode === 'anime' ? 'anime obsession.' : 'manga obsession.'}</em></h1><p>{catalogueMode === 'anime' ? 'Explore stories worth getting lost in. Discover trending series, seasonal gems and timeless favorites.' : 'Explore manga, manhwa and manhua. Discover trending chapters, unforgettable worlds and reader favorites.'}</p><div className="hero-actions"><Link className="primary-btn" to={hero ? `/anime/${hero.id}` : '/search'}><Play size={16} fill="currentColor"/> Explore featured</Link><Link className="secondary-btn" to={catalogueMode === 'anime' ? '/search' : '/search?format=MANGA'}>Browse library <ChevronRight size={16}/></Link></div><div className="hero-featured">{hero && <><span>FEATURED PICK · {heroIndex + 1}/5</span><strong>{titleOf(hero)}</strong></>}</div><div className="hero-carousel-controls"><button aria-label="Previous featured anime" onClick={() => setHeroIndex(i => (i + 4) % Math.max(1, featured.length))}><ChevronLeft size={16}/></button>{featured.map((item,index)=><button key={item.id} aria-label={`Show ${titleOf(item)}`} className={index===heroIndex?"active":""} onClick={()=>setHeroIndex(index)} />)}<button aria-label="Next featured anime" onClick={() => setHeroIndex(i => (i + 1) % Math.max(1, featured.length))}><ChevronRight size={16}/></button></div></div>
     </section>}
-    {!hero && <div className="hero hero-loading"><div className="hero-copy"><span className="eyebrow">RYKOCOLLECTION ANIME DISCOVERY</span><h1>Stories that stay<br/><em>with you.</em></h1><p>Find your next anime, one discovery at a time.</p><Link className="primary-btn" to="/search">Explore anime <ChevronRight size={16}/></Link></div></div>}
+    {!hero && <div className="hero hero-loading"><div className="hero-copy"><span className="eyebrow">RYKOCOLLECTION {catalogueMode.toUpperCase()} DISCOVERY</span><h1>Stories that stay<br/><em>with you.</em></h1><p>{catalogueMode === 'anime' ? 'Find your next anime, one discovery at a time.' : 'Find your next manga, manhwa or manhua, one discovery at a time.'}</p><Link className="primary-btn" to={catalogueMode === 'anime' ? '/search' : '/search?format=MANGA'}>Explore {catalogueMode} <ChevronRight size={16}/></Link></div></div>}
     {error && <div className="notice"><strong>Catalogue unavailable.</strong> {error} Check your connection and try again.</div>}
     {loading && <div className="section"><div className="section-head"><h2>Finding something great</h2></div><div className="anime-grid">{Array.from({length: 6}, (_,i) => <div className="skeleton-card" key={i}><div className="skeleton-poster"/><div className="skeleton-line"/></div>)}</div></div>}
-    <Section title="Trending now" subtitle="What the anime community is watching" items={trending} saved={saved.map(a => a.id)} onSave={toggle} to="/search?sort=trending"/>
-    <Section title="This season" subtitle="Fresh stories airing right now" items={seasonal} saved={saved.map(a => a.id)} onSave={toggle}/>
-    <Section title="Popular picks" subtitle="Fan favorites worth your time" items={popular} saved={saved.map(a => a.id)} onSave={toggle}/>
-    <Section title="Trending manga & manhwa" subtitle="Popular manga, manhwa and manhua from AniList" items={trendingManga} saved={saved.map(a => a.id)} onSave={toggle} to="/search?format=Manga"/>
-    <Section title="Popular manga" subtitle="Reader favorites across the AniList catalogue" items={popularManga} saved={saved.map(a => a.id)} onSave={toggle} to="/search?format=Manga"/>
+    {catalogueMode === 'anime' ? <>
+      <Section title="Trending anime" subtitle="What the anime community is watching" items={trending} saved={saved.map(a => a.id)} onSave={toggle} to="/search?sort=trending"/>
+      <Section title="This season" subtitle="Fresh stories airing right now" items={seasonal} saved={saved.map(a => a.id)} onSave={toggle}/>
+      <Section title="Popular anime" subtitle="Fan favorites worth your time" items={popular} saved={saved.map(a => a.id)} onSave={toggle}/>
+    </> : <>
+      <Section title="Trending manga & manhwa" subtitle="Popular manga, manhwa and manhua" items={trendingManga} saved={saved.map(a => a.id)} onSave={toggle} to="/search?format=MANGA"/>
+      <Section title="Popular manga" subtitle="Reader favorites across the AniList catalogue" items={popularManga} saved={saved.map(a => a.id)} onSave={toggle} to="/search?format=MANGA"/>
+    </>}
     {history.length > 0 && <section className="section"><div className="section-head"><div><h2>Pick up where you left off</h2><p>Your recently opened anime</p></div></div><div className="history-row">{history.slice(0,5).map(item => <Link to={`/anime/${item.id}`} className="history-item" key={item.id}><img src={item.image} alt=""/><span>{item.title}</span><small>Recently viewed</small></Link>)}</div></section>}
     <div className="api-credit">Catalogue powered by the RykoCollection website database.</div>
   </main>;
