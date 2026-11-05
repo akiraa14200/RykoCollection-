@@ -64,16 +64,17 @@ function Header({ user, isAdmin, onSignOut }: { user: User | null; isAdmin: bool
   const location = useLocation();
   useEffect(() => setOpen(false), [location.pathname]);
   useBackLayer(open, () => setOpen(false));
-  const submit = (event: FormEvent) => { event.preventDefault(); navigate(term.trim() ? `/search?q=${encodeURIComponent(term.trim())}` : '/search'); setOpen(false); };
+  const openExplore = (query = term.trim()) => navigate(query ? `/search?q=${encodeURIComponent(query)}` : '/search', { state: { focusBrowseSearch: true } });
+  const submit = (event: FormEvent) => { event.preventDefault(); openExplore(); setOpen(false); };
   return <header className="topbar"><div className="nav-wrap">
     <Link to="/" className="brand"><img className="brand-mark brand-logo" src="/logo.svg" alt="" width="31" height="31"/><span>RYKOCOLLECTION</span></Link>
     <nav className={open ? 'nav-links open' : 'nav-links'}>
       <Link to="/"><Compass size={16}/> Discover</Link><Link to="/search">Explore</Link><Link to="/watchlist"><Bookmark size={16}/> My list</Link><Link to="/video"><Tv size={16}/> Video</Link><Link to="/privacy"><ShieldCheck size={16}/> Privacy</Link>{isAdmin && <Link to="/admin"><ShieldCheck size={16}/> Admin workspace</Link>}
     </nav>
     <div className="topbar-catalogue-tools">
-      <form className="nav-search topbar-explore-search" onSubmit={submit} onClick={() => { if (location.pathname !== '/search') navigate(term.trim() ? `/search?q=${encodeURIComponent(term.trim())}` : '/search'); }} role="search" aria-label="Open Browse and Explore">
+      <form className="nav-search topbar-explore-search" onSubmit={submit} onClick={() => { if (location.pathname !== '/search') openExplore(); }} role="search" aria-label="Open Browse and Explore">
         <Search size={16}/>
-        <input value={term} onChange={e => setTerm(e.target.value)} onFocus={() => { navigate(term.trim() ? `/search?q=${encodeURIComponent(term.trim())}` : "/search"); setOpen(false); }} placeholder="Search & explore..." aria-label="Search and explore anime or manga"/>
+        <input value={term} onChange={e => setTerm(e.target.value)} onFocus={() => { if (location.pathname !== '/search') openExplore(); setOpen(false); }} placeholder="Search & explore..." aria-label="Search and explore anime or manga"/>
         <kbd>↵</kbd>
       </form>
       <div className="topbar-catalogue-switch" role="group" aria-label="Switch home catalogue">
@@ -253,6 +254,10 @@ function Home() {
 
 function SearchPage() {
   const location = useLocation();
+  const browseSearchRef = useRef<HTMLInputElement | null>(null);
+  useEffect(() => {
+    if ((location.state as { focusBrowseSearch?: boolean } | null)?.focusBrowseSearch) browseSearchRef.current?.focus();
+  }, [location.key, location.state]);
   const params = new URLSearchParams(location.search);
   const [term, setTerm] = useState(params.get('q') || '');
   const [genre, setGenre] = useState('');
@@ -309,7 +314,7 @@ function SearchPage() {
   const searchSentinel = useNearViewport(() => { void loadMore(); }, hasMore && !busy && !loadingMore && !error && items.length > 0);
   const genres = ['Action','Adventure','Comedy','Drama','Fantasy','Horror','Mystery','Romance','Sci-Fi','Slice of Life','Sports','Supernatural'];
   return <main className="content-page browse-page"><div className="page-heading"><span className="eyebrow">THE ANILIST CATALOGUE</span><h1>Explore <em>anime & manga.</em></h1><p>Search across anime, manga, manhwa, manhua and light novels.</p></div>
-    <div className="filter-bar browse-filters"><label className="large-search"><Search size={19}/><input value={term} onChange={e => setTerm(e.target.value)} placeholder="Search titles, series, stories..." autoComplete="off"/></label>
+    <div className="filter-bar browse-filters"><label className="large-search"><Search size={19}/><input ref={browseSearchRef} value={term} onChange={e => setTerm(e.target.value)} placeholder="Search titles, series, stories..." autoComplete="off"/></label>
       <div className="browse-filter-selects"><label className="genre-select"><span>Genre</span><select aria-label="Filter by genre" value={genre} onChange={e => setGenre(e.target.value)}><option value="">All genres</option>{genres.map(g => <option key={g}>{g}</option>)}</select></label>
       <label className="genre-select"><span>Status</span><select aria-label="Filter by status" value={status} onChange={e=>setStatus(e.target.value)}><option value="">Any status</option><option value="RELEASING">Airing</option><option value="FINISHED">Finished</option><option value="NOT_YET_RELEASED">Upcoming</option><option value="HIATUS">Hiatus</option></select></label>
       <label className="genre-select"><span>Format</span><select aria-label="Filter by format" value={format} onChange={e=>setFormat(e.target.value)}><option value="">Any format</option><option value="Anime">Anime</option><option value="Manga">Manga</option><option value="Manhwa">Manhwa</option><option value="Manhua">Manhua</option><option value="Movie">Movie</option><option value="TV Series">TV Series</option><option value="Light Novel">Light Novel</option><option value="Web Novel">Web Novel</option></select></label>
