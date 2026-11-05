@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef,
 import { Link, Navigate, Route, Routes, useNavigate, useParams, useLocation, type Location } from 'react-router-dom';
 import { Search, Compass, Bookmark, ShieldCheck, Play, Star, ChevronRight, ArrowLeft, Heart, Clock3, Menu, X, ExternalLink, Sparkles, Tv, Info, Users, FileText, Globe, Youtube, ListVideo, ChevronDown, RotateCw, MessageCircle, Home as HomeIcon, UserRound, ChevronLeft, Shuffle, Minus, Plus, Settings, Trash2, Clock } from 'lucide-react';
 // The application UI and page components are defined below.
-import { Anime, AnimeCharacter, getAnime, peekAnime, rememberPreviews, applyCachedVideoMetadata, enrichVideoMetadataProgressive, getAnimeCharacters, getPopular, getPopularManga, getSeasonal, getTrending, getTrendingManga, getRelatedVideos, getRelatedVideosBySourceIds, RelatedVideo, imageOf, searchAnime, titleOf } from './lib/catalogue';
+import { Anime, AnimeCharacter, getAnime, peekAnime, rememberPreviews, applyCachedVideoMetadata, enrichVideoMetadataProgressive, getAnimeCharacters, getPopular, getPopularManga, getSeasonal, getTrending, getTrendingManga, getRelatedVideos, getRelatedShortVideos, getRelatedVideosBySourceIds, RelatedVideo, imageOf, searchAnime, titleOf } from './lib/catalogue';
 import type { User } from '@supabase/supabase-js';
 import { supabase } from './lib/supabase';
 import { AnimeComments } from './components/AnimeComments';
@@ -769,6 +769,8 @@ function LazyVideoCard({ video, short, playing, onPlay, saved = false, onToggleS
 function VideoPage() {
   const [videos,setVideos]=useState<RelatedVideo[]>([]);
   const [page,setPage]=useState(1);
+  const [shortPage,setShortPage]=useState(1);
+  const [shortHasMore,setShortHasMore]=useState(false);
   const [hasMore,setHasMore]=useState(true);
   const [playingId,setPlayingId]=useState<string|null>(null);
   const [loading,setLoading]=useState(true);
@@ -884,13 +886,16 @@ function VideoPage() {
     }else{
       const snapshot=readPersisted<RelatedVideo[]>('video-feed',12*60*60*1000);
       if(snapshot?.length){setVideos(applyCachedVideoMetadata(snapshot));setLoading(false);}
-      getRelatedVideos(1).then(data=>{
+      Promise.all([getRelatedVideos(1),getRelatedShortVideos(1)]).then(([data,shorts])=>{
         if(!active)return;
-        setVideos(applyCachedVideoMetadata(data));
+        const combined=[...data,...shorts.filter(short=>!data.some(video=>video.id===short.id))];
+        setVideos(applyCachedVideoMetadata(combined));
         setHasMore(data.length===40);
+        setShortPage(1);
+        setShortHasMore(shorts.length===40);
         setLoading(false);
-        writePersisted('video-feed',data);
-        enrich(data,()=>active);
+        writePersisted('video-feed',combined);
+        enrich(combined,()=>active);
       }).catch(e=>{
         if(active&&!snapshot?.length)setError(e instanceof Error?e.message:'Could not load videos.');
       }).finally(()=>{if(active)setLoading(false);});
@@ -965,13 +970,15 @@ function VideoPage() {
     setLoadingMore(true);
     setError('');
     try{
-      const raw=sourceFilterActive
-        ? await getRelatedVideosBySourceIds(sourceFilteredIds,page+1)
-        : await getRelatedVideos(page+1);
-      const data=applyCachedVideoMetadata(raw);
+      const wantsShorts=format==='short'||format==='all';
+      const [raw,shortRaw]=await Promise.all([
+        sourceFilterActive ? getRelatedVideosBySourceIds(sourceFilteredIds,page+1) : getRelatedVideos(page+1),
+        wantsShorts&&shortHasMore ? getRelatedShortVideos(shortPage+1) : Promise.resolve([])
+      ]);
+      const data=applyCachedVideoMetadata([...raw,...shortRaw.filter(short=>!raw.some(video=>video.id===short.id))]);
       setVideos(old=>{const ids=new Set(old.map(video=>video.id));return [...old,...data.filter(video=>!ids.has(video.id))];});
-      setPage(current=>current+1);
-      setHasMore(data.length>0);
+      if(raw.length){setPage(current=>current+1);setHasMore(raw.length===40);}
+      if(shortRaw.length){setShortPage(current=>current+1);setShortHasMore(shortRaw.length===40);}
       enrich(data,()=>true);
     }catch(e){
       setError(e instanceof Error?e.message:'Could not load more videos.');
@@ -1028,7 +1035,7 @@ function VideoPage() {
       <div className="yt-section-heading"><div><h2>{format==='short'?'Shorts':'Videos'}</h2><p>{format==='short'?'Quick vertical clips':'Trailers, edits and community videos'}</p></div><span>{selected.length} results</span></div>
       <div className={format==='short'?'yt-shorts-grid':'yt-video-feed'}>{selected.map(video=>videoCard(video,format==='short'))}</div>
     </section>:empty;})()}
-    {!loading&&hasMore&&<div className="load-more-wrap" ref={videoSentinel}><button className="secondary-btn load-more-btn" onClick={loadMore} disabled={loadingMore}>{loadingMore?'Loading…':'Load more'}</button></div>}
+    {!loading&&(hasMore||(format!=='video'&&shortHasMore))&&<div className="load-more-wrap" ref={videoSentinel}><button className="secondary-btn load-more-btn" onClick={loadMore} disabled={loadingMore}>{loadingMore?'Loading…':'Load more'}</button></div>}
     <p className="yt-disclaimer">Playback availability depends on each original video provider and its embedding settings.</p>
   </main>;
 }
