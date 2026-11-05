@@ -5,6 +5,15 @@ plugins {
     id("org.jetbrains.kotlin.plugin.serialization")
 }
 
+val supabaseUrl = providers.gradleProperty("SUPABASE_URL")
+    .orElse(providers.environmentVariable("SUPABASE_URL"))
+    .orElse("https://moicrqcddmftjgwjqkvz.supabase.co")
+    .get()
+val supabasePublishableKey = providers.gradleProperty("SUPABASE_PUBLISHABLE_KEY")
+    .orElse(providers.environmentVariable("SUPABASE_PUBLISHABLE_KEY"))
+    .orElse("")
+    .get()
+
 android {
     namespace = "com.rykocollection.app"
     compileSdk = 36
@@ -16,8 +25,8 @@ android {
         versionCode = 1
         versionName = "1.0.0-native"
 
-        buildConfigField("String", "SUPABASE_URL", "\"https://moicrqcddmftjgwjqkvz.supabase.co\"")
-        buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY", "\"sb_publishable_XrJYTYAGNjlfPsWlP1SfUg_-yr9HBrq\"")
+        buildConfigField("String", "SUPABASE_URL", "\"$supabaseUrl\"")
+        buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY", "\"$supabasePublishableKey\"")
     }
 
     buildFeatures {

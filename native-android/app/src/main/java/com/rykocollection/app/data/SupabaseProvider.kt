@@ -8,6 +8,9 @@ import io.github.jan.supabase.realtime.Realtime
 
 object SupabaseProvider {
     val client by lazy {
+        require(BuildConfig.SUPABASE_PUBLISHABLE_KEY.isNotBlank()) {
+            "Set SUPABASE_PUBLISHABLE_KEY before using account features."
+        }
         createSupabaseClient(
             supabaseUrl = BuildConfig.SUPABASE_URL,
             supabaseKey = BuildConfig.SUPABASE_PUBLISHABLE_KEY
@@ -19,6 +22,8 @@ object SupabaseProvider {
     }
 
     fun initialize() {
-        client
+        // Public AniList browsing works without Supabase credentials.
+        // Account features initialize Supabase only when a publishable key is configured.
+        if (BuildConfig.SUPABASE_PUBLISHABLE_KEY.isNotBlank()) client
     }
 }
