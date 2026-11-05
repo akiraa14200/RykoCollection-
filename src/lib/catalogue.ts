@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { getMediaCharacters, getTrailerCatalogue, getHomeCollections, searchMedia, getAniListMediaById } from './anilist';
+import { getMediaCharacters, getTrailerCatalogue, searchTrailerCatalogue, getHomeCollections, searchMedia, getAniListMediaById } from './anilist';
 import { readPersisted, writePersisted } from './persist';
 
 export type AnimeCharacter = {
@@ -113,16 +113,61 @@ export async function getRelatedShortVideos(page = 1): Promise<RelatedVideo[]> {
 }
 
 export async function searchRelatedVideos(query: string, page = 1): Promise<RelatedVideo[]> {
-  const term = query.trim().replace(/[(),]/g, ' ').replace(/\s+/g, ' ').slice(0, 80);
+  const term = query.trim().replace(/[(),]/g, ' ').replace(/\\s+/g, ' ').slice(0, 80);
   if (term.length < 2) return [];
   const from = Math.max(0, page - 1) * 30;
   const pattern = '%' + term + '%';
-  const { data, error } = await supabase.from('related_videos')
-    .select('id,title_id,legacy_title_id,source_id,video_url,platform,video_title,creator_name,creator_avatar_url,action_type,action_url,sort_order,created_at')
-    .or('video_title.ilike.' + pattern + ',creator_name.ilike.' + pattern + ',video_url.ilike.' + pattern)
-    .order('created_at', { ascending: false }).range(from, from + 29);
-  throwIf(error);
-  return ((data || []) as RelatedVideoRow[]).map(mapRelatedVideo);
+  const [databaseResult, aniListResult] = await Promise.allSettled([
+    supabase.from('related_videos')
+      .select('id,title_id,legacy_title_id,source_id,video_url,platform,video_title,creator_name,creator_avatar_url,action_type,action_url,sort_order,created_at')
+      .or('video_title.ilike.' + pattern + ',creator_name.ilike.' + pattern + ',video_url.ilike.' + pattern)
+      .order('created_at', { ascending: false }).range(from, from + 29),
+    searchTrailerCatalogue(term, page)
+  ]);
+
+  const saved: RelatedVideo[] = [];
+  if (databaseResult.status === 'fulfilled') {
+    if (databaseResult.value.error) console.warn('Saved video search failed:', databaseResult.value.error);
+    else saved.push(...((databaseResult.value.data || []) as RelatedVideoRow[]).map(mapRelatedVideo));
+  } else console.warn('Saved video search unavailable:', databaseResult.reason);
+
+  const discovered: RelatedVideo[] = [];
+  if (aniListResult.status === 'fulfilled') {
+    const { anime, manga } = aniListResult.value;
+    [...anime, ...manga].forEach(item => {
+      const trailerId = item.trailer?.site?.toLowerCase() === 'youtube' && /^[a-zA-Z0-9_-]{6,}$/.test(item.trailer.id)
+        ? item.trailer.id : '';
+      if (!trailerId) return;
+      const mediaFormat = item.format || '';
+      const country = item.countryOfOrigin || '';
+      const titleFormat = /MANGA|NOVEL|ONE_SHOT/.test(mediaFormat)
+        ? (country === 'KR' ? 'Manhwa' : country === 'CN' ? 'Manhua' : 'Manga')
+        : 'Anime';
+      const titleName = item.title?.english || item.title?.romaji || item.title?.native || 'Untitled';
+      discovered.push({
+        id: `anilist-trailer-${item.id}`,
+        titleId: `anilist:${item.id}`,
+        videoUrl: `https://www.youtube.com/watch?v=${trailerId}`,
+        platform: 'youtube',
+        videoTitle: titleName,
+        creatorName: item.studios?.nodes?.[0]?.name || 'YouTube',
+        creatorAvatarUrl: '',
+        actionType: 'watch',
+        actionUrl: item.siteUrl || `https://www.youtube.com/watch?v=${trailerId}`,
+        sortOrder: 0,
+        createdAt: '1970-01-01T00:00:00.000Z',
+        titleName,
+        titleCover: item.coverImage?.extraLarge || item.coverImage?.large || '',
+        titleFormat,
+        releaseYear: item.seasonYear,
+        genres: item.genres || []
+      });
+    });
+  } else console.warn('AniList video search unavailable:', aniListResult.reason);
+
+  const unique = new Map<string, RelatedVideo>();
+  [...discovered, ...saved].forEach(video => unique.set(video.videoUrl, video));
+  return [...unique.values()];
 }
 
 export async function getRelatedVideos(page = 1, titleId?: string): Promise<RelatedVideo[]> {
