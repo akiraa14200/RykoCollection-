@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Music Player - Comico Real Code</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Inter',sans-serif}
+html,body{width:100%;height:100%;overflow:hidden}body{background:transparent;color:#fff;display:flex;align-items:stretch;justify-content:stretch;padding:0}
+.player{width:100%;height:100%;min-height:0;background:#121212;border:0;border-radius:0;overflow:hidden;display:flex;flex-direction:column;position:relative}
+.hdr{padding:12px 14px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(255,255,255,0.07);gap:8px}.hdr-right{display:flex;align-items:center;gap:8px}.collapse{width:30px;height:30px;border:0;border-radius:50%;background:rgba(255,255,255,.12);color:#fff;font-size:18px;line-height:1}
+.hdr h2{font-size:16px;font-weight:800;display:flex;gap:8px;align-items:center}
+.hdr h2 b{width:26px;height:26px;background:#ff0000;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:12px}
+.badge{font-size:10px;background:rgba(255,255,255,0.08);padding:4px 8px;border-radius:999px;color:rgba(255,255,255,0.5)}
+.search{padding:12px}
+.search-box{position:relative}
+.search-box input{width:100%;height:46px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);border-radius:999px;padding:0 42px 0 38px;color:#fff;font-size:13px;outline:none}
+.search-box input:focus{border-color:#fff;background:rgba(255,255,255,0.1)}
+.ico{position:absolute;left:13px;top:50%;transform:translateY(-50%);opacity:.4}
+.spin{position:absolute;right:12px;top:50%;transform:translateY(-50%);width:16px;height:16px;border:2px solid rgba(255,255,255,0.2);border-top-color:#fff;border-radius:50%;animation:rot .6s linear infinite;display:none}
+.spin.on{display:block}
+@keyframes rot{to{transform:translateY(-50%) rotate(360deg)}}
+.overlay{position:absolute;inset:0;top:108px;background:rgba(18,18,18,0.9);backdrop-filter:blur(16px);z-index:10;display:none;align-items:center;justify-content:center;flex-direction:column}
+.overlay.on{display:flex}
+.overlay .s{width:32px;height:32px;border:3px solid rgba(255,255,255,0.1);border-top-color:#fff;border-radius:50%;animation:rot2 .8s linear infinite}
+@keyframes rot2{to{transform:rotate(360deg)}}
+.list{flex:1;overflow-y:auto;padding:8px 12px 12px;scrollbar-width:none}
+.list::-webkit-scrollbar{display:none}
+.item{display:flex;gap:12px;align-items:center;padding:10px;border-radius:16px;cursor:pointer;transition:.2s;border:1px solid transparent}
+.item:hover{background:rgba(255,255,255,0.06)}
+.item.on{background:rgba(255,255,255,0.1);border-color:rgba(255,255,255,0.14)}
+.item img{width:52px;height:52px;border-radius:12px;object-fit:cover;background:#222;flex-shrink:0}
+.item .info{flex:1;min-width:0}
+.item .tt{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item .ar{font-size:11px;color:rgba(255,255,255,0.5);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item .pl{width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0}
+.item.on .pl{background:#fff;color:#000}
+.empty{text-align:center;padding:80px 20px;color:rgba(255,255,255,0.3)}
+.empty .ic{font-size:32px;margin-bottom:8px}
+.np{border-top:1px solid rgba(255,255,255,0.08);padding:12px;background:linear-gradient(180deg,rgba(255,255,255,0.04),transparent);display:none}
+.np.on{display:block}
+.np-top{display:flex;gap:12px;align-items:center}
+.np-top img{width:56px;height:56px;border-radius:12px}
+.np-info{flex:1;min-width:0}
+.np-tt{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.np-ar{font-size:11px;color:rgba(255,255,255,0.5)}
+.bars{display:flex;gap:3px;align-items:end;height:14px}
+.bars span{width:3px;background:#ff0000;border-radius:99px;animation:bar .8s infinite}
+.bars span:nth-child(2){animation-delay:.2s}
+.bars span:nth-child(3){animation-delay:.4s}
+@keyframes bar{0%,100%{height:4px}50%{height:14px}}
+.ctrls{display:flex;gap:8px;margin-top:12px}
+.ctrl{height:44px;border-radius:999px;border:none;cursor:pointer;font-weight:700;font-size:13px}
+.ctrl.prev,.ctrl.next{width:44px;background:rgba(255,255,255,0.1);color:#fff}
+.ctrl.play{flex:1;background:#fff;color:#000}
+.ctrl.stop{width:44px;background:rgba(255,255,255,0.1);color:#fff}
+#yt-stage{position:fixed!important;left:-10000px!important;top:0!important;width:200px!important;height:200px!important;min-height:200px!important;opacity:0!important;pointer-events:none!important;overflow:hidden!important;z-index:-1!important}#yt-player{width:200px!important;height:200px!important;min-width:200px!important;min-height:200px!important;display:block!important}#yt-player iframe{width:200px!important;height:200px!important;display:block!important;border:0}#yt-player{width:100%;height:200px;min-width:200px;min-height:200px;display:block}#yt-player iframe{width:100%!important;height:200px!important;display:block!important;border:0}
+body.mini{padding:0;min-height:0;align-items:stretch;background:transparent}.mini .player{width:100%;max-width:none;height:82px;min-height:82px;border-radius:16px;border-bottom:0;display:flex}.mini .hdr{padding:8px 12px;border:0}.mini .hdr h2{font-size:13px}.mini .hdr h2 b{width:22px;height:22px}.mini #badge{display:none}.mini .search,.mini .list,.mini .overlay{display:none!important}.mini .np{display:block!important;padding:4px 10px;border:0;background:transparent}.mini .np-top{gap:8px}.mini .np-top img{width:34px;height:34px;border-radius:8px}.mini .np-tt{font-size:11px}.mini .np-ar{font-size:9px}.mini .ctrls{gap:5px;margin-top:-32px;justify-content:flex-end;position:relative;z-index:2}.mini .ctrl{height:30px;font-size:11px}.mini .ctrl.prev,.mini .ctrl.next,.mini .ctrl.stop{width:30px}.mini .ctrl.play{flex:0 0 54px}.mini #bars{display:none!important}
+</style>
+</head>
+<body>
+
+<div class="player" id="player">
+  <div class="hdr"><h2><b>▶</b> YouTube Music</h2><div style="display:flex;gap:8px;align-items:center"><button id="closePlayer" aria-label="Close music screen" title="Back to browser" style="background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.18);color:white;border-radius:9px;padding:6px 11px;font-size:17px;min-width:36px;min-height:34px">‹</button><div class="badge" id="badge">Comico Real Code</div><button id="minimize" aria-label="Minimise player" title="Minimise to bottom bar" style="background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.2);color:white;border-radius:9px;padding:6px 12px;font-size:18px;line-height:18px;min-width:38px;min-height:34px">⌄</button><button id="expand" aria-label="Expand player" title="Expand player" style="display:none;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.2);color:white;border-radius:9px;padding:6px 12px;font-size:16px;min-width:38px;min-height:34px">□</button></div></div>
+  <div class="search">
+    <div class="search-box">
+      <span class="ico">🔍</span>
+      <input id="q" placeholder="Search songs (Comico method)..." autocomplete="off" />
+      <div class="spin" id="spin"></div>
+    </div>
+  </div>
+  <div class="overlay" id="ov"><div class="s"></div><div style="margin-top:10px;font-size:13px;font-weight:600">Searching YouTube</div><div style="margin-top:4px;font-size:11px;color:rgba(255,255,255,0.4)">filter=music_songs • Piped API</div></div>
+  <div id="yt-stage" aria-label="YouTube music player"><div id="yt-player"></div></div>
+  <div class="list" id="list"><div class="empty"><div class="ic">🎵</div><div>Search YouTube Music</div><div style="font-size:11px;margin-top:6px;color:rgba(255,255,255,0.25)">Real Comico search: /search?q=&filter=music_songs</div></div></div>
+  <div class="np" id="np">
+    <div class="np-top"><img id="npImg" src=""><div class="np-info"><div class="np-tt" id="npTt">-</div><div class="np-ar" id="npAr">-</div></div><div class="bars" id="bars" style="display:none"><span></span><span></span><span></span></div></div>
+    <div class="ctrls"><button class="ctrl prev" id="prev">⏮</button><button class="ctrl play" id="play">Pause</button><button class="ctrl next" id="next">⏭</button><button class="ctrl stop" id="stop">✕</button></div>
+  </div>
+
+</div>
+
+<script src="https://www.youtube.com/iframe_api"></script>
+<script>
+// === REAL COMICO MUSIC CODE EXTRACTED ===
+let ytPlayer = null;
+let isPlaying = false;
+let queue = [];
+let curIdx = -1;
+let debounce = null;
+const cache = new Map();
+const qEl = document.getElementById('q');
+const listEl = document.getElementById('list');
+const ov = document.getElementById('ov');
+const spin = document.getElementById('spin');
+const badge = document.getElementById('badge');
+
+function onYouTubeIframeAPIReady(){
+  ytPlayer = new YT.Player('yt-player', {
+    height: '200',
+    width: '100%',
+    playerVars: { playsinline:1, controls:1, disablekb:0, fs:0, origin: location.origin, rel:0 },
+    events: {
+      onReady: ()=>{ console.log('YT Player ready'); badge.textContent='YT Ready'; },
+      onError: (e)=>{ isPlaying=false; document.getElementById('play').textContent='Play'; document.getElementById('bars').style.display='none'; badge.textContent='Playback error • '+e.data; console.warn('YouTube player error',e.data); },
+      onStateChange: (e)=>{
+        if(e.data===YT.PlayerState.PLAYING){ isPlaying=true; document.getElementById('play').textContent='Pause'; document.getElementById('bars').style.display='flex'; badge.textContent='Playing'; }
+        if(e.data===YT.PlayerState.PAUSED){ isPlaying=false; document.getElementById('play').textContent='Play'; document.getElementById('bars').style.display='none'; badge.textContent='Paused'; }
+        if(e.data===YT.PlayerState.ENDED){ 
+          document.getElementById('bars').style.display='none';
+          if(curIdx+1 < queue.length) playAt(curIdx+1);
+        }
+      }
+    }
+  });
+}
+window.onYouTubeIframeAPIReady = onYouTubeIframeAPIReady;
+
+function setMiniMode(on){ if(on){ if(window.StreamGurd?.collapsePlayer) StreamGurd.collapsePlayer(); } else { document.body.classList.remove('mini'); document.getElementById('minimize').style.display='inline-block'; document.getElementById('expand').style.display='none'; } }
+document.getElementById('minimize').onclick=()=>setMiniMode(true);
+document.getElementById('expand').onclick=()=>setMiniMode(false);
+document.getElementById('closePlayer').onclick=()=>{if(window.StreamGurd&&StreamGurd.closePlayer)StreamGurd.closePlayer();};
+qEl.addEventListener('focus',()=>{ if(window.StreamGurd && StreamGurd.requestKeyboard) StreamGurd.requestKeyboard(); });
+qEl.addEventListener('click',()=>{ if(window.StreamGurd && StreamGurd.requestKeyboard) StreamGurd.requestKeyboard(); });
+function esc(t){ const d=document.createElement('div'); d.textContent=t||''; return d.innerHTML; }
+function extractVideoId(item){ const raw=String(item.videoId||item.id||item.url||''); const m=raw.match(/(?:v=|youtu\.be\/|\/watch\/|^)([A-Za-z0-9_-]{11})(?:[&?/#]|$)/); return m?m[1]:(raw.length===11?raw:''); }
+
+async function searchComico(wt){
+  const key = wt.trim().toLowerCase();
+  if (cache.has(key)) return cache.get(key);
+  const endpoints = [
+    'https://pipedapi.adminforge.de',
+    'https://pipedapi.reallyaweso.me',
+    'https://api.piped.private.coffee',
+    'https://pipedapi.kavin.rocks',
+    'https://pipedapi.moomoo.me'
+  ];
+  let songs = [];
+  for (const base of endpoints) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 7000);
+    try {
+      const response = await fetch(base + '/search?q=' + encodeURIComponent(wt) + '&filter=music_songs', {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' },
+        signal: controller.signal
+      });
+      if (!response.ok) continue;
+      const data = await response.json();
+      const items = Array.isArray(data.items) ? data.items : (Array.isArray(data.results) ? data.results : []);
+      songs = items.map(item => {
+        const raw = String(item.url || item.videoId || item.id || '');
+        const queryId = raw.match(/[?&]v=([A-Za-z0-9_-]{11})/);
+        const shortId = raw.match(/youtu\.be\/([A-Za-z0-9_-]{11})/);
+        const id = queryId?.[1] || shortId?.[1] || (String(item.id || '').match(/^[A-Za-z0-9_-]{11}$/)?.[0]) || '';
+        if (!id) return null;
+        const thumbs = item.thumbnails;
+        const thumb = item.thumbnail || (Array.isArray(thumbs) ? (thumbs[0]?.url || thumbs[0]) : '');
+        return {
+          id, videoId: id,
+          title: item.title || item.name || 'Unknown title',
+          artist: item.uploaderName || item.uploader || item.author || 'Unknown artist',
+          artwork: thumb || 'https://i.ytimg.com/vi/' + id + '/mqdefault.jpg',
+          url: 'https://www.youtube.com/watch?v=' + id
+        };
+      }).filter(Boolean).slice(0, 15);
+      if (songs.length) break;
+    } catch (error) {
+      console.warn('Music search endpoint failed:', base, error);
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+  cache.set(key, songs);
+  return songs;
+}
+
+function render(songs){
+  queue = songs;
+  if(!songs.length){
+    listEl.innerHTML = `<div class="empty"><div class="ic">😕</div><div>No songs found</div><div style="font-size:11px;margin-top:4px">Try: "kesariya", "apna bana le"</div></div>`;
+    return;
+  }
+  listEl.innerHTML = songs.map((s,i)=>`
+    <div class="item" data-i="${i}">
+      <img src="${esc(s.artwork)}" loading="lazy" onerror="this.src='https://i.ytimg.com/vi/${s.videoId}/hqdefault.jpg'">
+      <div class="info"><div class="tt">${esc(s.title)}</div><div class="ar">${esc(s.artist)}</div></div>
+      <div class="pl">▶</div>
+    </div>
+  `).join('');
+  listEl.querySelectorAll('.item').forEach(el=>{
+    el.onclick = ()=> playAt(parseInt(el.dataset.i));
+  });
+}
+
+function playAt(i){
+  if(i<0 || i>=queue.length) return;
+  curIdx = i;
+  const s = queue[i];
+  document.querySelectorAll('.item').forEach((e,idx)=> e.classList.toggle('on', idx===i));
+  
+  document.getElementById('npImg').src = s.artwork;
+  document.getElementById('npTt').textContent = s.title;
+  document.getElementById('npAr').textContent = s.artist;
+  document.getElementById('np').classList.add('on');
+  badge.textContent = 'Loading...';
+
+  // === REAL COMICO PLAY LOGIC ===
+  // He.current?.loadVideoById?.(s.videoId), He.current?.playVideo?.()
+  if(ytPlayer && s.videoId){
+    try{
+      ytPlayer.loadVideoById(s.videoId);
+      ytPlayer.playVideo();
+      isPlaying = true;
+      document.getElementById('play').textContent = 'Pause';
+      document.getElementById('bars').style.display = 'flex';
+      badge.textContent = 'Playing • YouTube';
+    }catch(e){
+      console.log('play error', e);
+      badge.textContent = 'Tap Play';
+    }
+  }else{
+    badge.textContent = 'YT not ready, retry...';
+    setTimeout(()=>playAt(i), 1000);
+  }
+}
+
+qEl.addEventListener('focus',()=>{ if(window.StreamGurd?.requestKeyboard) StreamGurd.requestKeyboard(); });
+qEl.addEventListener('click',()=>{ if(window.StreamGurd?.requestKeyboard) StreamGurd.requestKeyboard(); });
+
+// search input - debounced search
+qEl.addEventListener('input', e=>{
+  const wt = e.target.value.trim();
+  if(debounce) clearTimeout(debounce);
+  if(!wt){
+    listEl.innerHTML = `<div class="empty"><div class="ic">🎵</div><div>Search YouTube Music</div></div>`;
+    ov.classList.remove('on'); spin.classList.remove('on'); return;
+  }
+  if(wt.length<2) return;
+  if(!cache.has(wt.toLowerCase())){
+    ov.classList.add('on'); spin.classList.add('on');
+  }
+  debounce = setTimeout(async()=>{
+    try{
+      const songs = await searchComico(wt);
+      ov.classList.remove('on'); spin.classList.remove('on');
+      badge.textContent = `${songs.length} results • YT Music`;
+      render(songs);
+    }catch(err){
+      ov.classList.remove('on'); spin.classList.remove('on');
+      console.log(err);
+      listEl.innerHTML = `<div class="empty"><div class="ic">⚠️</div><div>Search service unavailable</div><div style="font-size:11px;margin-top:6px">Please try again in a moment.</div></div>`;
+      badge.textContent = 'Search unavailable';
+    }
+  }, 500); // same 500ms as Comico
+});
+
+// controls - same as Comico ml()
+// The native floating-panel collapse is handled by the header minimise button.
+document.getElementById('play').onclick = ()=>{
+  if(!ytPlayer) return;
+  if(isPlaying){
+    try{ ytPlayer.pauseVideo(); isPlaying=false; document.getElementById('play').textContent='Play'; document.getElementById('bars').style.display='none'; }catch{}
+  }else{
+    try{ ytPlayer.playVideo(); isPlaying=true; document.getElementById('play').textContent='Pause'; document.getElementById('bars').style.display='flex'; }catch{}
+  }
+};
+document.getElementById('stop').onclick = ()=>{
+  try{ ytPlayer.stopVideo(); }catch{}
+  document.getElementById('np').classList.remove('on');
+  document.getElementById('bars').style.display='none';
+  isPlaying=false;
+  badge.textContent='Stopped';
+  document.querySelectorAll('.item').forEach(e=>e.classList.remove('on'));
+};
+document.getElementById('next').onclick = ()=>{ if(curIdx+1<queue.length) playAt(curIdx+1); };
+document.getElementById('prev').onclick = ()=>{ if(curIdx-1>=0) playAt(curIdx-1); };
+
+console.log('Comico Real Music Player Loaded');
+</script>
+</body>
+</html>
