@@ -779,12 +779,25 @@ function VideoPage() {
     });
   };
   useEffect(()=>{
+    if(!tabActive)return;
     let active=true;
-    supabase.from('video_discovery_sources').select('id,source_type,label,source_key').eq('enabled',true).order('label').then(({data,error})=>{
-      if(active&&!error)setVideoSources((data||[]) as Array<{id:string;source_type:'channel'|'playlist';label:string;source_key:string}>);
-    });
-    return()=>{active=false;};
-  },[]);
+    const loadSources=async()=>{
+      const {data,error}=await supabase.from('video_discovery_sources')
+        .select('id,source_type,label,source_key').eq('enabled',true).order('label');
+      if(!active)return;
+      if(error){setError(error.message);return;}
+      setVideoSources((data||[]) as Array<{id:string;source_type:'channel'|'playlist';label:string;source_key:string}>);
+    };
+    const refreshOnReturn=()=>{if(document.visibilityState==='visible')void loadSources();};
+    void loadSources();
+    window.addEventListener('focus',refreshOnReturn);
+    document.addEventListener('visibilitychange',refreshOnReturn);
+    return()=>{
+      active=false;
+      window.removeEventListener('focus',refreshOnReturn);
+      document.removeEventListener('visibilitychange',refreshOnReturn);
+    };
+  },[tabActive]);
 
   useEffect(()=>{
     let active=true;
