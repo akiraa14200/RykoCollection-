@@ -886,7 +886,10 @@ function VideoPage() {
     }else{
       const snapshot=readPersisted<RelatedVideo[]>('video-feed',12*60*60*1000);
       if(snapshot?.length){setVideos(applyCachedVideoMetadata(snapshot));setLoading(false);}
-      Promise.all([getRelatedVideos(1),getRelatedShortVideos(1)]).then(([data,shorts])=>{
+      Promise.all([getRelatedVideos(1),getRelatedShortVideos(1).catch(error=>{
+        console.warn('Dedicated Shorts query failed; keeping the regular feed available.',error);
+        return [];
+      })]).then(([data,shorts])=>{
         if(!active)return;
         const combined=[...data,...shorts.filter(short=>!data.some(video=>video.id===short.id))];
         setVideos(applyCachedVideoMetadata(combined));
