@@ -219,12 +219,20 @@ function Home() {
   const animePopular = popular.filter(isAnimeCatalogueEntry);
   const animeSeasonal = seasonal.filter(isAnimeCatalogueEntry);
   const activeTrending = catalogueMode === 'anime' ? animeTrending : trendingManga;
-  const savedGenres = new Set(saved.flatMap(item => item.genres || []));
-  const recommendations = [...(catalogueMode === 'anime' ? animePopular : popularManga), ...activeTrending]
-    .filter(item => !saved.some(entry => entry.id === item.id))
-    .map(item => ({ item, score: (item.genres || []).filter(genre => savedGenres.has(genre)).length }))
+  const savedGenres = new Set(saved.flatMap(item => item.genres || []).map(value => value.toLowerCase()));
+  const savedThemes = new Set(saved.flatMap(item => item.tags?.map(tag => tag.name) || []).map(value => value.toLowerCase()));
+  const recentIds = new Set(history.map(item => item.id));
+  const candidatePool = [...(catalogueMode === 'anime' ? animePopular : popularManga), ...activeTrending, ...(catalogueMode === 'anime' ? animeSeasonal : [])];
+  const recommendations = [...new Map(candidatePool.map(item => [item.id, item])).values()]
+    .filter(item => !saved.some(entry => entry.id === item.id) && !recentIds.has(item.id))
+    .map(item => {
+      const genreMatches = (item.genres || []).filter(genre => savedGenres.has(genre.toLowerCase())).length;
+      const themeMatches = (item.tags || []).filter(tag => savedThemes.has(tag.name.toLowerCase())).length;
+      const score = genreMatches * 5 + themeMatches * 3 + (item.averageScore || 0) / 20;
+      return { item, score };
+    })
     .sort((a,b)=>b.score-a.score || (b.item.averageScore || 0)-(a.item.averageScore || 0))
-    .slice(0,6).map(entry=>entry.item);
+    .slice(0,8).map(entry=>entry.item);
   const releaseSchedule = [...animeSeasonal, ...animeTrending]
     .filter(item => item.nextAiringEpisode?.airingAt && item.nextAiringEpisode.airingAt * 1000 > Date.now())
     .sort((a,b)=>(a.nextAiringEpisode?.airingAt || 0)-(b.nextAiringEpisode?.airingAt || 0))
@@ -256,13 +264,13 @@ function Home() {
     {loading && <div className="section"><div className="section-head"><h2>Finding something great</h2></div><div className="anime-grid">{Array.from({length: 6}, (_,i) => <div className="skeleton-card" key={i}><div className="skeleton-poster"/><div className="skeleton-line"/></div>)}</div></div>}
     {catalogueMode === 'anime' ? <>
       <Section title="Trending anime" subtitle="What the anime community is watching" items={animeTrending} saved={saved.map(a => a.id)} onSave={toggle} to="/search?sort=trending"/>
-      <Section title="This season" subtitle="Fresh stories airing right now" items={animeSeasonal} saved={saved.map(a => a.id)} onSave={toggle}/>
+      {recommendations.length > 0 && <Section title="Recommended for you" subtitle={saved.length ? 'Picked from your saved genres, themes and viewing activity' : 'Popular, highly rated picks to help shape your taste profile'} items={recommendations} saved={saved.map(a=>a.id)} onSave={toggle} to="/search"/>}
       <Section title="Popular anime" subtitle="Fan favorites worth your time" items={animePopular} saved={saved.map(a => a.id)} onSave={toggle}/>
     </> : <>
       <Section title="Trending manga & manhwa" subtitle="Popular manga, manhwa and manhua" items={trendingManga} saved={saved.map(a => a.id)} onSave={toggle} to="/search?format=MANGA"/>
+      {recommendations.length > 0 && <Section title="Recommended for you" subtitle={saved.length ? 'Picked from your saved genres, themes and reading activity' : 'Popular, highly rated picks to help shape your taste profile'} items={recommendations} saved={saved.map(a=>a.id)} onSave={toggle} to="/search?format=MANGA"/>}
       <Section title="Popular manga" subtitle="Reader favorites across the AniList catalogue" items={popularManga} saved={saved.map(a => a.id)} onSave={toggle} to="/search?format=MANGA"/>
     </>}
-    {recommendations.length > 0 && <Section title="Picked for your taste" subtitle={saved.length ? 'Suggestions matched to genres in your library' : 'Popular titles to help shape your recommendations'} items={recommendations} saved={saved.map(a=>a.id)} onSave={toggle} to="/search"/>}
     {releaseSchedule.length > 0 && <section className="section"><div className="section-head"><div><h2>Upcoming episodes</h2><p>Next release times for currently airing anime</p></div><Link to="/activity" className="text-link">Activity <ChevronRight size={15}/></Link></div><div className="release-schedule">{releaseSchedule.map(item=><Link to={'/anime/'+item.id} className="release-item" key={item.id}><img src={imageOf(item)} alt=""/><span><strong>{titleOf(item)}</strong><small>Episode {item.nextAiringEpisode?.episode}</small></span><time>{formatCountdown(item.nextAiringEpisode!.airingAt)}</time></Link>)}</div></section>}
     {history.length > 0 && <section className="section"><div className="section-head"><div><h2>Pick up where you left off</h2><p>Your recently opened anime</p></div></div><div className="history-row">{history.slice(0,5).map(item => <Link to={`/anime/${item.id}`} className="history-item" key={item.id}><img src={item.image} alt=""/><span>{item.title}</span><small>Recently viewed</small></Link>)}</div></section>}
     <div className="api-credit">Catalogue powered by the RykoCollection website database.</div>
