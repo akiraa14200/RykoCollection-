@@ -25,7 +25,7 @@ export function EntryLikeButton({ animeId, user }: { animeId: string; user: User
     if (!Number.isSafeInteger(id) || id <= 0) return;
     let active = true;
     void (async () => {
-      const [{ count: total }, mine] = await Promise.all([
+      const [{ data: total }, mine] = await Promise.all([
         supabase.rpc('get_ryko_entry_like_count', { entry_id: id }),
         user ? supabase.from('anime_entry_likes').select('id').eq('anilist_id', id).eq('user_id', user.id).maybeSingle() : Promise.resolve({ data: null, error: null })
       ]);
