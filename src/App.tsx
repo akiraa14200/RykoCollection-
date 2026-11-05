@@ -285,7 +285,7 @@ function SearchPage() {
     {error && <div className="notice">{error}</div>}
     {busy && !items.length ? <div className="anime-grid">{Array.from({length:8},(_,i)=><div className="skeleton-card" key={i}><div className="skeleton-poster"/><div className="skeleton-line"/></div>)}</div> :
       items.length ? <><div className="anime-grid">{items.map(item=><AnimeCard key={item.id} anime={item} saved={saved.some(a=>a.id===item.id)} onSave={toggle}/>)}</div>{hasMore && <div className="load-more-wrap" ref={searchSentinel}><button className="secondary-btn load-more-btn" onClick={loadMore} disabled={loadingMore}>{loadingMore?'Loading more titles…':'Load more titles'}</button></div>}</> :
-      <div className="empty-state"><Search size={28}/><h3>No anime or manga found</h3><p>Try another title or choose a different filter.</p></div>}
+      <div className="empty-state"><Search size={28}/><h3>No anime or manga found</h3><p>Try a different title, remove a filter, or return to discovery.</p><div className="empty-state-actions"><button className="secondary-btn" onClick={()=>{setTerm("");setGenre("");setStatus("");setFormat("");setSort("");}}>Reset search</button><Link className="primary-btn" to="/">Go to Home <ChevronRight size={15}/></Link></div></div>}
   </main>;
 }
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -588,7 +588,7 @@ function WatchlistPage() {
           <LibrarySelect label="Sort" value={f.sort} onChange={sort => set({ sort })} options={sortOptions}/>
         </div></div>
       {filtered && <div className="browse-results-head"><div className="results-caption">{list.length} of {items.length} titles</div><button type="button" className="secondary-btn surprise-btn" onClick={() => set({ q: '', status: '', genre: '', type: '' })}>Clear filters</button></div>}
-      {!list.length ? <div className="empty-state"><Search size={26}/><h3>No matches</h3><p>Try another search or filter.</p></div> :
+      {!list.length ? <div className="empty-state"><Search size={26}/><h3>No matches</h3><p>Try another search or clear the filters to see your saved titles.</p><button className="secondary-btn" onClick={() => set({ q: "", status: "", genre: "", type: "" })}>Clear filters</button></div> :
         groups.map(group => { const entries = list.filter(item => statusOf(item) === group); if (filtered && !entries.length) return null; return <section className="section library-group" key={group}><div className="section-head"><div><h2>{libraryStatusLabel(group, reading)}</h2><p>{entries.length} {entries.length===1?'title':'titles'}</p></div></div>{entries.length ? <div className="anime-grid">{entries.map(titleCard)}</div> : <p className="library-empty">No titles in this category yet.</p>}</section>; })}
     </>;
   };
