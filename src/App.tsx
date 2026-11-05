@@ -1156,6 +1156,7 @@ function AccountPage({ user, isAdmin }: { user: User | null; isAdmin: boolean })
     <section className="account-links-card">
       <h2><Settings size={18}/> App & information</h2>
       <Link to="/settings" className="account-link-row"><span><Settings size={17}/><span><strong>Settings</strong><small>Playback, storage and app preferences</small></span></span><ChevronRight size={17}/></Link>
+      <Link to="/activity" className="account-link-row"><span><Clock3 size={17}/><span><strong>Activity dashboard</strong><small>Watch, reading progress and monthly activity</small></span></span><ChevronRight size={17}/></Link>
       <Link to="/about" className="account-link-row"><span><Info size={17}/><span><strong>About RykoCollection</strong><small>Project details, credits and contact</small></span></span><ChevronRight size={17}/></Link>
       <Link to="/privacy" className="account-link-row"><span><ShieldCheck size={17}/><span><strong>Privacy policy</strong><small>How app data and external services work</small></span></span><ChevronRight size={17}/></Link>
       <Link to="/terms" className="account-link-row"><span><FileText size={17}/><span><strong>Terms of use</strong><small>Guidelines and third-party content</small></span></span><ChevronRight size={17}/></Link>
@@ -1215,6 +1216,35 @@ function AboutPage() {
   </main>;
 }
 
+function ActivityDashboard() {
+  const { saved, history, progress } = useLibrary();
+  const [calendarMonth, setCalendarMonth] = useState(() => new Date());
+  const watchedEpisodes = Object.values(progress).reduce((sum, value) => sum + value, 0);
+  const genres = new Map<string, number>();
+  saved.forEach(item => (item.genres || []).forEach(genre => genres.set(genre, (genres.get(genre) || 0) + 1)));
+  const topGenres = [...genres.entries()].sort((a,b)=>b[1]-a[1]).slice(0,6);
+  const days = Array.from({length: new Date(calendarMonth.getFullYear(),calendarMonth.getMonth()+1,0).getDate()},(_,i)=>i+1);
+  const firstDay = new Date(calendarMonth.getFullYear(),calendarMonth.getMonth(),1).getDay();
+  const monthLabel = calendarMonth.toLocaleDateString(undefined,{month:'long',year:'numeric'});
+  const activity = readStore<Record<string, number>>('rykoc-activity-days', {});
+  const monthKey = (day:number) => [calendarMonth.getFullYear(),String(calendarMonth.getMonth()+1).padStart(2,'0'),String(day).padStart(2,'0')].join('-');
+  const totalTitles = saved.length;
+  return <main className="content-page info-page activity-page">
+    <div className="page-heading"><span className="eyebrow">YOUR RYKO JOURNEY</span><h1>Anime <em>activity.</em></h1><p>Your personal watch and reading progress, stored on this device.</p></div>
+    <div className="activity-stats-grid">
+      <article className="activity-stat"><span>Saved titles</span><strong>{totalTitles}</strong><small>In your personal library</small></article>
+      <article className="activity-stat"><span>Episodes / chapters</span><strong>{watchedEpisodes}</strong><small>Progress recorded</small></article>
+      <article className="activity-stat"><span>Recently viewed</span><strong>{history.length}</strong><small>Recent title activity</small></article>
+      <article className="activity-stat"><span>Completed</span><strong>{Object.values(readStore<Record<string,string>>('rykoc-library-status',{})).filter(x=>x==='Completed').length}</strong><small>Titles marked complete</small></article>
+    </div>
+    <section className="settings-card activity-calendar"><div className="activity-calendar-head"><div><span className="eyebrow">CONSISTENCY</span><h2>Monthly activity</h2><p>Days with recorded activity appear highlighted.</p></div><div className="calendar-controls"><button className="icon-btn" onClick={()=>setCalendarMonth(new Date(calendarMonth.getFullYear(),calendarMonth.getMonth()-1,1))} aria-label="Previous month"><ChevronLeft size={17}/></button><strong>{monthLabel}</strong><button className="icon-btn" onClick={()=>setCalendarMonth(new Date(calendarMonth.getFullYear(),calendarMonth.getMonth()+1,1))} aria-label="Next month"><ChevronRight size={17}/></button></div></div>
+      <div className="activity-calendar-grid">{['S','M','T','W','T','F','S'].map((d,i)=><span className="calendar-weekday" key={i}>{d}</span>)}{Array.from({length:firstDay},(_,i)=><span key={'blank'+i}/>)}{days.map(day=><span key={day} className={activity[monthKey(day)]?'calendar-day active':'calendar-day'} title={activity[monthKey(day)]?activity[monthKey(day)]+' activity events':'No recorded activity'}>{day}</span>)}</div>
+    </section>
+    <section className="settings-card"><div className="section-head"><div><span className="eyebrow">YOUR TASTE</span><h2>Favourite genres</h2></div><Link to="/search" className="text-link">Explore titles <ChevronRight size={15}/></Link></div>{topGenres.length ? <div className="genre-interest-list">{topGenres.map(([genre,count])=><div className="genre-interest" key={genre}><span>{genre}</span><strong>{count} saved</strong><i style={{width:(count/topGenres[0][1]*100)+'%'}}/></div>)}</div> : <p className="fine-print">Save a few titles to see your favourite genres here.</p>}</section>
+    <section className="settings-card"><div className="section-head"><div><span className="eyebrow">RECENT ACTIVITY</span><h2>Recently viewed</h2></div><Link to="/watchlist" className="text-link">Open library <ChevronRight size={15}/></Link></div>{history.length ? <div className="history-row">{history.slice(0,8).map(item=><Link to={'/anime/'+item.id} className="history-item" key={item.id}><img src={item.image} alt=""/><span>{item.title}</span><small>Viewed {new Date(item.updated).toLocaleDateString()}</small></Link>)}</div> : <p className="fine-print">Your recently viewed titles will appear here.</p>}</section>
+  </main>;
+}
+
 function TermsPage() {
   return <main className="content-page info-page legal-page">
     <div className="page-heading"><span className="eyebrow">PLEASE READ</span><h1>Terms of <em>use.</em></h1><p>Last updated: 5 November 2026</p></div>
@@ -1252,7 +1282,7 @@ function TabbedRoutes({ user, isAdmin }: { user: User | null; isAdmin: boolean }
         <Routes location={tabLocations.current[path]}><Route path={path} element={tabElement(path)}/></Routes>
       </TabActiveContext.Provider>
     </div>)}
-    {!activeTab && <Routes><Route path="/anime/:id" element={<DetailPage/>}/><Route path="/privacy" element={<PrivacyPage/>}/><Route path="/terms" element={<TermsPage/>}/><Route path="/settings" element={<AppSettings/>}/><Route path="/about" element={<AboutPage/>}/><Route path="/extensions" element={<Navigate to="/account" replace/>}/><Route path="/admin" element={<AdminWorkspace/>}/><Route path="*" element={<main className="content-page empty-state"><Search size={28}/><h1>Page not found</h1><p>This page may have moved. Start again from Home or explore the catalogue.</p><div className="empty-state-actions"><Link className="primary-btn" to="/">Go to Home</Link><Link className="secondary-btn" to="/search">Explore catalogue</Link></div></main>}/></Routes>}
+    {!activeTab && <Routes><Route path="/anime/:id" element={<DetailPage/>}/><Route path="/privacy" element={<PrivacyPage/>}/><Route path="/terms" element={<TermsPage/>}/><Route path="/settings" element={<AppSettings/>}/><Route path="/activity" element={<ActivityDashboard/>}/><Route path="/about" element={<AboutPage/>}/><Route path="/extensions" element={<Navigate to="/account" replace/>}/><Route path="/admin" element={<AdminWorkspace/>}/><Route path="*" element={<main className="content-page empty-state"><Search size={28}/><h1>Page not found</h1><p>This page may have moved. Start again from Home or explore the catalogue.</p><div className="empty-state-actions"><Link className="primary-btn" to="/">Go to Home</Link><Link className="secondary-btn" to="/search">Explore catalogue</Link></div></main>}/></Routes>}
   </>;
 }
 
