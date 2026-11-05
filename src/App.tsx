@@ -146,6 +146,8 @@ function useLibrary() {
 type HomeSnapshot = { trending: Anime[]; popular: Anime[]; seasonal: Anime[]; trendingManga: Anime[]; popularManga: Anime[] };
 const HOME_CACHE_KEY = 'home';
 const HOME_CACHE_AGE = 24 * 60 * 60 * 1000;
+const isAnimeCatalogueEntry = (item: Anime) => !/MANGA|MANHWA|MANHUA|LIGHT NOVEL|WEB NOVEL|ONE.?SHOT|NOVEL/i.test(item.format || '');
+
 
 function Home() {
   const navigate = useNavigate();
@@ -199,7 +201,12 @@ function Home() {
     return () => { active = false; };
   }, []);
   const [heroIndex, setHeroIndex] = useState(0);
-  const activeTrending = catalogueMode === 'anime' ? trending : trendingManga;
+  // Local Supabase rows can contain both media types; never trust their source
+  // query alone when rendering the Anime mode.
+  const animeTrending = trending.filter(isAnimeCatalogueEntry);
+  const animePopular = popular.filter(isAnimeCatalogueEntry);
+  const animeSeasonal = seasonal.filter(isAnimeCatalogueEntry);
+  const activeTrending = catalogueMode === 'anime' ? animeTrending : trendingManga;
   const featured = activeTrending.slice(0, 5);
   const hero = featured[heroIndex] || activeTrending[0];
   const tabActive = useTabActive();
@@ -226,9 +233,9 @@ function Home() {
     {error && <div className="notice"><strong>Catalogue unavailable.</strong> {error} Check your connection and try again.</div>}
     {loading && <div className="section"><div className="section-head"><h2>Finding something great</h2></div><div className="anime-grid">{Array.from({length: 6}, (_,i) => <div className="skeleton-card" key={i}><div className="skeleton-poster"/><div className="skeleton-line"/></div>)}</div></div>}
     {catalogueMode === 'anime' ? <>
-      <Section title="Trending anime" subtitle="What the anime community is watching" items={trending} saved={saved.map(a => a.id)} onSave={toggle} to="/search?sort=trending"/>
-      <Section title="This season" subtitle="Fresh stories airing right now" items={seasonal} saved={saved.map(a => a.id)} onSave={toggle}/>
-      <Section title="Popular anime" subtitle="Fan favorites worth your time" items={popular} saved={saved.map(a => a.id)} onSave={toggle}/>
+      <Section title="Trending anime" subtitle="What the anime community is watching" items={animeTrending} saved={saved.map(a => a.id)} onSave={toggle} to="/search?sort=trending"/>
+      <Section title="This season" subtitle="Fresh stories airing right now" items={animeSeasonal} saved={saved.map(a => a.id)} onSave={toggle}/>
+      <Section title="Popular anime" subtitle="Fan favorites worth your time" items={animePopular} saved={saved.map(a => a.id)} onSave={toggle}/>
     </> : <>
       <Section title="Trending manga & manhwa" subtitle="Popular manga, manhwa and manhua" items={trendingManga} saved={saved.map(a => a.id)} onSave={toggle} to="/search?format=MANGA"/>
       <Section title="Popular manga" subtitle="Reader favorites across the AniList catalogue" items={popularManga} saved={saved.map(a => a.id)} onSave={toggle} to="/search?format=MANGA"/>
