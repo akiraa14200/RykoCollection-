@@ -97,17 +97,17 @@ export function AdminWorkspace() {
     try{
       let key=sourceForm.source_key.trim();
       let sourceType=sourceForm.source_type;
-      if(/^https?:\\/\\//i.test(key)){
+      if(/^https?:\/\//i.test(key)){
         const u=new URL(key);
-        const host=u.hostname.replace(/^www\\./i,'').toLowerCase();
+        const host=u.hostname.replace(/^www\./i,'').toLowerCase();
         const playlistId=u.searchParams.get('list');
         // Detect playlist URLs automatically, even when the source dropdown is still set to channel.
         if(playlistId && (u.pathname.toLowerCase().includes('playlist') || host==='youtube.com' || host==='m.youtube.com')){
           sourceType='playlist';
           key=playlistId;
         }else if(sourceType==='channel'){
-          const channelId=u.pathname.match(/\\/channel\\/([a-zA-Z0-9_-]+)/)?.[1];
-          const handle=u.pathname.match(/\\/@([a-zA-Z0-9._-]+)/)?.[1];
+          const channelId=u.pathname.match(/\/channel\/([a-zA-Z0-9_-]+)/)?.[1];
+          const handle=u.pathname.match(/\/@([a-zA-Z0-9._-]+)/)?.[1];
           key=channelId|| (handle?'@'+handle:'');
         }else key=playlistId||'';
       }
