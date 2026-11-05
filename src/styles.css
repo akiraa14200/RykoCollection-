@@ -614,3 +614,13 @@ body{padding-bottom:104px}
 .nav-links .nav-browser-link{font-size:13px;color:#d7d0ff;display:flex;gap:7px;align-items:center;background:#8b7cff18;border:1px solid #8b7cff55;border-radius:9px;padding:8px 11px;white-space:nowrap}.nav-links .nav-browser-link:hover{background:#8b7cff30;color:#fff}
 
 .bottom-nav-browser{border:0;background:transparent;font-family:inherit;cursor:pointer;-webkit-appearance:none;appearance:none}
+
+
+/* RykoTube server-search suggestions */
+.yt-search-wrap{position:relative;flex:1;min-width:0;max-width:620px}
+.yt-search-wrap .yt-search{max-width:none;width:100%}
+.yt-search-suggestions{position:absolute;z-index:80;top:calc(100% + 8px);left:0;right:0;max-height:340px;overflow:auto;padding:6px;border:1px solid #34343a;border-radius:16px;background:#101012;box-shadow:0 14px 36px #000a}
+.yt-search-suggestions button{display:flex;width:100%;flex-direction:column;gap:4px;padding:10px 12px;border:0;border-radius:10px;background:transparent;color:#f4f4f4;text-align:left}
+.yt-search-suggestions button:active,.yt-search-suggestions button:hover{background:#242429}
+.yt-search-suggestions strong{font-size:13px;font-weight:600}
+.yt-search-suggestions span{font-size:11px;color:#999}
