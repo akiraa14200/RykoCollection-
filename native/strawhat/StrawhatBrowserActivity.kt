@@ -539,7 +539,16 @@ class StrawhatBrowserActivity : Activity() {
     private fun showCatalogue() {
         var category = "Anime"
         var entries = cachedCatalogue(category)
-        val box = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(18), dp(8), dp(18), dp(4)) }
+        val box = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(18), dp(12), dp(18), dp(10))
+            background = darkGlassShape(0xE8171422.toInt(), 30)
+        }
+        val heading = text("SITE CATALOGUE", 17f, Color.WHITE, true).apply {
+            letterSpacing = .02f
+            setPadding(dp(2), dp(2), dp(2), dp(12))
+        }
+        box.addView(heading, LinearLayout.LayoutParams(-1, -2))
         val tabs = LinearLayout(this).apply { gravity = Gravity.CENTER }
         val animeTab = actionButton("Anime", true) {}
         val mangaTab = actionButton("Manga") {}
@@ -547,12 +556,27 @@ class StrawhatBrowserActivity : Activity() {
         tabs.addView(mangaTab, LinearLayout.LayoutParams(0, dp(38), 1f).apply { leftMargin = dp(4) })
         val search = EditText(this).apply {
             hint = "Search sites"; setSingleLine(true); setTextColor(Color.WHITE); setHintTextColor(Color.GRAY)
-            background = shape(Color.rgb(42, 35, 62),12); setPadding(dp(12),0,dp(12),0)
+            background = darkGlassShape(0xCC29233B.toInt(), 18); setPadding(dp(14),0,dp(14),0)
         }
         val info = text("",11f,Color.LTGRAY).apply { setPadding(dp(2),dp(8),dp(2),dp(8)) }
-        val list = ListView(this)
+        val list = ListView(this).apply {
+            divider = android.graphics.drawable.ColorDrawable(Color.argb(35, 210, 198, 255))
+            dividerHeight = dp(1)
+            selector = android.graphics.drawable.ColorDrawable(Color.argb(24, 190, 177, 255))
+            setPadding(0, dp(4), 0, dp(4))
+            isVerticalScrollBarEnabled = false
+        }
         val filtered = entries.toMutableList()
-        val adapter = ArrayAdapter(this,android.R.layout.simple_list_item_1,filtered.map { it.name }.toMutableList())
+        val adapter = object : ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, filtered.map { it.name }.toMutableList()) {
+            override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
+                val row = super.getView(position, convertView, parent) as TextView
+                row.setTextColor(Color.rgb(244, 241, 252))
+                row.textSize = 15f
+                row.setPadding(dp(14), dp(13), dp(12), dp(13))
+                row.background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
+                return row
+            }
+        }
         list.adapter = adapter
         box.addView(tabs,LinearLayout.LayoutParams(-1,dp(40)))
         box.addView(search,LinearLayout.LayoutParams(-1,dp(46)).apply { topMargin=dp(6) })
@@ -573,7 +597,9 @@ class StrawhatBrowserActivity : Activity() {
         }
         animeTab.setOnClickListener { render("Anime") }
         mangaTab.setOnClickListener { render("Manga") }
-        val dialog=AlertDialog.Builder(this).setTitle("Site Catalogue").setView(box).setNegativeButton("Close",null).setPositiveButton("Refresh",null).create()
+        val dialog=AlertDialog.Builder(this).setCustomTitle(text("Site Catalogue", 20f, Color.WHITE, true).apply {
+            setPadding(dp(22), dp(18), dp(22), dp(4))
+        }).setView(box).setNegativeButton("Close",null).setPositiveButton("Refresh",null).create()
         list.setOnItemClickListener { _,_,position,_ ->
             val item=filtered.getOrNull(position) ?: return@setOnItemClickListener
             dialog.dismiss(); open(item.url)
@@ -589,7 +615,8 @@ class StrawhatBrowserActivity : Activity() {
             }
         }
         dialog.show()
-        dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.setTextColor(Color.rgb(190, 177, 255))
+        styleGlassDialog(dialog, 32)
+        dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.setTextColor(Color.rgb(201, 188, 255))
         dialog.getButton(AlertDialog.BUTTON_NEGATIVE)?.setTextColor(Color.LTGRAY)
         render("Anime")
         if(cachedCatalogue("Anime").isEmpty() || cachedCatalogue("Manga").isEmpty()) refreshCatalogue(false)
@@ -976,6 +1003,7 @@ class StrawhatBrowserActivity : Activity() {
             .setView(ScrollView(this).apply { addView(wrap) })
             .setNegativeButton("Close", null).create()
         dialog.show()
+        styleGlassDialog(dialog, 30)
         dialog.getButton(AlertDialog.BUTTON_NEGATIVE)?.setTextColor(lilac)
     }
 
@@ -1005,11 +1033,27 @@ class StrawhatBrowserActivity : Activity() {
         AlertDialog.Builder(this).setView(content)
             .setPositiveButton("Privacy") { _, _ -> showPolicy("Privacy policy", "Bookmarks, history, catalogue cache and the last page are stored locally on this device. Website requests are sent to the websites you open. Websites may set their own cookies. Clear browser data from Settings to remove local cookies, cache and history.") }
             .setNeutralButton("Terms") { _, _ -> showPolicy("Terms of use", "Use this browser lawfully. Respect website terms, copyright and access restrictions. Filtering is best-effort only and does not guarantee privacy, security, complete ad removal or uninterrupted access.") }
-            .setNegativeButton("Close", null).show()
+            .setNegativeButton("Close", null).create().also { it.show(); styleGlassDialog(it, 30) }
     }
+    private fun styleGlassDialog(dialog: AlertDialog, radius: Int = 26) {
+        dialog.window?.setBackgroundDrawable(darkGlassShape(0xF0161320.toInt(), radius))
+        dialog.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+        dialog.window?.setDimAmount(.68f)
+        dialog.findViewById<TextView>(androidx.appcompat.R.id.alertTitle)?.setTextColor(Color.WHITE)
+        dialog.findViewById<TextView>(android.R.id.message)?.apply {
+            setTextColor(Color.rgb(220, 215, 235))
+            setLineSpacing(dp(3).toFloat(), 1f)
+        }
+        dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.setTextColor(lilac)
+        dialog.getButton(AlertDialog.BUTTON_NEGATIVE)?.setTextColor(secondaryText)
+        dialog.getButton(AlertDialog.BUTTON_NEUTRAL)?.setTextColor(lilac)
+    }
+
     private fun showPolicy(title: String, message: String) {
-        AlertDialog.Builder(this).setTitle(title).setMessage(message)
-            .setPositiveButton("Got it", null).show()
+        val dialog = AlertDialog.Builder(this).setTitle(title).setMessage(message)
+            .setPositiveButton("Got it", null).create()
+        dialog.show()
+        styleGlassDialog(dialog, 28)
     }
 
     private fun exitFullscreen() {
