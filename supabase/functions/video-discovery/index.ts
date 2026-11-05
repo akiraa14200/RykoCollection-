@@ -38,7 +38,7 @@ function parseFeed(xml: string): any[] {
       entry.match(/<id>yt:video:([^<]+)<\/id>/i)?.[1] ||
       rawLink.match(/(?:v=|youtu\.be\/|youtube\.com\/shorts\/)([A-Za-z0-9_-]{6,32})/)?.[1] || "";
     const thumbnail = entry.match(/<(?:media:thumbnail|thumbnail)\b[^>]*(?:url|href)=["']([^"']+)["']/i)?.[1] || "";
-    if (!/^[A-Za-z0-9_-]{6,32}$/.test(id) || !title) continue;
+    if (!/^[A-Za-z0-9_-]{6,32}$/.test(id) || !title || /^(want to save this playlist|youtube)$/i.test(title.trim())) continue;
     output.push({
       video_id: id,
       video_url: "https://www.youtube.com/watch?v=" + id,
@@ -134,7 +134,9 @@ async function discoverFeed(type: "channel" | "playlist", key: string): Promise<
         const fragment = page.text.slice(Math.max(0, match.index - 1200), Math.min(page.text.length, match.index + 3000));
         const titleMatch = fragment.match(/"title"\s*:\s*\{"(?:runs":\[\{"text"|simpleText")\s*:\s*"([^"]+)/);
         const title = decodeXml(titleMatch?.[1] || "");
-        if (!title || found.some(v => v.video_id === id)) continue;
+        // YouTube playlist pages also contain playlist-level prompts that can be
+        // adjacent to a videoId in the page source. Never queue those as videos.
+        if (!title || /^(want to save this playlist|youtube)$/i.test(title.trim()) || found.some(v => v.video_id === id)) continue;
         found.push({
           video_id: id, video_url: "https://www.youtube.com/watch?v=" + id,
           video_title: title.slice(0, 300), creator_name: null,
