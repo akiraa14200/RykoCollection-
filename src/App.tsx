@@ -54,6 +54,12 @@ const readStore = <T,>(key: string, fallback: T): T => {
 function Header({ user, isAdmin, onSignOut }: { user: User | null; isAdmin: boolean; onSignOut: () => void }) {
   const [open, setOpen] = useState(false);
   const [term, setTerm] = useState('');
+  const [catalogueMode, setCatalogueMode] = useState<'anime' | 'manga'>(() => localStorage.getItem('rykoc-home-catalogue-mode') === 'manga' ? 'manga' : 'anime');
+  const chooseCatalogue = (mode: 'anime' | 'manga') => {
+    setCatalogueMode(mode);
+    localStorage.setItem('rykoc-home-catalogue-mode', mode);
+    window.dispatchEvent(new CustomEvent('rykoc-catalogue-mode', { detail: mode }));
+  };
   const navigate = useNavigate();
   const location = useLocation();
   useEffect(() => setOpen(false), [location.pathname]);
@@ -65,6 +71,10 @@ function Header({ user, isAdmin, onSignOut }: { user: User | null; isAdmin: bool
       <Link to="/"><Compass size={16}/> Discover</Link><Link to="/search">Explore</Link><Link to="/watchlist"><Bookmark size={16}/> My list</Link><Link to="/video"><Tv size={16}/> Video</Link><Link to="/privacy"><ShieldCheck size={16}/> Privacy</Link>{isAdmin && <Link to="/admin"><ShieldCheck size={16}/> Admin workspace</Link>}
     </nav>
     <form className="nav-search" onSubmit={submit}><Search size={17}/><input value={term} onChange={e => setTerm(e.target.value)} onFocus={() => { navigate(term.trim() ? `/search?q=${encodeURIComponent(term.trim())}` : "/search"); setOpen(false); }} placeholder="Search anime..." aria-label="Search anime"/><kbd>↵</kbd></form>
+    <div className="topbar-catalogue-switch" role="group" aria-label="Switch home catalogue">
+      <button type="button" className={catalogueMode === 'anime' ? 'active' : ''} aria-pressed={catalogueMode === 'anime'} onClick={() => chooseCatalogue('anime')}><Tv size={14}/><span>Anime</span></button>
+      <button type="button" className={catalogueMode === 'manga' ? 'active' : ''} aria-pressed={catalogueMode === 'manga'} onClick={() => chooseCatalogue('manga')}><BookOpen size={14}/><span>Manga</span></button>
+    </div>
     {user && <div className="nav-account"><span>{String(user.user_metadata?.display_name || "Reader")}</span><button onClick={onSignOut}>Sign out</button></div>}
     <button className="icon-btn mobile-menu" onClick={() => setOpen(!open)} aria-label="Toggle menu">{open ? <X/> : <Menu/>}</button>
   </div></header>;
@@ -141,11 +151,14 @@ function Home() {
   const navigate = useNavigate();
   const [homeSearchTerm, setHomeSearchTerm] = useState('');
   const [catalogueMode, setCatalogueMode] = useState<'anime' | 'manga'>(() => localStorage.getItem('rykoc-home-catalogue-mode') === 'manga' ? 'manga' : 'anime');
-  const changeCatalogueMode = (mode: 'anime' | 'manga') => {
-    setCatalogueMode(mode);
-    localStorage.setItem('rykoc-home-catalogue-mode', mode);
-    setHeroIndex(0);
-  };
+  useEffect(() => {
+    const onModeChange = (event: Event) => {
+      const mode = (event as CustomEvent<'anime' | 'manga'>).detail;
+      if (mode === 'anime' || mode === 'manga') { setCatalogueMode(mode); setHeroIndex(0); }
+    };
+    window.addEventListener('rykoc-catalogue-mode', onModeChange);
+    return () => window.removeEventListener('rykoc-catalogue-mode', onModeChange);
+  }, []);
   const openBrowseSearch = (event: FormEvent) => {
     event.preventDefault();
     const query = homeSearchTerm.trim();
@@ -200,13 +213,6 @@ function Home() {
     return () => window.clearInterval(timer);
   }, [featured.length, tabActive]);
   return <main className="page-shell">
-    <div className="home-catalogue-header">
-      <div className="home-catalogue-heading"><span className="eyebrow">EXPLORE RYKO</span><strong>{catalogueMode === 'anime' ? 'Anime catalogue' : 'Manga universe'}</strong></div>
-      <div className="catalogue-switch" role="group" aria-label="Choose catalogue">
-        <button type="button" className={catalogueMode === 'anime' ? 'active' : ''} aria-pressed={catalogueMode === 'anime'} onClick={() => changeCatalogueMode('anime')}><Tv size={15}/> Anime</button>
-        <button type="button" className={catalogueMode === 'manga' ? 'active' : ''} aria-pressed={catalogueMode === 'manga'} onClick={() => changeCatalogueMode('manga')}><BookOpen size={15}/> Manga</button>
-      </div>
-    </div>
     <form className="nav-search home-search" role="search" onSubmit={openBrowseSearch} style={{ display: 'flex', width: 'min(100%, 680px)', margin: '0 auto 24px', minHeight: 48 }}>
       <Search size={18}/>
       <input value={homeSearchTerm} onChange={event => setHomeSearchTerm(event.target.value)} onFocus={() => navigate(homeSearchTerm.trim() ? `/search?q=${encodeURIComponent(homeSearchTerm.trim())}` : '/search')} placeholder={catalogueMode === 'anime' ? 'Search anime...' : 'Search manga, manhwa & manhua...'} aria-label={catalogueMode === 'anime' ? 'Search anime' : 'Search manga, manhwa and manhua'} />
