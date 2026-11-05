@@ -59,7 +59,7 @@ class AniListRepository {
         val query = """
             query(${': MediaType!) {
               Page(page: 1, perPage: 18) {
-                media(type: $type, sort: TRENDING_DESC, isAdult: false) {
+                media(type: ${'$'}type, sort: TRENDING_DESC, isAdult: false) {
                   id
                   title { english romaji native }
                   coverImage { large extraLarge }
