@@ -40,6 +40,10 @@ html,body{width:100%;height:100%;overflow:hidden}body{background:transparent;col
 .empty .ic{font-size:32px;margin-bottom:8px}
 .np{border-top:1px solid rgba(255,255,255,0.08);padding:12px;background:linear-gradient(180deg,rgba(255,255,255,0.04),transparent);display:none}
 .np.on{display:block}
+.progress-wrap{margin:11px 2px 0;display:flex;align-items:center;gap:9px}
+.progress-time{font-size:9px;line-height:1;color:var(--ryko-muted);font-variant-numeric:tabular-nums;min-width:28px}
+.progress-track{height:3px;flex:1;border-radius:99px;background:rgba(255,255,255,.15);overflow:hidden;position:relative}
+.progress-fill{height:100%;width:0%;border-radius:99px;background:linear-gradient(90deg,#8875e8,#d0c5ff);box-shadow:0 0 8px rgba(169,155,255,.55);transition:width .25s linear}
 .np-top{display:flex;gap:12px;align-items:center}
 .np-top img{width:56px;height:56px;border-radius:12px}
 .np-info{flex:1;min-width:0}
@@ -56,7 +60,7 @@ html,body{width:100%;height:100%;overflow:hidden}body{background:transparent;col
 .ctrl.play{flex:1;background:#a99bff;color:#100d19}
 .ctrl.stop{width:44px;background:rgba(255,255,255,0.1);color:#fff}
 #yt-stage{position:fixed!important;left:-10000px!important;top:0!important;width:200px!important;height:200px!important;min-height:200px!important;opacity:0!important;pointer-events:none!important;overflow:hidden!important;z-index:-1!important}#yt-player{width:200px!important;height:200px!important;min-width:200px!important;min-height:200px!important;display:block!important}#yt-player iframe{width:200px!important;height:200px!important;display:block!important;border:0}#yt-player{width:100%;height:200px;min-width:200px;min-height:200px;display:block}#yt-player iframe{width:100%!important;height:200px!important;display:block!important;border:0}
-body.mini{padding:0;min-height:0;align-items:stretch;background:transparent}.mini .player{width:100%;max-width:none;height:82px;min-height:82px;border-radius:16px;border-bottom:0;display:flex}.mini .hdr{padding:8px 12px;border:0}.mini .hdr h2{font-size:13px}.mini .hdr h2 b{width:22px;height:22px}.mini #badge{display:none}.mini .search,.mini .list,.mini .overlay{display:none!important}.mini .np{display:block!important;padding:4px 10px;border:0;background:transparent}.mini .np-top{gap:8px}.mini .np-top img{width:34px;height:34px;border-radius:8px}.mini .np-tt{font-size:11px}.mini .np-ar{font-size:9px}.mini .ctrls{gap:5px;margin-top:-32px;justify-content:flex-end;position:relative;z-index:2}.mini .ctrl{height:30px;font-size:11px}.mini .ctrl.prev,.mini .ctrl.next,.mini .ctrl.stop{width:30px}.mini .ctrl.play{flex:0 0 54px}.mini #bars{display:none!important}
+body.mini{padding:0;min-height:0;align-items:stretch;background:transparent}.mini .player{width:100%;max-width:none;height:82px;min-height:82px;border-radius:16px;border-bottom:0;display:flex}.mini .hdr{padding:8px 12px;border:0}.mini .hdr h2{font-size:13px}.mini .hdr h2 b{width:22px;height:22px}.mini #badge{display:none}.mini .search,.mini .list,.mini .overlay{display:none!important}.mini .np{display:block!important;padding:4px 10px;border:0;background:transparent}.mini .np-top{gap:8px}.mini .np-top img{width:34px;height:34px;border-radius:8px}.mini .np-tt{font-size:11px}.mini .np-ar{font-size:9px}.mini .ctrls{gap:5px;margin-top:-32px;justify-content:flex-end;position:relative;z-index:2}.mini .ctrl{height:30px;font-size:11px}.mini .ctrl.prev,.mini .ctrl.next,.mini .ctrl.stop{width:30px}.mini .ctrl.play{flex:0 0 54px}.mini #bars{display:none!important}.mini .progress-wrap{display:none!important}
 
 :root{color-scheme:dark;--ryko-bg:#09090b;--ryko-surface:#171421;--ryko-raised:#211b32;--ryko-accent:#a99bff;--ryko-accent-soft:rgba(169,155,255,.16);--ryko-line:rgba(205,194,255,.13);--ryko-muted:#a39db5;--ryko-gap:12px}
 *{font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
@@ -119,6 +123,11 @@ button:focus-visible,input:focus-visible,.item:focus-visible{outline:2px solid v
   <div class="list" id="list"><div class="empty"><div class="ic">🎵</div><div>Search YouTube Music</div><div style="font-size:11px;margin-top:6px;color:rgba(255,255,255,0.25)">Search YouTube Music to build your queue</div></div></div>
   <div class="np" id="np">
     <div class="np-top"><img id="npImg" src=""><div class="np-info"><div class="np-tt" id="npTt">-</div><div class="np-ar" id="npAr">-</div></div><div class="bars" id="bars" style="display:none"><span></span><span></span><span></span></div></div>
+    <div class="progress-wrap" aria-label="Track progress">
+      <span class="progress-time" id="elapsed">0:00</span>
+      <div class="progress-track" id="progressTrack"><div class="progress-fill" id="progressFill"></div></div>
+      <span class="progress-time" id="duration">0:00</span>
+    </div>
     <div class="ctrls"><button class="ctrl prev" id="prev">⏮</button><button class="ctrl play" id="play">Pause</button><button class="ctrl next" id="next">⏭</button><button class="ctrl stop" id="stop">✕</button></div>
   </div>
 
@@ -132,6 +141,7 @@ let isPlaying = false;
 let queue = [];
 let curIdx = -1;
 let debounce = null;
+let progressTimer = null;
 const cache = new Map();
 const qEl = document.getElementById('q');
 const listEl = document.getElementById('list');
@@ -145,7 +155,7 @@ function onYouTubeIframeAPIReady(){
     width: '100%',
     playerVars: { playsinline:1, controls:1, disablekb:0, fs:0, origin: location.origin, rel:0 },
     events: {
-      onReady: ()=>{ console.log('YT Player ready'); badge.textContent='YT Ready'; },
+      onReady: ()=>{ console.log('YT Player ready'); badge.textContent='YT Ready'; startProgressUpdates(); },
       onError: (e)=>{ isPlaying=false; document.getElementById('play').textContent='Play'; document.getElementById('bars').style.display='none'; badge.textContent='Playback error • '+e.data; console.warn('YouTube player error',e.data); },
       onStateChange: (e)=>{
         if(e.data===YT.PlayerState.PLAYING){ isPlaying=true; document.getElementById('play').textContent='Pause'; document.getElementById('bars').style.display='flex'; badge.textContent='Playing'; }
@@ -160,6 +170,34 @@ function onYouTubeIframeAPIReady(){
 }
 window.onYouTubeIframeAPIReady = onYouTubeIframeAPIReady;
 
+function formatTime(seconds){
+  if(!Number.isFinite(seconds) || seconds < 0) return '0:00';
+  const value = Math.floor(seconds);
+  return Math.floor(value/60)+':'+String(value%60).padStart(2,'0');
+}
+function updateProgress(){
+  if(!ytPlayer || typeof ytPlayer.getDuration!=='function') return;
+  try{
+    const duration = Number(ytPlayer.getDuration()) || 0;
+    const current = Number(ytPlayer.getCurrentTime()) || 0;
+    const percent = duration > 0 ? Math.max(0,Math.min(100,(current/duration)*100)) : 0;
+    document.getElementById('progressFill').style.width = percent+'%';
+    document.getElementById('elapsed').textContent = formatTime(current);
+    document.getElementById('duration').textContent = formatTime(duration);
+  }catch(_){}
+}
+function startProgressUpdates(){
+  if(progressTimer) clearInterval(progressTimer);
+  progressTimer = setInterval(updateProgress,500);
+}
+document.getElementById('progressTrack').addEventListener('click',event=>{
+  if(!ytPlayer || typeof ytPlayer.getDuration!=='function') return;
+  const duration = Number(ytPlayer.getDuration()) || 0;
+  if(duration <= 0) return;
+  const rect = event.currentTarget.getBoundingClientRect();
+  const ratio = Math.max(0,Math.min(1,(event.clientX-rect.left)/rect.width));
+  try{ ytPlayer.seekTo(duration*ratio,true); updateProgress(); }catch(_){}
+});
 function setMiniMode(on){ if(on){ if(window.StreamGurd?.collapsePlayer) StreamGurd.collapsePlayer(); } else { document.body.classList.remove('mini'); document.getElementById('minimize').style.display='inline-block'; document.getElementById('expand').style.display='none'; } }
 document.getElementById('minimize').onclick=()=>setMiniMode(true);
 document.getElementById('expand').onclick=()=>setMiniMode(false);
@@ -313,6 +351,9 @@ document.getElementById('stop').onclick = ()=>{
   try{ ytPlayer.stopVideo(); }catch{}
   document.getElementById('np').classList.remove('on');
   document.getElementById('bars').style.display='none';
+  document.getElementById('progressFill').style.width='0%';
+  document.getElementById('elapsed').textContent='0:00';
+  document.getElementById('duration').textContent='0:00';
   isPlaying=false;
   badge.textContent='Stopped';
   document.querySelectorAll('.item').forEach(e=>e.classList.remove('on'));
