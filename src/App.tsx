@@ -666,7 +666,7 @@ function videoEmbedUrl(video: RelatedVideo) {
     if (host === 'tiktok.com' || host.endsWith('.tiktok.com')) {
       const videoIndex = parts.indexOf('video');
       const id = videoIndex >= 0 ? parts[videoIndex + 1] : '';
-      return id && /^\\d+$/.test(id) ? `https://www.tiktok.com/embed/v2/${id}` : '';
+      return id && id.length>0 && [...id].every(char=>char>='0'&&char<='9') ? `https://www.tiktok.com/embed/v2/${id}` : '';
     }
   } catch { return ''; }
   return '';
