@@ -122,6 +122,29 @@ class StrawhatBrowserActivity : Activity() {
     }
 
     private fun dp(n: Int) = (n * resources.displayMetrics.density).toInt()
+    private val ink get() = Color.rgb(9, 9, 11)
+    private val violet get() = Color.rgb(169, 155, 255)
+    private val lilac get() = Color.rgb(205, 194, 255)
+    private val secondaryText get() = Color.rgb(158, 153, 174)
+
+    private fun animateIn(view: View, distance: Float = 10f) {
+        view.animate().cancel()
+        view.alpha = 0f
+        view.translationY = dp(distance).toFloat()
+        view.animate().alpha(1f).translationY(0f).setDuration(230)
+            .setInterpolator(android.view.animation.DecelerateInterpolator()).start()
+    }
+
+    private fun animateVisibility(view: View, visible: Boolean) {
+        if (visible) {
+            view.visibility = View.VISIBLE
+            animateIn(view, 8f)
+        } else {
+            view.animate().cancel()
+            view.animate().alpha(0f).translationY(dp(6).toFloat()).setDuration(150)
+                .withEndAction { view.visibility = View.GONE; view.alpha = 1f; view.translationY = 0f }.start()
+        }
+    }
     private fun shape(color: Int, radius: Int) = GradientDrawable().apply {
         setColor(color); cornerRadius = dp(radius).toFloat()
     }
@@ -291,22 +314,43 @@ class StrawhatBrowserActivity : Activity() {
         contentLayout.addView(statusRow, LinearLayout.LayoutParams(-1, dp(17)))
 
         homePanel = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER; setPadding(dp(18), dp(18), dp(18), dp(18))
-            background = GradientDrawable(GradientDrawable.Orientation.TL_BR, intArrayOf(Color.rgb(35, 27, 57), Color.rgb(10, 9, 14))).apply { cornerRadius = dp(24).toFloat(); setStroke(dp(1), Color.rgb(137, 112, 255)) }
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            setPadding(dp(20), dp(22), dp(20), dp(20))
+            background = GradientDrawable(GradientDrawable.Orientation.TL_BR,
+                intArrayOf(Color.rgb(39, 29, 66), Color.rgb(18, 15, 27), ink)).apply {
+                cornerRadius = dp(28).toFloat()
+                setStroke(dp(1), Color.argb(115, 169, 155, 255))
+            }
+            elevation = dp(3).toFloat()
         }
         val heroIcon = TextView(this).apply { text = "🏴‍☠️"; textSize = 34f; gravity = Gravity.CENTER; setTextColor(accent); background = GradientDrawable().apply { setColor(Color.rgb(43, 35, 65)); cornerRadius = dp(20).toFloat() } }
         homePanel.addView(heroIcon, LinearLayout.LayoutParams(dp(62), dp(62)).apply { gravity = Gravity.CENTER; bottomMargin = dp(14) })
-        homePanel.addView(text("Set sail across the web.", 21f, Color.WHITE, true).apply { gravity = Gravity.CENTER })
-        homePanel.addView(text("Your browser, your choice. Strawhat Pirate filters known ad and tracker domains and helps stop unwanted redirects.", 12f, Color.rgb(177, 169, 199)).apply { gravity = Gravity.CENTER; setLineSpacing(dp(3).toFloat(), 1f); setPadding(dp(4), dp(9), dp(4), dp(16)) })
+        homePanel.addView(text("Your next adventure\nstarts here.", 25f, Color.WHITE, true).apply {
+            gravity = Gravity.CENTER
+            setLineSpacing(dp(1).toFloat(), 1f)
+            letterSpacing = -0.025f
+        })
+        homePanel.addView(text("A calmer way to explore. Open your favourite sites, discover anime and manga sources, and keep useful links close.", 13f, Color.rgb(183, 177, 201)).apply {
+            gravity = Gravity.CENTER
+            setLineSpacing(dp(4).toFloat(), 1f)
+            setPadding(dp(4), dp(10), dp(4), dp(18))
+        })
         val featureRow = LinearLayout(this).apply { gravity = Gravity.CENTER }
         featureRow.addView(featureChip("◉ Tracker filter"), LinearLayout.LayoutParams(0, dp(34), 1f).apply { rightMargin = dp(4) })
         featureRow.addView(featureChip("↗ Redirect guard"), LinearLayout.LayoutParams(0, dp(34), 1f).apply { leftMargin = dp(4) })
         homePanel.addView(featureRow)
+        homePanel.addView(text("QUICK ACCESS", 10f, secondaryText, true).apply {
+            letterSpacing = .12f
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(2), dp(22), 0, dp(9))
+        })
         val entryActions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER }
         entryActions.addView(actionButton("＋ ADD WEBSITE", true) { addLink() }, LinearLayout.LayoutParams(0, dp(48), 1f).apply { rightMargin = dp(5) })
         entryActions.addView(actionButton("☷ SITE CATALOGUE", false) { showCatalogue() }, LinearLayout.LayoutParams(0, dp(48), 1f).apply { leftMargin = dp(5) })
         homePanel.addView(entryActions, LinearLayout.LayoutParams(-1, dp(48)).apply { topMargin = dp(18) })
         contentLayout.addView(homePanel, LinearLayout.LayoutParams(-1, 0, 1f))
+        homePanel.post { animateIn(homePanel, 14f) }
 
         web = WebView(this)
         root.addView(web, 0, FrameLayout.LayoutParams(-1, -1))
@@ -554,7 +598,7 @@ class StrawhatBrowserActivity : Activity() {
     @SuppressLint("SetJavaScriptEnabled")
     private fun showMusicPlayer() {
         musicPanel?.let { panel ->
-            panel.visibility = View.VISIBLE
+            animateVisibility(panel, true)
             musicFab?.visibility = View.GONE
             return
         }
@@ -601,7 +645,7 @@ class StrawhatBrowserActivity : Activity() {
         musicFab?.visibility = View.GONE
 
         fun hidePlayer() {
-            panel.visibility = View.GONE
+            animateVisibility(panel, false)
             musicFab?.visibility = View.VISIBLE
             musicFab?.text = "♫"
         }
@@ -833,19 +877,20 @@ class StrawhatBrowserActivity : Activity() {
         prefs.edit().putString("history",list.take(80).joinToString("\n")).apply()
     }
     private fun menu() {
-        val choices = arrayOf(if(blocking) "Pause redirect protection" else "Enable redirect protection","Refresh","Back","Forward","Save current website","History","Clear cookies and cache","About Strawhat Pirate","Privacy policy","Terms of use")
+        val choices = arrayOf("Settings", if(blocking) "Pause redirect protection" else "Enable redirect protection","Refresh","Back","Forward","Save current website","History","Clear cookies and cache","About Strawhat Pirate","Privacy policy","Terms of use")
         AlertDialog.Builder(this).setTitle("Strawhat Pirate").setItems(choices) { _,i ->
             when(i) {
-                0 -> { blocking = !blocking; prefs.edit().putBoolean("blocking",blocking).apply(); web.reload() }
-                1 -> web.reload()
-                2 -> if(web.canGoBack()) web.goBack()
-                3 -> if(web.canGoForward()) web.goForward()
-                4 -> web.url?.let { val list = (listOf(it)+saved()).distinct(); prefs.edit().putString("saved",list.joinToString("\n")).apply(); toast("Website saved") }
-                5 -> { val h = prefs.getString("history","").orEmpty().split("\n").filter { it.isNotBlank() }; if(h.isNotEmpty()) AlertDialog.Builder(this).setTitle("History").setItems(h.toTypedArray()) { _,n -> open(h[n]) }.show() else toast("No history") }
-                6 -> { CookieManager.getInstance().removeAllCookies(null); web.clearCache(true); web.clearHistory(); toast("Browser data cleared") }
-                7 -> showAbout()
-                8 -> showPolicy("Privacy policy", "Strawhat Pirate stores bookmarks, browsing history, catalogue cache and your last opened page locally on this device. Website requests go directly to the sites you visit. The app does not operate an account system or sell personal data. Websites may use their own cookies and tracking technologies. Clearing browser data removes local cookies, cache and history.")
-                9 -> showPolicy("Terms of use", "Use Strawhat Pirate lawfully and respect each website's terms, copyright and access rules. You are responsible for the websites and content you choose to visit. Redirect protection prevents pop-up windows and links that try to open new tabs; it does not block advertisements or guarantee protection from every redirect. The app is provided as-is. Do not use it to bypass access controls or infringe anyone's rights.")
+                0 -> showSettings()
+                1 -> { blocking = !blocking; prefs.edit().putBoolean("blocking",blocking).apply(); web.reload() }
+                2 -> web.reload()
+                3 -> if(web.canGoBack()) web.goBack()
+                4 -> if(web.canGoForward()) web.goForward()
+                5 -> web.url?.let { val list = (listOf(it)+saved()).distinct(); prefs.edit().putString("saved",list.joinToString("\n")).apply(); toast("Website saved") }
+                6 -> { val h = prefs.getString("history","").orEmpty().split("\n").filter { it.isNotBlank() }; if(h.isNotEmpty()) AlertDialog.Builder(this).setTitle("History").setItems(h.toTypedArray()) { _,n -> open(h[n]) }.show() else toast("No history") }
+                7 -> { CookieManager.getInstance().removeAllCookies(null); web.clearCache(true); web.clearHistory(); toast("Browser data cleared") }
+                8 -> showAbout()
+                9 -> showPolicy("Privacy policy", "Strawhat Pirate stores bookmarks, browsing history, catalogue cache and your last opened page locally on this device. Website requests go directly to the sites you visit. The app does not operate an account system or sell personal data. Websites may use their own cookies and tracking technologies. Clearing browser data removes local cookies, cache and history.")
+                10 -> showPolicy("Terms of use", "Use Strawhat Pirate lawfully and respect each website's terms, copyright and access rules. You are responsible for the websites and content you choose to visit. Redirect protection prevents pop-up windows and links that try to open new tabs; it does not block advertisements or guarantee protection from every redirect. The app is provided as-is. Do not use it to bypass access controls or infringe anyone's rights.")
             }
         }.show()
     }
@@ -874,14 +919,94 @@ class StrawhatBrowserActivity : Activity() {
         setStroke(dp(1), 0x88B9A7FF.toInt())
     }
 
-    private fun showAbout() {
-        AlertDialog.Builder(this).setTitle("🏴‍☠️ Strawhat Pirate")
-            .setMessage("A local-first Android browser for exploring the web with a built-in site catalogue, saved links, browsing history and a lightweight domain filter.\n\nMade for personal browsing. Anime and Manga catalogues are supplied by the linked public spreadsheet.\n\nAd filtering is domain-based and cannot guarantee removal of first-party or in-stream ads.")
-            .setPositiveButton("Privacy policy") { _, _ -> showPolicy("Privacy policy", "Bookmarks, history, catalogue cache and the last page are stored locally on this device. Website requests are sent to the websites you open. The app has no account system and does not sell personal data. Sites may set their own cookies. Clear browser data from the menu to remove local cookies, cache and history.") }
-            .setNeutralButton("Terms") { _, _ -> showPolicy("Terms of use", "Use this browser lawfully. Respect website terms, copyright and access restrictions. You are responsible for your browsing and the content you access. Filtering is best-effort only and does not guarantee privacy, security, complete ad removal or uninterrupted access. The app is provided as-is.") }
-            .setNegativeButton("Close", null).show()
+    private fun showSettings() {
+        val wrap = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(18), dp(8), dp(18), dp(8))
+        }
+        fun section(title: String, subtitle: String) {
+            wrap.addView(text(title, 10f, violet, true).apply {
+                letterSpacing = .13f
+                setPadding(0, dp(14), 0, dp(4))
+            })
+            wrap.addView(text(subtitle, 12f, secondaryText).apply { setPadding(0, 0, 0, dp(8)) })
+        }
+        fun row(title: String, detail: String, action: () -> Unit) {
+            val item = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(dp(14), dp(11), dp(14), dp(11))
+                background = darkGlassShape(0xAA171421.toInt(), 16)
+                isClickable = true
+                isFocusable = true
+                setOnClickListener { action() }
+            }
+            item.addView(text(title, 14f, Color.WHITE, true))
+            item.addView(text(detail, 11f, secondaryText).apply { setPadding(0, dp(3), 0, 0) })
+            wrap.addView(item, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(8) })
+        }
+        section("BROWSING", "Control how Strawhat behaves on this device.")
+        row("Redirect protection", if (blocking) "On · Known unwanted redirect hosts are filtered" else "Off · Filtering is paused") {
+            blocking = !blocking
+            prefs.edit().putBoolean("blocking", blocking).apply()
+            toast(if (blocking) "Protection enabled" else "Protection paused")
+            showSettings()
+        }
+        row("Clear browsing data", "Remove cookies, cache and recent history") {
+            AlertDialog.Builder(this).setTitle("Clear browsing data?")
+                .setMessage("This removes cookies, cached files and browsing history stored by Strawhat on this device.")
+                .setNegativeButton("Cancel", null).setPositiveButton("Clear") { _, _ ->
+                    CookieManager.getInstance().removeAllCookies(null)
+                    web.clearCache(true); web.clearHistory()
+                    prefs.edit().remove("history").remove("last_url").apply()
+                    toast("Browsing data cleared")
+                }.show()
+        }
+        section("MUSIC", "Personalise the built-in music search.")
+        row("YouTube Data API key", if (youtubeApiKey().isBlank()) "Not configured · Add a key to enable official search" else "Configured · Stored only on this device") {
+            configureYouTubeApiKey(text("", 12f, secondaryText))
+        }
+        section("STORAGE & PRIVACY", "Your saved links and preferences stay local.")
+        row("Privacy policy", "How local data and website requests work") {
+            showPolicy("Privacy policy", "Bookmarks, history, catalogue cache and the last page are stored locally on this device. Website requests go directly to the sites you visit. Websites may set their own cookies and tracking technologies. Strawhat does not operate a browser account or cloud-sync your browsing data.")
+        }
+        row("Usage notes", "Filtering is best-effort, not a security guarantee") {
+            showPolicy("Usage notes", "Use websites lawfully and respect their terms. Domain filtering cannot guarantee removal of first-party ads, in-stream ads, trackers or every redirect.")
+        }
+        val dialog = AlertDialog.Builder(this).setTitle("Strawhat settings")
+            .setView(ScrollView(this).apply { addView(wrap) })
+            .setNegativeButton("Close", null).create()
+        dialog.show()
+        dialog.getButton(AlertDialog.BUTTON_NEGATIVE)?.setTextColor(lilac)
     }
 
+    private fun showAbout() {
+        val content = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER_HORIZONTAL
+            setPadding(dp(20), dp(12), dp(20), dp(8))
+        }
+        content.addView(TextView(this).apply {
+            text = "🏴‍☠️"; textSize = 42f; gravity = Gravity.CENTER
+            background = GradientDrawable().apply {
+                setColor(Color.rgb(43, 34, 68)); cornerRadius = dp(22).toFloat()
+                setStroke(dp(1), Color.argb(120, 169, 155, 255))
+            }
+        }, LinearLayout.LayoutParams(dp(76), dp(76)).apply { bottomMargin = dp(12) })
+        content.addView(text("STRAW HAT PIRATE", 16f, Color.WHITE, true).apply { gravity = Gravity.CENTER; letterSpacing = .08f })
+        content.addView(text("A RYKO BROWSER EXPERIENCE", 10f, violet, true).apply {
+            gravity = Gravity.CENTER; setPadding(0, dp(5), 0, dp(14))
+        })
+        content.addView(text("A local-first browser companion for exploring the web, saving useful places, and discovering anime and manga sites. Your saved links and browser preferences remain on this device.", 12f, secondaryText).apply {
+            gravity = Gravity.CENTER; setLineSpacing(dp(3).toFloat(), 1f)
+        })
+        content.addView(text("Protection is best-effort. It cannot guarantee complete ad, tracker or redirect blocking.", 11f, secondaryText).apply {
+            gravity = Gravity.CENTER; setPadding(0, dp(14), 0, dp(4))
+        })
+        AlertDialog.Builder(this).setView(content)
+            .setPositiveButton("Privacy") { _, _ -> showPolicy("Privacy policy", "Bookmarks, history, catalogue cache and the last page are stored locally on this device. Website requests are sent to the websites you open. Websites may set their own cookies. Clear browser data from Settings to remove local cookies, cache and history.") }
+            .setNeutralButton("Terms") { _, _ -> showPolicy("Terms of use", "Use this browser lawfully. Respect website terms, copyright and access restrictions. Filtering is best-effort only and does not guarantee privacy, security, complete ad removal or uninterrupted access.") }
+            .setNegativeButton("Close", null).show()
+    }
     private fun showPolicy(title: String, message: String) {
         AlertDialog.Builder(this).setTitle(title).setMessage(message)
             .setPositiveButton("Got it", null).show()
