@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef,
 import { Link, Navigate, Route, Routes, useNavigate, useParams, useLocation, type Location } from 'react-router-dom';
 import { Search, Compass, Bookmark, ShieldCheck, Play, Star, ChevronRight, ArrowLeft, Heart, Clock3, Menu, X, ExternalLink, Sparkles, Tv, Info, Users, FileText, Globe, Youtube, ListVideo, ChevronDown, RotateCw, MessageCircle, Home as HomeIcon, UserRound, ChevronLeft, Shuffle, Minus, Plus, Settings, Trash2, Clock } from 'lucide-react';
 // The application UI and page components are defined below.
-import { Anime, AnimeCharacter, getAnime, peekAnime, rememberPreviews, applyCachedVideoMetadata, enrichVideoMetadataProgressive, getAnimeCharacters, getPopular, getPopularManga, getSeasonal, getTrending, getTrendingManga, getRelatedVideos, getRelatedShortVideos, getRelatedVideosBySourceIds, RelatedVideo, imageOf, searchAnime, titleOf } from './lib/catalogue';
+import { Anime, AnimeCharacter, getAnime, peekAnime, rememberPreviews, applyCachedVideoMetadata, enrichVideoMetadataProgressive, getAnimeCharacters, getPopular, getPopularManga, getSeasonal, getTrending, getTrendingManga, getRelatedVideos, getRelatedShortVideos, searchRelatedVideos, getRelatedVideosBySourceIds, RelatedVideo, imageOf, searchAnime, titleOf } from './lib/catalogue';
 import type { User } from '@supabase/supabase-js';
 import { supabase } from './lib/supabase';
 import { AnimeComments } from './components/AnimeComments';
@@ -777,6 +777,8 @@ function VideoPage() {
   const [loadingMore,setLoadingMore]=useState(false);
   const [error,setError]=useState('');
   const [term,setTerm]=useState('');
+  const [remoteSearchVideos,setRemoteSearchVideos]=useState<RelatedVideo[]>([]);
+  const [suggestionsOpen,setSuggestionsOpen]=useState(false);
   const [format,setFormat]=useState<'all'|'video'|'short'>('all');
   const [category,setCategory]=useState('All');
   const [videoSources,setVideoSources]=useState<Array<{id:string;source_type:'channel'|'playlist';label:string;source_key:string}>>([]);
@@ -906,9 +908,22 @@ function VideoPage() {
     return()=>{active=false;};
   },[selectedSource,sourceTypeFilter,sourceFilteredIds.join(','),sourceFilterActive]);
 
+  useEffect(()=>{
+    const query=term.trim();
+    if(query.length<2){setRemoteSearchVideos([]);return;}
+    let active=true;
+    const timer=window.setTimeout(()=>{
+      void searchRelatedVideos(query).then(results=>{if(active)setRemoteSearchVideos(results);})
+        .catch(error=>console.warn('RykoTube search failed; showing loaded matches.',error));
+    },220);
+    return()=>{active=false;window.clearTimeout(timer);};
+  },[term]);
+
   const filtered=useMemo(()=>{
     const query=term.trim().toLowerCase();
-    return videos.filter(video=>{
+    const combined=new Map<string,RelatedVideo>();
+    [...videos,...remoteSearchVideos].forEach(video=>combined.set(video.id,video));
+    return [...combined.values()].filter(video=>{
       const matchesText=!query||[video.videoTitle,video.creatorName,video.titleName].join(' ').toLowerCase().includes(query);
       const matchesCategory=category==='All'||(video.titleFormat||'').toLowerCase()===category.toLowerCase();
       const sourceMeta=videoSources.find(source=>source.id===video.sourceId);
@@ -916,7 +931,7 @@ function VideoPage() {
       const matchesSource=!selectedSource||video.sourceId===selectedSource;
       return matchesText&&matchesCategory&&matchesSourceType&&matchesSource;
     });
-  },[videos,term,category,selectedSource,sourceTypeFilter,videoSources]);
+  },[videos,remoteSearchVideos,term,category,selectedSource,sourceTypeFilter,videoSources]);
 
   // Build a lightweight taste profile from the user's own saved titles and history.
   const {recommendedRegular,recommendedShorts}=useMemo(()=>{
@@ -969,13 +984,13 @@ function VideoPage() {
   },[recommendedRegular,recommendedShorts]);
 
   const loadMore=async()=>{
-    if(loadingMore||!hasMore)return;
+    if(loadingMore||!(hasMore||(format!=='video'&&shortHasMore)))return;
     setLoadingMore(true);
     setError('');
     try{
       const wantsShorts=format==='short'||format==='all';
       const [raw,shortRaw]=await Promise.all([
-        sourceFilterActive ? getRelatedVideosBySourceIds(sourceFilteredIds,page+1) : getRelatedVideos(page+1),
+        hasMore ? (sourceFilterActive ? getRelatedVideosBySourceIds(sourceFilteredIds,page+1) : getRelatedVideos(page+1)) : Promise.resolve([]),
         wantsShorts&&shortHasMore ? getRelatedShortVideos(shortPage+1) : Promise.resolve([])
       ]);
       const data=applyCachedVideoMetadata([...raw,...shortRaw.filter(short=>!raw.some(video=>video.id===short.id))]);
@@ -1007,10 +1022,11 @@ function VideoPage() {
     <label className="yt-search"><Search size={19}/><input value={term} onChange={event=>setTerm(event.target.value)} placeholder="Search videos, creators or titles" autoComplete="off"/>{term&&<button onClick={()=>setTerm('')} aria-label="Clear search"><X size={16}/></button>}</label>
   </header>;
 
+  const sortedVideoSources=[...videoSources].sort((a,b)=>a.label.localeCompare(b.label,undefined,{numeric:true,sensitivity:'base'}));
   const sourceDirectory=<section className="yt-source-directory" aria-label="Browse YouTube channels and playlists">
     <div className="yt-source-directory-head"><strong>Browse sources</strong><button type="button" onClick={()=>{setSelectedSource('');setSourceTypeFilter('all');}}>All sources</button></div>
     {([{type:'channel',label:'Channels',icon:<Youtube size={16}/>},{type:'playlist',label:'Playlists',icon:<ListVideo size={16}/>} ] as const).map(group=>{
-      const items=videoSources.filter(source=>source.source_type===group.type);
+      const items=sortedVideoSources.filter(source=>source.source_type===group.type);
       return <div className="yt-source-group" key={group.type}>
         <div className="yt-source-group-head">{group.icon}<strong>{group.label}</strong><span>{items.length}</span></div>
         <div className="yt-source-chips">
