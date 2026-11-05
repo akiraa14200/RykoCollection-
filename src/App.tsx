@@ -1183,10 +1183,28 @@ export default function App() {
     } catch { /* storage unavailable */ }
   }, []);
   useEffect(() => {
+    let mounted = true;
+    const retry = () => {
+      if (navigator.onLine) void flushPendingReports();
+    };
     void flushPendingReports();
-    const retry = () => { void flushPendingReports(); };
     window.addEventListener('online', retry);
-    return () => window.removeEventListener('online', retry);
+    document.addEventListener('visibilitychange', retry);
+    let appStateListener: { remove: () => Promise<void> } | undefined;
+    if (Capacitor.isNativePlatform()) {
+      void CapApp.addListener('appStateChange', state => {
+        if (state.isActive) retry();
+      }).then(listener => {
+        if (mounted) appStateListener = listener;
+        else void listener.remove();
+      }).catch(error => console.warn('Could not attach native sync listener.', error));
+    }
+    return () => {
+      mounted = false;
+      window.removeEventListener('online', retry);
+      document.removeEventListener('visibilitychange', retry);
+      if (appStateListener) void appStateListener.remove();
+    };
   }, [user]);
   const signOut = () => { void supabase.auth.signOut(); };
   return <><OfflineBanner/><Header user={user} isAdmin={isAdmin} onSignOut={signOut}/><TabbedRoutes user={user} isAdmin={isAdmin}/><BottomNavigation/><ToastHost/><footer className="footer"><Link to="/" className="brand"><img className="brand-mark brand-logo" src="/logo.svg" alt="" width="31" height="31" loading="lazy"/><span>RYKOCOLLECTION</span></Link><p>Discover stories. Find your next world.</p><span>Shared Ryko catalogue · Independent fan discovery project</span></footer></>;
