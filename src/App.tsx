@@ -750,6 +750,7 @@ function VideoPage() {
   const [category,setCategory]=useState('All');
   const [videoSources,setVideoSources]=useState<Array<{id:string;source_type:'channel'|'playlist';label:string;source_key:string}>>([]);
   const [selectedSource,setSelectedSource]=useState('');
+  const [sourceTypeFilter,setSourceTypeFilter]=useState<'all'|'channel'|'playlist'>('all');
   const tabActive=useTabActive();
   useEffect(()=>{if(!tabActive)setPlayingId(null);},[tabActive]);
   // Lock browser zoom only while the Video tab is active. Restore the site's normal
@@ -809,10 +810,12 @@ function VideoPage() {
     return videos.filter(video=>{
       const matchesText=!query||[video.videoTitle,video.creatorName,video.titleName].join(' ').toLowerCase().includes(query);
       const matchesCategory=category==='All'||(video.titleFormat||'').toLowerCase()===category.toLowerCase();
+      const sourceMeta=videoSources.find(source=>source.id===video.sourceId);
+      const matchesSourceType=sourceTypeFilter==='all'||sourceMeta?.source_type===sourceTypeFilter;
       const matchesSource=!selectedSource||video.sourceId===selectedSource;
-      return matchesText&&matchesCategory&&matchesSource;
+      return matchesText&&matchesCategory&&matchesSourceType&&matchesSource;
     });
-  },[videos,term,category,selectedSource]);
+  },[videos,term,category,selectedSource,sourceTypeFilter,videoSources]);
 
   // Build a lightweight taste profile from the user's own saved titles and history.
   const {recommendedRegular,recommendedShorts}=useMemo(()=>{
@@ -895,20 +898,21 @@ function VideoPage() {
   </header>;
 
   const sourceDirectory=<section className="yt-source-directory" aria-label="Browse YouTube channels and playlists">
+    <div className="yt-source-directory-head"><strong>Browse sources</strong><button type="button" onClick={()=>{setSelectedSource('');setSourceTypeFilter('all');}}>All sources</button></div>
     {([{type:'channel',label:'Channels',icon:<Youtube size={16}/>},{type:'playlist',label:'Playlists',icon:<ListVideo size={16}/>} ] as const).map(group=>{
       const items=videoSources.filter(source=>source.source_type===group.type);
       return <div className="yt-source-group" key={group.type}>
         <div className="yt-source-group-head">{group.icon}<strong>{group.label}</strong><span>{items.length}</span></div>
         <div className="yt-source-chips">
-          <button type="button" className={!selectedSource?'active':''} onClick={()=>setSelectedSource('')}>All {group.label.toLowerCase()}</button>
-          {items.map(source=><button type="button" key={source.id} className={selectedSource===source.id?'active':''} onClick={()=>setSelectedSource(source.id)}>{source.label}</button>)}
+          <button type="button" className={sourceTypeFilter===group.type&&!selectedSource?'active':''} onClick={()=>{setSelectedSource('');setSourceTypeFilter(group.type);}}>All {group.label.toLowerCase()}</button>
+          {items.map(source=><button type="button" key={source.id} className={selectedSource===source.id?'active':''} onClick={()=>{setSelectedSource(source.id);setSourceTypeFilter(group.type);}}>{source.label}</button>)}
           {!items.length&&<span className="yt-source-empty">No {group.label.toLowerCase()} added yet</span>}
         </div>
       </div>;
     })}
   </section>;
 
-  const empty=<div className="yt-empty"><Play size={28}/><h3>{term||category!=='All'?'No matching videos':'No videos yet'}</h3><p>Try changing your search or filters.</p><button className="secondary-btn" onClick={()=>{setTerm('');setCategory('All');setFormat('all');setSelectedSource('');}}>Clear filters</button></div>;
+  const empty=<div className="yt-empty"><Play size={28}/><h3>{term||category!=='All'?'No matching videos':'No videos yet'}</h3><p>Try changing your search or filters.</p><button className="secondary-btn" onClick={()=>{setTerm('');setCategory('All');setFormat('all');setSelectedSource('');setSourceTypeFilter('all');}}>Clear filters</button></div>;
   const videoCard=(video:RelatedVideo,short:boolean)=><LazyVideoCard key={video.id} video={video} short={short} playing={playingId===video.id} onPlay={()=>setPlayingId(current=>current===video.id?null:video.id)} saved={savedVideoIds.has(video.id)} onToggleSave={()=>toggleVideo(video)}/>;
 
   return <main className="video-page yt-page">
