@@ -90,8 +90,8 @@ export function CommunityHub({ user }: { user: User | null }) {
     if (!/^[a-z0-9_]{2,32}$/.test(username)) { setStatus('Username must be 2–32 characters: letters, numbers or underscores.'); return; }
     setBusy(true); setStatus('');
     const [entryResult, profileResult] = await Promise.all([
-      supabase.from('anime_entry_profiles').upsert({ id: user.id, username, display_name: profile.display_name.trim() || 'Reader' }, { onConflict: 'id' }),
-      supabase.from('profiles').upsert({ id: user.id, bio: profile.bio.slice(0,280), avatar_url: profile.avatar_url, banner_url: profile.banner_url }, { onConflict: 'id' })
+      supabase.from('anime_entry_profiles').update({ username, display_name: profile.display_name.trim() || 'Reader' }).eq('id', user.id),
+      supabase.from('profiles').update({ bio: profile.bio.slice(0,280), avatar_url: profile.avatar_url, banner_url: profile.banner_url }).eq('id', user.id)
     ]);
     setBusy(false);
     const error = entryResult.error || profileResult.error;
