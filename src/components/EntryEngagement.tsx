@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import type { User } from '@supabase/supabase-js';
-import { Heart, MessageCircle, Send, ShieldCheck, Trophy } from 'lucide-react';
+import { Heart, MessageCircle, Send, Trophy } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { getAnime, imageOf, titleOf, type Anime } from '../lib/catalogue';
