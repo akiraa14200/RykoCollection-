@@ -16,7 +16,7 @@ export type AnimeCharacter = {
 };
 export type AnimeStaff = { role: string; node: { name: { full?: string } } };
 export type AnimeExternalLink = { url: string; site: string; type?: string; language?: string };
-export type RelatedVideo = { id: string; titleId: string; videoUrl: string; platform: 'youtube' | 'instagram' | 'dailymotion'; videoTitle: string; creatorName: string; creatorAvatarUrl: string; actionType: 'read' | 'watch'; actionUrl: string; sortOrder: number; createdAt: string; titleName?: string; titleCover?: string; titleFormat?: string; releaseYear?: number; genres?: string[]; sourceId?: string };
+export type RelatedVideo = { id: string; titleId: string; videoUrl: string; platform: 'youtube' | 'instagram' | 'dailymotion' | 'tiktok'; videoTitle: string; creatorName: string; creatorAvatarUrl: string; actionType: 'read' | 'watch'; actionUrl: string; sortOrder: number; createdAt: string; titleName?: string; titleCover?: string; titleFormat?: string; releaseYear?: number; genres?: string[]; sourceId?: string };
 export type Anime = {
   id: string;
   anilistId?: number;
@@ -90,7 +90,7 @@ export async function getRelatedVideosBySourceIds(sourceIds: string[], page = 1)
   const from = Math.max(0, page - 1) * 40;
   const { data, error } = await supabase.from('related_videos')
     .select('id,title_id,legacy_title_id,source_id,video_url,platform,video_title,creator_name,creator_avatar_url,action_type,action_url,sort_order,created_at')
-    .in('source_id', ids).eq('platform', 'youtube')
+    .in('source_id', ids)
     .order('sort_order', { ascending: true }).order('created_at', { ascending: false })
     .range(from, from + 39);
   throwIf(error);
