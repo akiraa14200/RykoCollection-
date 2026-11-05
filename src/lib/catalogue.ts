@@ -94,7 +94,7 @@ export async function getRelatedVideos(page = 1, titleId?: string): Promise<Rela
   const { data, error } = await request;
   throwIf(error);
   const videos = ((data || []) as RelatedVideoRow[]).map(mapRelatedVideo);
-  const titleIds = [...new Set(videos.map(video => video.titleId))];
+  const titleIds = [...new Set(videos.map(video => video.titleId).filter((id): id is string => typeof id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)))];
   if (titleIds.length) {
     const { data: titles, error: titleError } = await supabase.from('titles').select('id,name,cover_url,media_type,release_year,genres').in('id', titleIds);
     throwIf(titleError);
