@@ -97,6 +97,36 @@ export async function getRelatedVideosBySourceIds(sourceIds: string[], page = 1)
   return ((data || []) as RelatedVideoRow[]).map(mapRelatedVideo);
 }
 
+// Query Shorts separately so rows beyond the first general-feed page are not hidden.
+export async function getRelatedShortVideos(page = 1): Promise<RelatedVideo[]> {
+  const from = (page - 1) * 40;
+  const { data, error } = await supabase.from('related_videos')
+    .select('id,title_id,legacy_title_id,source_id,video_url,platform,video_title,creator_name,creator_avatar_url,action_type,action_url,sort_order,created_at')
+    .or('video_url.ilike.%/shorts/%,video_url.ilike.%/reel/%,video_url.ilike.%/reels/%,video_url.ilike.%tiktok.com%')
+    .order('sort_order', { ascending: true }).order('created_at', { ascending: false })
+    .range(from, from + 39);
+  throwIf(error);
+  const videos = ((data || []) as RelatedVideoRow[]).map(mapRelatedVideo);
+  const titleIds = [...new Set(videos.map(video => video.titleId).filter(id =>
+    typeof id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)
+  ))];
+  if (titleIds.length) {
+    const { data: titles, error: titleError } = await supabase.from('titles')
+      .select('id,name,cover_url,media_type,release_year,genres').in('id', titleIds);
+    if (titleError) console.warn('Shorts title metadata lookup failed; showing Shorts without title metadata.', titleError);
+    const byId = new Map((titles || []).map((title: any) => [title.id, title]));
+    videos.forEach(video => {
+      const title: any = byId.get(video.titleId);
+      if (title) {
+        video.titleName = title.name; video.titleCover = title.cover_url;
+        video.titleFormat = title.media_type; video.releaseYear = title.release_year;
+        video.genres = title.genres || [];
+      }
+    });
+  }
+  return videos;
+}
+
 export async function getRelatedVideos(page = 1, titleId?: string): Promise<RelatedVideo[]> {
   const from = (page - 1) * 40;
   let request = supabase.from('related_videos').select('id,title_id,legacy_title_id,source_id,video_url,platform,video_title,creator_name,creator_avatar_url,action_type,action_url,sort_order,created_at').order('sort_order', { ascending: true }).order('created_at', { ascending: false }).range(from, from + 39);
