@@ -19,6 +19,9 @@ import { App as CapApp } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
 import { ToastHost, OfflineBanner, ShareButton, formatCountdown, useNow, showToast, readRecentSearches, pushRecentSearch, clearRecentSearches } from './components/Extras';
 import './components/extras.css';
+import { CommunityHub } from './components/CommunityHub';
+import { LibraryStudio } from './components/LibraryStudio';
+import './components/community-library.css';
 
 /** Calls onReach when the returned element scrolls near the viewport (infinite loading). */
 function useNearViewport(onReach: () => void, enabled: boolean) {
@@ -1180,6 +1183,8 @@ function AccountPage({ user, isAdmin }: { user: User | null; isAdmin: boolean })
       <h2><Settings size={18}/> App & information</h2>
       <Link to="/settings" className="account-link-row"><span><Settings size={17}/><span><strong>Settings</strong><small>Playback, storage and app preferences</small></span></span><ChevronRight size={17}/></Link>
       <Link to="/activity" className="account-link-row"><span><Clock3 size={17}/><span><strong>Activity dashboard</strong><small>Watch, reading progress and monthly activity</small></span></span><ChevronRight size={17}/></Link>
+      <Link to="/community" className="account-link-row"><span><Users size={17}/><span><strong>Community & profile</strong><small>Guidelines, discussions and public reader profile</small></span></span><ChevronRight size={17}/></Link>
+      <Link to="/library-studio" className="account-link-row"><span><Bookmark size={17}/><span><strong>Library studio</strong><small>Custom collections, private ratings and notes</small></span></span><ChevronRight size={17}/></Link>
       <Link to="/about" className="account-link-row"><span><Info size={17}/><span><strong>About RykoCollection</strong><small>Project details, credits and contact</small></span></span><ChevronRight size={17}/></Link>
       <Link to="/privacy" className="account-link-row"><span><ShieldCheck size={17}/><span><strong>Privacy policy</strong><small>How app data and external services work</small></span></span><ChevronRight size={17}/></Link>
       <Link to="/terms" className="account-link-row"><span><FileText size={17}/><span><strong>Terms of use</strong><small>Guidelines and third-party content</small></span></span><ChevronRight size={17}/></Link>
@@ -1305,7 +1310,7 @@ function TabbedRoutes({ user, isAdmin }: { user: User | null; isAdmin: boolean }
         <Routes location={tabLocations.current[path]}><Route path={path} element={tabElement(path)}/></Routes>
       </TabActiveContext.Provider>
     </div>)}
-    {!activeTab && <Routes><Route path="/anime/:id" element={<DetailPage/>}/><Route path="/privacy" element={<PrivacyPage/>}/><Route path="/terms" element={<TermsPage/>}/><Route path="/settings" element={<AppSettings/>}/><Route path="/activity" element={<ActivityDashboard/>}/><Route path="/about" element={<AboutPage/>}/><Route path="/extensions" element={<Navigate to="/account" replace/>}/><Route path="/admin" element={<AdminWorkspace/>}/><Route path="*" element={<main className="content-page empty-state"><Search size={28}/><h1>Page not found</h1><p>This page may have moved. Start again from Home or explore the catalogue.</p><div className="empty-state-actions"><Link className="primary-btn" to="/">Go to Home</Link><Link className="secondary-btn" to="/search">Explore catalogue</Link></div></main>}/></Routes>}
+    {!activeTab && <Routes><Route path="/anime/:id" element={<DetailPage/>}/><Route path="/privacy" element={<PrivacyPage/>}/><Route path="/terms" element={<TermsPage/>}/><Route path="/settings" element={<AppSettings/>}/><Route path="/activity" element={<ActivityDashboard/>}/><Route path="/community" element={<CommunityHub user={user}/>}/><Route path="/library-studio" element={<LibraryStudio/>}/><Route path="/about" element={<AboutPage/>}/><Route path="/extensions" element={<Navigate to="/account" replace/>}/><Route path="/admin" element={<AdminWorkspace/>}/><Route path="*" element={<main className="content-page empty-state"><Search size={28}/><h1>Page not found</h1><p>This page may have moved. Start again from Home or explore the catalogue.</p><div className="empty-state-actions"><Link className="primary-btn" to="/">Go to Home</Link><Link className="secondary-btn" to="/search">Explore catalogue</Link></div></main>}/></Routes>}
   </>;
 }
 
