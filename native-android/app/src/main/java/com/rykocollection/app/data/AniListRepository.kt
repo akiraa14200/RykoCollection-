@@ -57,9 +57,53 @@ class AniListRepository {
 
     suspend fun trendingMedia(manga: Boolean = false): List<AniListMedia> {
         val query = """
-            query($type: MediaType!) {
+            query(${': MediaType!) {
               Page(page: 1, perPage: 18) {
                 media(type: $type, sort: TRENDING_DESC, isAdult: false) {
+                  id
+                  title { english romaji native }
+                  coverImage { large extraLarge }
+                  averageScore
+                  format
+                  seasonYear
+                }
+              }
+            }
+        """.trimIndent()
+
+        val response: AniListEnvelope = client.post("https://graphql.anilist.co") {
+            contentType(ContentType.Application.Json)
+            setBody(mapOf("query" to query, "variables" to mapOf("type" to if (manga) "MANGA" else "ANIME")))
+        }.body()
+        return response.data?.Page?.media.orEmpty()
+    }
+
+    fun close() = client.close()
+}
+}type: MediaType!) {
+              Page(page: 1, perPage: 18) {
+                media(type: ${', sort: TRENDING_DESC, isAdult: false) {
+                  id
+                  title { english romaji native }
+                  coverImage { large extraLarge }
+                  averageScore
+                  format
+                  seasonYear
+                }
+              }
+            }
+        """.trimIndent()
+
+        val response: AniListEnvelope = client.post("https://graphql.anilist.co") {
+            contentType(ContentType.Application.Json)
+            setBody(mapOf("query" to query, "variables" to mapOf("type" to if (manga) "MANGA" else "ANIME")))
+        }.body()
+        return response.data?.Page?.media.orEmpty()
+    }
+
+    fun close() = client.close()
+}
+}type, sort: TRENDING_DESC, isAdult: false) {
                   id
                   title { english romaji native }
                   coverImage { large extraLarge }
