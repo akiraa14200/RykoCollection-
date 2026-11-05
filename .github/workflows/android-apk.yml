@@ -55,11 +55,12 @@ jobs:
       - name: Verify Android application identity
         run: |
           node --input-type=module <<'NODE'
-          import config from './capacitor.config.ts';
-          if (config.appId !== 'com.rykocollection.app') {
-            throw new Error(`Unexpected Android application id: ${config.appId}`);
+          import { readFileSync } from 'node:fs';
+          const config = readFileSync('capacitor.config.ts', 'utf8');
+          if (!/appId:\s*['\"]com\\.rykocollection\\.app['\"]/.test(config)) {
+            throw new Error('capacitor.config.ts must use com.rykocollection.app');
           }
-          console.log(`Building ${config.appName} (${config.appId})`);
+          console.log('Verified Android application id: com.rykocollection.app');
           NODE
 
       - name: Set up Python
