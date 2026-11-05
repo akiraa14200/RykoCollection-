@@ -769,3 +769,44 @@ body{padding-bottom:104px}
 .release-item small{font-size:10px;color:#8e879a}
 .release-item time{font-size:10px;color:#b9a9f0;white-space:nowrap}
 @media(max-width:700px){.activity-stats-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.activity-stat{padding:14px}.activity-stat strong{font-size:25px}.activity-calendar-head{align-items:flex-start;flex-direction:column}.calendar-controls{width:100%;justify-content:space-between}.activity-calendar-grid{gap:4px}.activity-calendar-grid>span{min-height:31px}.release-schedule{grid-template-columns:1fr}}
+
+
+/* Top-right Ryko menu: the catalogue switch now lives inside this panel. */
+.topbar-menu-wrap{position:relative;flex:0 0 auto}
+.topbar-menu-button{width:36px;height:36px;border-radius:12px;background:rgba(25,21,38,.82);border-color:rgba(196,181,255,.24);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+.topbar-menu-panel{position:absolute;z-index:120;right:0;top:calc(100% + 11px);width:min(290px,calc(100vw - 28px));padding:12px;border:1px solid rgba(196,181,255,.2);border-radius:18px;background:rgba(17,16,23,.97);box-shadow:0 18px 55px #0009;backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);display:flex;flex-direction:column;gap:3px}
+.topbar-menu-heading{padding:5px 8px 8px;color:#a9a2b8;font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase}
+.topbar-menu-mode{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.topbar-menu-mode button,.topbar-menu-panel>a,.topbar-menu-signout{min-height:39px;display:flex;align-items:center;gap:10px;padding:0 10px;border:1px solid transparent;border-radius:10px;background:transparent;color:#e5e1ed;font:inherit;font-size:13px;text-align:left;text-decoration:none;cursor:pointer}
+.topbar-menu-mode button{justify-content:center;background:#ffffff08;border-color:#ffffff10}
+.topbar-menu-mode button.active{background:rgba(145,119,220,.22);border-color:rgba(181,159,255,.45);color:#fff}
+.topbar-menu-panel>a:hover,.topbar-menu-signout:hover{background:#ffffff0c;color:#fff}
+.topbar-menu-panel>a svg,.topbar-menu-signout svg{color:#b8a8ef}
+.topbar-menu-divider{height:1px;background:#ffffff16;margin:7px 2px}
+.topbar-menu-signout{border-top:1px solid #ffffff12;margin-top:4px;padding-top:6px}
+@media(max-width:700px){.topbar-menu-button{width:34px;height:34px}.topbar-menu-panel{right:0;top:calc(100% + 9px)}.topbar-catalogue-tools{flex:1 1 0;min-width:0}.topbar-explore-search{flex:1 1 auto}}
+
+/* Ryko global anime and manga newsroom */
+.ryko-news-page{padding-top:42px;padding-bottom:70px}
+.news-hero{padding:28px 0 22px}
+.news-hero h1{font-size:clamp(34px,5vw,58px);letter-spacing:-.045em;margin:12px 0}
+.news-hero h1 em{color:#b8a7f4;font-style:normal}
+.news-hero>p{max-width:690px;color:var(--muted,#a7a3b0);line-height:1.7}
+.news-toolbar{display:flex;gap:10px;max-width:760px;margin-top:24px}
+.news-search{height:43px;display:flex;align-items:center;gap:10px;flex:1;padding:0 13px;border:1px solid var(--line);border-radius:12px;background:#ffffff08;color:#a8a3b3}
+.news-search input{min-width:0;flex:1;border:0;outline:0;background:transparent;color:#fff;font:inherit}
+.news-categories{display:flex;gap:8px;overflow-x:auto;padding:12px 0 22px}
+.news-categories button{border:1px solid var(--line);border-radius:999px;padding:8px 14px;background:#ffffff06;color:#c8c3d1;white-space:nowrap;font-size:12px}
+.news-categories button.active{background:#a58bea24;border-color:#b7a0f366;color:#fff}
+.news-feed-heading{display:flex;justify-content:space-between;align-items:end;margin:8px 0 17px}
+.news-feed-heading h2{margin:0 0 5px;font-size:21px}.news-feed-heading p,.news-feed-heading>span{margin:0;color:#96919f;font-size:12px}
+.news-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px}
+.news-card{min-width:0;overflow:hidden;border:1px solid var(--line);border-radius:16px;background:linear-gradient(145deg,#ffffff09,#ffffff03)}
+.news-image{display:block;height:190px;background:#17151d;overflow:hidden}.news-image img{width:100%;height:100%;object-fit:cover}
+.news-card-content{padding:15px}.news-meta{display:flex;justify-content:space-between;gap:8px;color:#a99bd1;font-size:10px}.news-meta span{display:flex;align-items:center;gap:5px}
+.news-card h3{font-size:16px;line-height:1.4;margin:11px 0}.news-card h3 a{color:#f4f1f8;text-decoration:none}.news-card-content>p{font-size:12px;line-height:1.6;color:#a8a3af;margin:0 0 14px}
+.news-read-link{display:inline-flex;align-items:center;gap:6px;color:#c3b3f2;font-size:11px;font-weight:700;text-decoration:none}
+.news-state{padding:40px 18px;text-align:center;border:1px solid var(--line);border-radius:15px;color:#aaa4b3;display:flex;flex-direction:column;align-items:center;gap:15px}
+.news-sources{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:24px;color:#817c8a;font-size:10px}
+.news-spinning{animation:news-spin .8s linear infinite}@keyframes news-spin{to{transform:rotate(360deg)}}
+@media(max-width:650px){.ryko-news-page{padding-top:24px}.news-grid{grid-template-columns:1fr}.news-image{height:205px}.news-toolbar{gap:7px}.news-toolbar .secondary-btn{padding:0 10px;font-size:11px}}
