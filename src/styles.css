@@ -686,3 +686,16 @@ body{padding-bottom:104px}
 .topbar-catalogue-switch button.active{color:#fff;background:linear-gradient(135deg,rgba(157,137,235,.95),rgba(99,78,165,.95));border-color:rgba(229,221,255,.4);box-shadow:inset 0 1px 0 rgba(255,255,255,.22),0 3px 12px rgba(105,83,180,.25)}
 @media(max-width:700px){.topbar-catalogue-switch{margin-left:auto;margin-right:8px}.topbar-catalogue-switch button{min-height:30px;padding:0 8px;font-size:10px}.topbar-catalogue-switch button svg{width:13px;height:13px}}
 @media(max-width:390px){.topbar-catalogue-switch button span{display:none}.topbar-catalogue-switch button{width:31px;padding:0}}
+
+/* Instagram Reels use Instagram's full post embed, not a cropped 9:16 video frame.
+   The embed includes its own controls/caption/CTA and has variable height. */
+.yt-instagram-card .yt-thumbnail{aspect-ratio:auto;height:clamp(520px,72vw,680px);min-height:520px;overflow:hidden;background:#101014;border:1px solid rgba(255,255,255,.1);border-radius:14px}
+.yt-instagram-card .yt-thumbnail iframe{position:absolute;inset:0;width:100%;height:100%;max-height:none;object-fit:contain;background:#fff}
+.yt-instagram-card .yt-thumbnail-button{position:absolute;inset:0}
+.yt-instagram-card .yt-thumbnail-button img{object-fit:cover;object-position:center}
+.yt-instagram-card .yt-play-overlay{opacity:.3}
+.yt-instagram-card .yt-instagram-open{display:inline-flex;margin-top:5px;padding:7px 10px;border:1px solid rgba(190,174,255,.25);border-radius:9px;background:rgba(151,130,224,.1)}
+@media(max-width:600px){
+ .yt-instagram-card .yt-thumbnail{height:min(610px,calc(100vw * 1.72));min-height:470px;border-radius:12px}
+ .yt-instagram-card .yt-thumbnail iframe{height:100%;width:100%}
+}
