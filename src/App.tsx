@@ -995,8 +995,8 @@ function VideoPage() {
       ]);
       const data=applyCachedVideoMetadata([...raw,...shortRaw.filter(short=>!raw.some(video=>video.id===short.id))]);
       setVideos(old=>{const ids=new Set(old.map(video=>video.id));return [...old,...data.filter(video=>!ids.has(video.id))];});
-      if(raw.length){setPage(current=>current+1);setHasMore(raw.length===40);}
-      if(shortRaw.length){setShortPage(current=>current+1);setShortHasMore(shortRaw.length===40);}
+      if(hasMore){if(raw.length)setPage(current=>current+1);setHasMore(raw.length===40);}
+      if(wantsShorts&&shortHasMore){if(shortRaw.length)setShortPage(current=>current+1);setShortHasMore(shortRaw.length===40);}
       enrich(data,()=>true);
     }catch(e){
       setError(e instanceof Error?e.message:'Could not load more videos.');
@@ -1019,7 +1019,10 @@ function VideoPage() {
 
   const searchBar=<header className="yt-topbar">
     <div className="yt-brand"><img className="yt-brand-mark" src="/logo.svg" alt="" width="30" height="30"/><strong>Ryko<span>Tube</span></strong><small>Collection</small></div>
-    <label className="yt-search"><Search size={19}/><input value={term} onChange={event=>setTerm(event.target.value)} placeholder="Search videos, creators or titles" autoComplete="off"/>{term&&<button onClick={()=>setTerm('')} aria-label="Clear search"><X size={16}/></button>}</label>
+    <div className="yt-search-wrap">
+      <label className="yt-search"><Search size={19}/><input value={term} onFocus={()=>setSuggestionsOpen(true)} onChange={event=>{setTerm(event.target.value);setSuggestionsOpen(true);}} placeholder="Search videos, creators or titles" autoComplete="off" aria-expanded={suggestionsOpen}/>{term&&<button type="button" onClick={()=>{setTerm('');setRemoteSearchVideos([]);setSuggestionsOpen(false);}} aria-label="Clear search"><X size={16}/></button>}</label>
+      {suggestionsOpen&&term.trim().length>=2&&remoteSearchVideos.length>0&&<div className="yt-search-suggestions" role="listbox">{remoteSearchVideos.slice(0,6).map(video=><button type="button" role="option" key={video.id} onClick={()=>{setTerm(video.videoTitle||video.creatorName||video.titleName||'');setSuggestionsOpen(false);}}><strong>{video.videoTitle||video.titleName||'Untitled video'}</strong><span>{video.creatorName||'Creator'} · {video.platform}</span></button>)}</div>}
+    </div>
   </header>;
 
   const sortedVideoSources=[...videoSources].sort((a,b)=>a.label.localeCompare(b.label,undefined,{numeric:true,sensitivity:'base'}));
