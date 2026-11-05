@@ -97,18 +97,20 @@ export function AdminWorkspace() {
     try{
       let key=sourceForm.source_key.trim();
       let sourceType=sourceForm.source_type;
-      if(/^https?:\/\//i.test(key)){
+      if(key.toLowerCase().startsWith('http://') || key.toLowerCase().startsWith('https://')){
         const u=new URL(key);
-        const host=u.hostname.replace(/^www\./i,'').toLowerCase();
+        const host=u.hostname.toLowerCase().replace(/^www[.]/i,'');
         const playlistId=u.searchParams.get('list');
+        const segments=u.pathname.split('/').filter(Boolean);
         // Detect playlist URLs automatically, even when the source dropdown is still set to channel.
-        if(playlistId && (u.pathname.toLowerCase().includes('playlist') || host==='youtube.com' || host==='m.youtube.com')){
+        if(playlistId && (segments.includes('playlist') || host==='youtube.com' || host==='m.youtube.com')){
           sourceType='playlist';
           key=playlistId;
         }else if(sourceType==='channel'){
-          const channelId=u.pathname.match(/\/channel\/([a-zA-Z0-9_-]+)/)?.[1];
-          const handle=u.pathname.match(/\/@([a-zA-Z0-9._-]+)/)?.[1];
-          key=channelId|| (handle?'@'+handle:'');
+          const channelIndex=segments.indexOf('channel');
+          const channelId=channelIndex>=0?segments[channelIndex+1]||'':'';
+          const handle=segments.find(part=>part.startsWith('@'));
+          key=channelId || (handle||'');
         }else key=playlistId||'';
       }
       const valid=sourceType==='channel'
