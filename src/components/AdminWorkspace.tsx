@@ -16,7 +16,6 @@ const blankCharacter = { title_id:'', name:'', role:'Main', description:'', imag
 const blankVideo = { title_id:'', video_url:'', platform:'youtube', video_title:'', creator_name:'', creator_avatar_url:'', action_type:'watch', action_url:'', sort_order:'0' };
 const toList = (v:string) => v.split(',').map(x=>x.trim()).filter(Boolean);
 const errText = (e:unknown) => e instanceof Error ? e.message : 'Something went wrong.';
-const youtubeVideoId = (value:string) => { try { const u=new URL(value); const host=u.hostname.replace(/^www\./,''); const parts=u.pathname.split('/').filter(Boolean); return host==='youtu.be'?parts[0]||'':u.searchParams.get('v')||(parts[0]==='embed'||parts[0]==='shorts'?parts[1]||'':''); } catch { return ''; } };
 
 export function AdminWorkspace() {
   const [tab,setTab] = useState<Tab>('overview');
