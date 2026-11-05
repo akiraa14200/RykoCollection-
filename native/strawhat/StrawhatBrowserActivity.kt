@@ -597,9 +597,7 @@ class StrawhatBrowserActivity : Activity() {
         }
         animeTab.setOnClickListener { render("Anime") }
         mangaTab.setOnClickListener { render("Manga") }
-        val dialog=AlertDialog.Builder(this).setCustomTitle(text("Site Catalogue", 20f, Color.WHITE, true).apply {
-            setPadding(dp(22), dp(18), dp(22), dp(4))
-        }).setView(box).setNegativeButton("Close",null).setPositiveButton("Refresh",null).create()
+        val dialog=AlertDialog.Builder(this).setView(box).setNegativeButton("Close",null).setPositiveButton("Refresh",null).create()
         list.setOnItemClickListener { _,_,position,_ ->
             val item=filtered.getOrNull(position) ?: return@setOnItemClickListener
             dialog.dismiss(); open(item.url)
@@ -905,7 +903,7 @@ class StrawhatBrowserActivity : Activity() {
     }
     private fun menu() {
         val choices = arrayOf("Settings", if(blocking) "Pause redirect protection" else "Enable redirect protection","Refresh","Back","Forward","Save current website","History","Clear cookies and cache","About Strawhat Pirate","Privacy policy","Terms of use")
-        AlertDialog.Builder(this).setTitle("Strawhat Pirate").setItems(choices) { _,i ->
+        val menuDialog = AlertDialog.Builder(this).setTitle("Strawhat Pirate").setItems(choices) { _,i ->
             when(i) {
                 0 -> showSettings()
                 1 -> { blocking = !blocking; prefs.edit().putBoolean("blocking",blocking).apply(); web.reload() }
@@ -919,7 +917,9 @@ class StrawhatBrowserActivity : Activity() {
                 9 -> showPolicy("Privacy policy", "Strawhat Pirate stores bookmarks, browsing history, catalogue cache and your last opened page locally on this device. Website requests go directly to the sites you visit. The app does not operate an account system or sell personal data. Websites may use their own cookies and tracking technologies. Clearing browser data removes local cookies, cache and history.")
                 10 -> showPolicy("Terms of use", "Use Strawhat Pirate lawfully and respect each website's terms, copyright and access rules. You are responsible for the websites and content you choose to visit. Redirect protection prevents pop-up windows and links that try to open new tabs; it does not block advertisements or guarantee protection from every redirect. The app is provided as-is. Do not use it to bypass access controls or infringe anyone's rights.")
             }
-        }.show()
+        }.create()
+        menuDialog.show()
+        styleGlassDialog(menuDialog, 30)
     }
     // Dark translucent surfaces keep the feature drawer readable while retaining a glass-like finish.
     private fun darkGlassShape(color: Int, radius: Int) = GradientDrawable(
@@ -979,14 +979,16 @@ class StrawhatBrowserActivity : Activity() {
             showSettings()
         }
         row("Clear browsing data", "Remove cookies, cache and recent history") {
-            AlertDialog.Builder(this).setTitle("Clear browsing data?")
+            val confirm = AlertDialog.Builder(this).setTitle("Clear browsing data?")
                 .setMessage("This removes cookies, cached files and browsing history stored by Strawhat on this device.")
                 .setNegativeButton("Cancel", null).setPositiveButton("Clear") { _, _ ->
                     CookieManager.getInstance().removeAllCookies(null)
                     web.clearCache(true); web.clearHistory()
                     prefs.edit().remove("history").remove("last_url").apply()
                     toast("Browsing data cleared")
-                }.show()
+                }.create()
+            confirm.show()
+            styleGlassDialog(confirm, 28)
         }
         section("MUSIC", "Personalise the built-in music search.")
         row("YouTube Data API key", if (youtubeApiKey().isBlank()) "Not configured · Add a key to enable official search" else "Configured · Stored only on this device") {
@@ -1039,7 +1041,7 @@ class StrawhatBrowserActivity : Activity() {
         dialog.window?.setBackgroundDrawable(darkGlassShape(0xF0161320.toInt(), radius))
         dialog.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND)
         dialog.window?.setDimAmount(.68f)
-        dialog.findViewById<TextView>(androidx.appcompat.R.id.alertTitle)?.setTextColor(Color.WHITE)
+        dialog.findViewById<TextView>(android.R.id.alertTitle)?.setTextColor(Color.WHITE)
         dialog.findViewById<TextView>(android.R.id.message)?.apply {
             setTextColor(Color.rgb(220, 215, 235))
             setLineSpacing(dp(3).toFloat(), 1f)
