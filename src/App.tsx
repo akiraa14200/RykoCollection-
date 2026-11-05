@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { Link, Navigate, Route, Routes, useNavigate, useParams, useLocation, type Location } from 'react-router-dom';
-import { Search, Compass, Bookmark, ShieldCheck, Play, Star, ChevronRight, ArrowLeft, Heart, Clock3, Menu, X, ExternalLink, Sparkles, Tv, Info, Users, FileText, Globe, Youtube, ListVideo, ChevronDown, RotateCw, MessageCircle, Home as HomeIcon, UserRound, ChevronLeft, Shuffle, Minus, Plus, Settings, Trash2, Clock } from 'lucide-react';
+import { Search, Compass, Bookmark, ShieldCheck, Play, Star, ChevronRight, ArrowLeft, Heart, Clock3, Menu, X, ExternalLink, Sparkles, Tv, Info, Users, FileText, Globe, Youtube, ListVideo, ChevronDown, RotateCw, MessageCircle, Home as HomeIcon, UserRound, ChevronLeft, Shuffle, Minus, Plus, Settings, Trash2, Clock, BookOpen, Mail, Shield, WandSparkles } from 'lucide-react';
 // The application UI and page components are defined below.
 import { Anime, AnimeCharacter, getAnime, peekAnime, rememberPreviews, applyCachedVideoMetadata, enrichVideoMetadataProgressive, getAnimeCharacters, getPopular, getPopularManga, getSeasonal, getTrending, getTrendingManga, getRelatedVideos, getRelatedShortVideos, searchRelatedVideos, getRelatedVideosBySourceIds, RelatedVideo, imageOf, searchAnime, titleOf } from './lib/catalogue';
 import type { User } from '@supabase/supabase-js';
@@ -1125,7 +1125,13 @@ function AccountPage({ user, isAdmin }: { user: User | null; isAdmin: boolean })
       <button type="button" className="account-switch" onClick={()=>{setMode(mode==='signin'?'signup':'signin');setMessage('');}}>{mode==='signin'?'New here? Create an account':'Already have an account? Sign in'}</button>
       {message && <p className="account-message">{message}</p>}
     </form>}
-    <AppSettings/>
+    <section className="account-links-card">
+      <h2><Settings size={18}/> App & information</h2>
+      <Link to="/settings" className="account-link-row"><span><Settings size={17}/><span><strong>Settings</strong><small>Playback, storage and app preferences</small></span></span><ChevronRight size={17}/></Link>
+      <Link to="/about" className="account-link-row"><span><Info size={17}/><span><strong>About RykoCollection</strong><small>Project details, credits and contact</small></span></span><ChevronRight size={17}/></Link>
+      <Link to="/privacy" className="account-link-row"><span><ShieldCheck size={17}/><span><strong>Privacy policy</strong><small>How app data and external services work</small></span></span><ChevronRight size={17}/></Link>
+      <Link to="/terms" className="account-link-row"><span><FileText size={17}/><span><strong>Terms of use</strong><small>Guidelines and third-party content</small></span></span><ChevronRight size={17}/></Link>
+    </section>
   </main>;
 }
 
@@ -1142,25 +1148,55 @@ function AppSettings() {
   const clearCache = () => {
     const keys: string[] = [];
     for (let i = 0; i < localStorage.length; i++) { const key = localStorage.key(i) || ''; if (key.startsWith('rykoc-cache:')) keys.push(key); }
-    keys.forEach(key => localStorage.removeItem(key));
-    measure();
-    showToast('Cached catalogue cleared. Your library is kept.');
+    keys.forEach(key => localStorage.removeItem(key)); measure();
+    showToast('Catalogue cache cleared. Your library and progress are safe.');
   };
-  return <section className="settings-card" aria-labelledby="settings-title">
-    <h2 id="settings-title"><Settings size={18}/> App settings</h2>
-    <div className="settings-row"><div><strong>Ambient mode</strong><p>Soft light from the video glows behind the player.</p></div><button className={ambient?'toggle active':'toggle'} onClick={toggleAmbient} aria-label="Toggle ambient mode" aria-pressed={ambient}><span/></button></div>
-    <div className="settings-row"><div><strong>Cached catalogue</strong><p>{(cacheSize / 1024).toFixed(0)} KB saved for faster loading. Library, progress and Watch later are not affected.</p></div><button className="secondary-btn" onClick={clearCache}><Trash2 size={15}/> Clear</button></div>
-    <div className="settings-row"><div><strong>Strawhat Pirate browser</strong><p>Open the native browser with saved websites, browsing history, redirect protection and YouTube Music search.</p></div><button className="secondary-btn" onClick={() => { const native = (window as Window & { RykoNative?: { openStrawhatBrowser?: () => void } }).RykoNative; if (native?.openStrawhatBrowser) native.openStrawhatBrowser(); else showToast('Strawhat Browser is available in the Android app.'); }}>Open browser</button></div>
-  </section>;
+  const clearSearches = () => { clearRecentSearches(); showToast('Recent searches cleared.'); };
+  const native = (window as Window & { RykoNative?: { openStrawhatBrowser?: () => void } }).RykoNative;
+  return <main className="content-page info-page">
+    <div className="page-heading"><span className="eyebrow">MAKE RYKO YOURS</span><h1>App <em>settings.</em></h1><p>Manage playback preferences, local data and app information.</p></div>
+    <section className="settings-card"><h2><Settings size={18}/> Experience</h2>
+      <div className="settings-row"><div><strong>Ambient video glow</strong><p>Show a soft colour glow while a supported video is playing.</p></div><button className={ambient?'toggle active':'toggle'} onClick={toggleAmbient} aria-label="Toggle ambient mode" aria-pressed={ambient}><span/></button></div>
+      <div className="settings-row"><div><strong>Strawhat browser</strong><p>Open the integrated native browser on Android.</p></div><button className="secondary-btn" onClick={() => { if (native?.openStrawhatBrowser) native.openStrawhatBrowser(); else showToast('Strawhat Browser is available in the Android app.'); }}>Open browser</button></div>
+    </section>
+    <section className="settings-card"><h2><Shield size={18}/> Storage & privacy</h2>
+      <div className="settings-row"><div><strong>Catalogue cache</strong><p>{(cacheSize / 1024).toFixed(0)} KB stored to make browsing faster. Clearing it does not remove your Library or progress.</p></div><button className="secondary-btn" onClick={clearCache}><Trash2 size={15}/> Clear cache</button></div>
+      <div className="settings-row"><div><strong>Recent searches</strong><p>Remove the saved search suggestions on this device.</p></div><button className="secondary-btn" onClick={clearSearches}>Clear history</button></div>
+    </section>
+    <section className="settings-card"><h2><Info size={18}/> App information</h2>
+      <div className="settings-row"><div><strong>RykoCollection</strong><p>Installed app version</p></div><span className="version-pill">v1.0.0</span></div>
+      <div className="settings-row"><div><strong>Updates & release notes</strong><p>Check published builds and changes from the project repository.</p></div><a className="secondary-btn" href="https://github.com/akiraa14200/RykoCollection-/releases" target="_blank" rel="noreferrer">View releases <ExternalLink size={14}/></a></div>
+    </section>
+    <div className="info-link-grid"><Link to="/privacy"><ShieldCheck size={17}/> Privacy policy <ChevronRight size={16}/></Link><Link to="/terms"><FileText size={17}/> Terms of use <ChevronRight size={16}/></Link><Link to="/about"><Info size={17}/> About & credits <ChevronRight size={16}/></Link></div>
+  </main>;
+}
+
+function AboutPage() {
+  return <main className="content-page info-page">
+    <div className="page-heading"><span className="eyebrow">THE PROJECT</span><h1>About <em>RykoCollection.</em></h1><p>Discover stories. Find your next world.</p></div>
+    <section className="about-hero-card"><img src="/logo.svg" alt="RykoCollection logo"/><div><span className="eyebrow">INDEPENDENT FAN DISCOVERY PROJECT</span><h2>One place to explore your next story.</h2><p>RykoCollection brings anime, manga discovery, personal tracking and related video discovery together in one experience.</p><span className="version-pill">Version 1.0.0</span></div></section>
+    <section className="settings-card"><h2><WandSparkles size={18}/> What you can do</h2><div className="about-feature-grid"><div><Compass/><strong>Discover</strong><p>Explore anime, manga, manhwa and manhua catalogue entries.</p></div><div><Bookmark/><strong>Keep your Library</strong><p>Save titles, track progress and collect videos for later.</p></div><div><Play/><strong>Find videos</strong><p>Browse trailers and links from external video providers.</p></div><div><Globe/><strong>Browse with Strawhat</strong><p>Open the integrated browser in supported Android builds.</p></div></div></section>
+    <section className="settings-card"><h2><BookOpen size={18}/> Credits & acknowledgements</h2>
+      <div className="credit-row"><strong>AniList</strong><span>Public anime and manga catalogue metadata and artwork links.</span><a href="https://anilist.co" target="_blank" rel="noreferrer">Visit <ExternalLink size={13}/></a></div>
+      <div className="credit-row"><strong>YouTube and video providers</strong><span>Video playback, trailers and creator content remain hosted by their respective providers.</span></div>
+      <div className="credit-row"><strong>Supabase</strong><span>Backend services for supported account and community features.</span><a href="https://supabase.com" target="_blank" rel="noreferrer">Visit <ExternalLink size={13}/></a></div>
+      <p className="fine-print">RykoCollection is an independent fan discovery project. It is not affiliated with or endorsed by AniList, YouTube, animation studios, publishers or other rights holders. All third-party names, artwork and media belong to their respective owners.</p>
+    </section>
+    <section className="settings-card"><h2><Mail size={18}/> Contact</h2><p className="info-body-copy">For app feedback, corrections, privacy requests or support, contact the project team.</p><a className="primary-btn" href="mailto:rykocollection@gmail.com">Email RykoCollection <Mail size={15}/></a></section>
+  </main>;
+}
+
+function TermsPage() {
+  return <main className="content-page info-page legal-page">
+    <div className="page-heading"><span className="eyebrow">PLEASE READ</span><h1>Terms of <em>use.</em></h1><p>Last updated: 5 November 2026</p></div>
+    <section className="legal-card"><h2>1. About the service</h2><p>RykoCollection is an independent discovery and personal catalogue interface for anime, manga and related videos. Features and availability may change as the project is maintained.</p><h2>2. Third-party content</h2><p>Catalogue information is sourced from AniList and video links may open or embed content from YouTube, Instagram, TikTok and other providers. RykoCollection does not own or control that content, its availability, advertising, privacy practices or embedding restrictions. Each provider's terms apply when you use its service.</p><h2>3. Acceptable use</h2><p>Use the app lawfully. Do not attempt to disrupt the service, bypass access controls, misuse accounts, upload unlawful material or infringe another person's rights.</p><h2>4. Accounts and saved data</h2><p>You are responsible for keeping your sign-in credentials secure. Some preferences and saved items are stored locally on your device, while supported account and community features may use backend services. Local data can be lost when browser or app data is cleared.</p><h2>5. Availability and accuracy</h2><p>We aim to keep information useful and the app reliable, but do not guarantee uninterrupted access, error-free catalogue metadata, or that an external video can always be played or embedded.</p><h2>6. Intellectual property</h2><p>RykoCollection branding and original interface elements belong to the project. Third-party trademarks, artwork, titles and media remain the property of their respective owners. If you believe content is improperly linked or displayed, contact us with the relevant details.</p><h2>7. Changes and contact</h2><p>These terms may be updated as the app evolves. Continued use after an update means you accept the revised terms. Contact <a href="mailto:rykocollection@gmail.com">rykocollection@gmail.com</a> for questions or rights-related requests.</p></section>
+  </main>;
 }
 
 function PrivacyPage() {
-  const [protection, setProtection] = useState(()=>readStore('kairo-privacy', true));
-  useEffect(()=>localStorage.setItem('kairo-privacy', JSON.stringify(protection)),[protection]);
-  return <main className="content-page privacy-page"><div className="page-heading"><span className="eyebrow">YOUR DATA, YOUR CHOICE</span><h1>Privacy <em>center.</em></h1><p>Simple controls and clear information about what this app can protect.</p></div>
-    <div className="privacy-card"><div className="privacy-icon"><ShieldCheck/></div><div className="privacy-copy"><h2>Privacy-friendly mode</h2><p>Controls optional local preferences and keeps this app free of injected ad scripts and third-party analytics.</p></div><button className={protection?'toggle active':'toggle'} onClick={()=>setProtection(!protection)} aria-label="Toggle privacy mode"><span/></button></div>
-    <div className="privacy-grid"><div className="privacy-info"><h3><ShieldCheck size={17}/> First-party protection</h3><p>No advertising SDKs or analytics trackers are bundled by this application. External links open with safe browser isolation attributes.</p><span className="status-good">Enabled by design</span></div><div className="privacy-info"><h3><ExternalLink size={17}/> External video providers</h3><p>This is a regular website, not a network-level ad blocker. It cannot filter requests inside cross-origin video iframes or control ads served by an external player.</p><span className="status-neutral">Provider controlled</span></div><div className="privacy-info"><h3><Bookmark size={17}/> Local data</h3><p>Your watchlist and recently viewed titles are stored in this browser's local storage. They are not synced to a server.</p><span className="status-good">Stored on this device</span></div><div className="privacy-info"><h3><ShieldCheck size={17}/> Protection limits</h3><p>For stronger network-wide filtering, use a reputable browser content blocker or device-level DNS filtering. Do not disable provider security or access controls.</p><span className="status-neutral">Browser limitation</span></div></div>
-    <p className="fine-print">AniList is used for public anime metadata. Requests are sent directly from your browser to AniList's public GraphQL API. Privacy mode does not claim to block all advertisements on third-party websites.</p>
+  return <main className="content-page info-page legal-page">
+    <div className="page-heading"><span className="eyebrow">YOUR DATA, YOUR CHOICE</span><h1>Privacy <em>policy.</em></h1><p>Last updated: 5 November 2026</p></div>
+    <section className="legal-card"><h2>1. Information handled by the app</h2><p>If you create an account or sign in, authentication details such as your email address and account identifier are processed by Supabase. Features that use accounts or community data may send the information you submit to the RykoCollection backend.</p><p>Preferences, recent searches, saved titles, progress and saved videos may be stored in local app or browser storage on your device. The exact data available depends on the feature you use.</p><h2>2. Third-party services</h2><p>AniList provides public anime and manga catalogue data. Supabase provides backend and authentication services. When you play or open an external video, the relevant provider may receive technical information such as your IP address and browser or device details under its own privacy policy.</p><h2>3. How information is used</h2><p>Information is used to provide app features, keep your account working, remember local preferences, support community features, troubleshoot problems and protect the service.</p><h2>4. Storage and control</h2><p>You can clear catalogue cache and recent searches in Settings. Clearing app storage may remove locally saved items and progress. Signing out ends the current account session but does not itself delete an account or backend records. For account or data deletion requests, contact the project team.</p><h2>5. Children and sensitive information</h2><p>Do not submit sensitive personal information in public comments or profile fields. If you are under the age required to consent to online services in your location, use the service with a parent or guardian's guidance.</p><h2>6. Changes and contact</h2><p>This policy may be updated when features or service providers change. For privacy questions or deletion requests, email <a href="mailto:rykocollection@gmail.com">rykocollection@gmail.com</a>.</p><p className="fine-print">This policy describes the app's intended data flows in plain language. Third-party services operate under their own policies and controls.</p></section>
   </main>;
 }
 
@@ -1187,7 +1223,7 @@ function TabbedRoutes({ user, isAdmin }: { user: User | null; isAdmin: boolean }
         <Routes location={tabLocations.current[path]}><Route path={path} element={tabElement(path)}/></Routes>
       </TabActiveContext.Provider>
     </div>)}
-    {!activeTab && <Routes><Route path="/anime/:id" element={<DetailPage user={user}/>}/><Route path="/privacy" element={<PrivacyPage/>}/><Route path="/extensions" element={<Navigate to="/account" replace/>}/><Route path="/admin" element={<AdminWorkspace/>}/><Route path="*" element={<main className="content-page empty-state"><h1>Page not found</h1><Link to="/">Return home</Link></main>}/></Routes>}
+    {!activeTab && <Routes><Route path="/anime/:id" element={<DetailPage user={user}/>}/><Route path="/privacy" element={<PrivacyPage/>}/><Route path="/terms" element={<TermsPage/>}/><Route path="/settings" element={<AppSettings/>}/><Route path="/about" element={<AboutPage/>}/><Route path="/extensions" element={<Navigate to="/account" replace/>}/><Route path="/admin" element={<AdminWorkspace/>}/><Route path="*" element={<main className="content-page empty-state"><h1>Page not found</h1><Link to="/">Return home</Link></main>}/></Routes>}
   </>;
 }
 
@@ -1216,10 +1252,29 @@ function ScrollMemory({ scrollKey }: { scrollKey: string }) {
   return null;
 }
 
+function FirstRunOnboarding({ onFinish }: { onFinish: () => void }) {
+  const navigate = useNavigate();
+  const startExploring = () => { onFinish(); navigate('/search'); };
+  return <div className="onboarding-backdrop" role="presentation">
+    <section className="onboarding-card" role="dialog" aria-modal="true" aria-labelledby="onboarding-title">
+      <img src="/logo.svg" alt="" className="onboarding-logo"/>
+      <span className="eyebrow">WELCOME TO RYKOCOLLECTION</span>
+      <h2 id="onboarding-title">Your next story starts here.</h2>
+      <p>Discover anime and manga, keep your favourites organised, and explore trailers and creator videos in one place.</p>
+      <div className="onboarding-points"><div><Compass/><span><strong>Explore</strong><small>Find anime, manga and new stories.</small></span></div><div><Bookmark/><span><strong>Build your Library</strong><small>Save titles and track your progress.</small></span></div><div><Play/><span><strong>Discover videos</strong><small>Find trailers, clips and related videos.</small></span></div></div>
+      <button className="primary-btn onboarding-primary" onClick={startExploring}>Start exploring <ChevronRight size={16}/></button>
+      <button className="onboarding-skip" onClick={onFinish}>I'll explore on my own</button>
+      <small className="onboarding-version">RykoCollection · v1.0.0</small>
+    </section>
+  </div>;
+}
+
 export default function App() {
   useAppBackNavigation();
   const [user, setUser] = useState<User | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(() => { try { return localStorage.getItem("rykoc-onboarding-complete") !== "yes"; } catch { return false; } });
+  const finishOnboarding = () => { try { localStorage.setItem("rykoc-onboarding-complete", "yes"); } catch { /* storage can be unavailable */ } setShowOnboarding(false); };
   useEffect(() => {
     let active = true;
     supabase.auth.getSession().then(({ data }) => {
@@ -1285,5 +1340,5 @@ export default function App() {
     };
   }, [user]);
   const signOut = () => { void supabase.auth.signOut(); };
-  return <><OfflineBanner/><Header user={user} isAdmin={isAdmin} onSignOut={signOut}/><TabbedRoutes user={user} isAdmin={isAdmin}/><BottomNavigation/><ToastHost/><footer className="footer"><Link to="/" className="brand"><img className="brand-mark brand-logo" src="/logo.svg" alt="" width="31" height="31" loading="lazy"/><span>RYKOCOLLECTION</span></Link><p>Discover stories. Find your next world.</p><span>Shared Ryko catalogue · Independent fan discovery project</span></footer></>;
+  return <><OfflineBanner/><Header user={user} isAdmin={isAdmin} onSignOut={signOut}/><TabbedRoutes user={user} isAdmin={isAdmin}/><BottomNavigation/><ToastHost/>{showOnboarding && <FirstRunOnboarding onFinish={finishOnboarding}/>}<footer className="footer"><Link to="/" className="brand"><img className="brand-mark brand-logo" src="/logo.svg" alt="" width="31" height="31" loading="lazy"/><span>RYKOCOLLECTION</span></Link><p>Discover stories. Find your next world.</p><span>Shared Ryko catalogue · Independent fan discovery project</span></footer></>;
 }
