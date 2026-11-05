@@ -70,10 +70,16 @@ function Header({ user, isAdmin, onSignOut }: { user: User | null; isAdmin: bool
     <nav className={open ? 'nav-links open' : 'nav-links'}>
       <Link to="/"><Compass size={16}/> Discover</Link><Link to="/search">Explore</Link><Link to="/watchlist"><Bookmark size={16}/> My list</Link><Link to="/video"><Tv size={16}/> Video</Link><Link to="/privacy"><ShieldCheck size={16}/> Privacy</Link>{isAdmin && <Link to="/admin"><ShieldCheck size={16}/> Admin workspace</Link>}
     </nav>
-    <form className="nav-search" onSubmit={submit}><Search size={17}/><input value={term} onChange={e => setTerm(e.target.value)} onFocus={() => { navigate(term.trim() ? `/search?q=${encodeURIComponent(term.trim())}` : "/search"); setOpen(false); }} placeholder="Search anime..." aria-label="Search anime"/><kbd>↵</kbd></form>
-    <div className="topbar-catalogue-switch" role="group" aria-label="Switch home catalogue">
-      <button type="button" className={catalogueMode === 'anime' ? 'active' : ''} aria-pressed={catalogueMode === 'anime'} onClick={() => chooseCatalogue('anime')}><Tv size={14}/><span>Anime</span></button>
-      <button type="button" className={catalogueMode === 'manga' ? 'active' : ''} aria-pressed={catalogueMode === 'manga'} onClick={() => chooseCatalogue('manga')}><BookOpen size={14}/><span>Manga</span></button>
+    <div className="topbar-catalogue-tools">
+      <form className="nav-search topbar-explore-search" onSubmit={submit} role="search">
+        <Search size={16}/>
+        <input value={term} onChange={e => setTerm(e.target.value)} onFocus={() => { navigate(term.trim() ? `/search?q=${encodeURIComponent(term.trim())}` : "/search"); setOpen(false); }} placeholder="Search & explore..." aria-label="Search and explore anime or manga"/>
+        <kbd>↵</kbd>
+      </form>
+      <div className="topbar-catalogue-switch" role="group" aria-label="Switch home catalogue">
+        <button type="button" className={catalogueMode === 'anime' ? 'active' : ''} aria-pressed={catalogueMode === 'anime'} onClick={() => chooseCatalogue('anime')}><Tv size={12}/><span>Anime</span></button>
+        <button type="button" className={catalogueMode === 'manga' ? 'active' : ''} aria-pressed={catalogueMode === 'manga'} onClick={() => chooseCatalogue('manga')}><BookOpen size={12}/><span>Manga</span></button>
+      </div>
     </div>
     {user && <div className="nav-account"><span>{String(user.user_metadata?.display_name || "Reader")}</span><button onClick={onSignOut}>Sign out</button></div>}
     <button className="icon-btn mobile-menu" onClick={() => setOpen(!open)} aria-label="Toggle menu">{open ? <X/> : <Menu/>}</button>
