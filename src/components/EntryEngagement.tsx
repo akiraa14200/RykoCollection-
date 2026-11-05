@@ -26,10 +26,10 @@ export function EntryLikeButton({ animeId, user }: { animeId: string; user: User
     let active = true;
     void (async () => {
       const [{ count: total }, mine] = await Promise.all([
-        supabase.from('anime_entry_likes').select('id', { count: 'exact', head: true }).eq('anilist_id', id),
+        supabase.rpc('get_ryko_entry_like_count', { entry_id: id }),
         user ? supabase.from('anime_entry_likes').select('id').eq('anilist_id', id).eq('user_id', user.id).maybeSingle() : Promise.resolve({ data: null, error: null })
       ]);
-      if (active) { setCount(total || 0); setLiked(!!mine.data); }
+      if (active) { setCount(Number(total || 0)); setLiked(!!mine.data); }
     })();
     return () => { active = false; };
   }, [id, user?.id]);
