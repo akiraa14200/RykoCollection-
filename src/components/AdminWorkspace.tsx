@@ -117,10 +117,13 @@ export function AdminWorkspace() {
         ? (/^[a-zA-Z0-9_-]{10,80}$/.test(key)||/^@[a-zA-Z0-9._-]{3,100}$/.test(key))
         : /^[a-zA-Z0-9_-]{10,80}$/.test(key);
       if(!valid)throw new Error(sourceType==='channel'?'Enter a YouTube channel ID or handle URL (for example @museindiachannel).':'Could not read a playlist ID. Paste the full YouTube playlist URL or its ID.');
-      const {error}=await supabase.from('video_discovery_sources').insert({source_type:sourceType,source_key:key,label:sourceForm.label.trim()||key});
+      const {data:createdSource,error}=await supabase.from('video_discovery_sources').insert({source_type:sourceType,source_key:key,label:sourceForm.label.trim()||key}).select('*').single();
       if(error)throw error;
       setSourceForm({source_type:'channel',source_key:'',label:''});
-      await loadDiscovery();setNotice('YouTube source added. Run discovery to collect its recent uploads.');
+      await loadDiscovery();
+      // Adding a source now immediately starts discovery. Results remain pending
+      // until the admin approves them, so nothing is published without review.
+      await discoverFromSource(createdSource as VideoSourceRow);
     }catch(e){setError(errText(e));}finally{setDiscoveryBusy(false);}
   };
   const discoverFromSource=async(source:VideoSourceRow)=>{setDiscoveryBusy(true);setError('');try{const {data,error}=await supabase.functions.invoke('video-discovery',{body:{source_type:source.source_type,source_key:source.source_key}});if(error){let detail=error.message||'Edge Function request failed.';const context=(error as any).context;if(context instanceof Response){try{const payload=await context.clone().json();detail=payload?.error||detail;}catch{}}throw new Error(detail);}if(!data?.ok)throw new Error(data?.error||'Could not discover videos.');const feedRows=(data.videos||[]);const published=await supabase.from('related_videos').select('video_url').eq('platform','youtube').limit(5000);if(published.error)throw published.error;const publishedIds=new Set((published.data||[]).map((v:any)=>youtubeVideoId(v.video_url)).filter(Boolean));const rows=feedRows.filter((v:any)=>!publishedIds.has(v.video_id)).map((v:any)=>({...v,source_id:source.id,status:'pending'}));let added=0;if(rows.length){const {data:inserted,error:insertError}=await supabase.from('video_discovery_queue').upsert(rows,{onConflict:'video_id',ignoreDuplicates:true}).select('video_id');if(insertError)throw insertError;added=inserted?.length||0;}await supabase.from('video_discovery_sources').update({last_checked_at:new Date().toISOString()}).eq('id',source.id);await loadDiscovery();setNotice(added?'Discovery finished: '+added+' new videos added to the approval queue. Existing catalogue videos and previously discovered IDs were skipped.':feedRows.length?'No new videos: all feed entries were already published or previously discovered.':'No recent videos were found in this feed.');}catch(e){setError(errText(e));}finally{setDiscoveryBusy(false);}};
