@@ -172,10 +172,28 @@ Deno.serve(async (req: Request) => {
 
     const body = await req.json();
     const sourceId = String(body?.source_id || "").trim();
-    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(sourceId)) {
-      return Response.json({ error: "The saved source ID is missing or invalid. Refresh the workspace and try again." }, { status: 400, headers: corsHeaders });
+    let source: any = null;
+    let sourceError: any = null;
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(sourceId);
+    if (isUuid) {
+      const result = await adminClient.from("video_discovery_sources")
+        .select("id,source_type,source_key,label,enabled").eq("id", sourceId).maybeSingle();
+      source = result.data;
+      sourceError = result.error;
+    } else {
+      // Backward compatibility for the already-deployed website client, which
+      // still sends source_type/source_key rather than source_id.
+      const legacyType = body?.source_type;
+      const legacyKey = String(body?.source_key || "").trim();
+      if (!["channel", "playlist"].includes(legacyType) || !legacyKey) {
+        return Response.json({ error: "The saved source ID is missing. Refresh the workspace and try again." }, { status: 400, headers: corsHeaders });
+      }
+      const result = await adminClient.from("video_discovery_sources")
+        .select("id,source_type,source_key,label,enabled")
+        .eq("source_type", legacyType).eq("source_key", legacyKey).maybeSingle();
+      source = result.data;
+      sourceError = result.error;
     }
-    const { data: source, error: sourceError } = await adminClient.from("video_discovery_sources").select("id,source_type,source_key,label,enabled").eq("id", sourceId).maybeSingle();
     if (sourceError) throw sourceError;
     if (!source || !source.enabled) return Response.json({ error: "This source was removed or disabled. Refresh the source list." }, { status: 404, headers: corsHeaders });
 
