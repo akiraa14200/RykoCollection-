@@ -141,7 +141,11 @@ function useLibrary() {
   const toggle = (anime: Anime) => setSaved(old => old.some(item => item.id === anime.id) ? old.filter(item => item.id !== anime.id) : [anime, ...old]);
   const remember = (anime: Anime) => setHistory(old => [{ id: anime.id, title: titleOf(anime), image: imageOf(anime), progress: 0, updated: Date.now() }, ...old.filter(item => item.id !== anime.id)].slice(0, 20));
   const setLibraryStatus = (id: string, status: 'Watching' | 'Plan to Watch' | 'Completed' | 'Waiting') => setStatuses(old => ({ ...old, [id]: status }));
-  const setProgress = (id: string, value: number, max?: number) => setProgressMap(old => ({ ...old, [id]: Math.max(0, Math.min(max && max > 0 ? max : 9999, Math.round(value))) }));
+  const setProgress = (id: string, value: number, max?: number) => {
+    const next = Math.max(0, Math.min(max && max > 0 ? max : 9999, Math.round(value)));
+    setProgressMap(old => ({ ...old, [id]: next }));
+    try { const key = new Date().toISOString().slice(0,10); const days = readStore<Record<string,number>>('rykoc-activity-days',{}); days[key] = (days[key] || 0) + 1; localStorage.setItem('rykoc-activity-days',JSON.stringify(days)); } catch {}
+  };
   const toggleVideo = (video: RelatedVideo) => {
     const exists = current.current.savedVideos.some(item => item.id === video.id);
     showToast(exists ? 'Removed from Watch later' : 'Saved to Watch later');
@@ -214,6 +218,16 @@ function Home() {
   const animePopular = popular.filter(isAnimeCatalogueEntry);
   const animeSeasonal = seasonal.filter(isAnimeCatalogueEntry);
   const activeTrending = catalogueMode === 'anime' ? animeTrending : trendingManga;
+  const savedGenres = new Set(saved.flatMap(item => item.genres || []));
+  const recommendations = [...(catalogueMode === 'anime' ? animePopular : popularManga), ...activeTrending]
+    .filter(item => !saved.some(entry => entry.id === item.id))
+    .map(item => ({ item, score: (item.genres || []).filter(genre => savedGenres.has(genre)).length }))
+    .sort((a,b)=>b.score-a.score || (b.item.averageScore || 0)-(a.item.averageScore || 0))
+    .slice(0,6).map(entry=>entry.item);
+  const releaseSchedule = [...animeSeasonal, ...animeTrending]
+    .filter(item => item.nextAiringEpisode?.airingAt && item.nextAiringEpisode.airingAt * 1000 > Date.now())
+    .sort((a,b)=>(a.nextAiringEpisode?.airingAt || 0)-(b.nextAiringEpisode?.airingAt || 0))
+    .filter((item,index,all)=>all.findIndex(other=>other.id===item.id)===index).slice(0,5);
   const featured = activeTrending.slice(0, 5);
   const hero = featured[heroIndex] || activeTrending[0];
   const tabActive = useTabActive();
@@ -247,6 +261,8 @@ function Home() {
       <Section title="Trending manga & manhwa" subtitle="Popular manga, manhwa and manhua" items={trendingManga} saved={saved.map(a => a.id)} onSave={toggle} to="/search?format=MANGA"/>
       <Section title="Popular manga" subtitle="Reader favorites across the AniList catalogue" items={popularManga} saved={saved.map(a => a.id)} onSave={toggle} to="/search?format=MANGA"/>
     </>}
+    {recommendations.length > 0 && <Section title="Picked for your taste" subtitle={saved.length ? 'Suggestions matched to genres in your library' : 'Popular titles to help shape your recommendations'} items={recommendations} saved={saved.map(a=>a.id)} onSave={toggle} to="/search"/>}
+    {releaseSchedule.length > 0 && <section className="section"><div className="section-head"><div><h2>Upcoming episodes</h2><p>Next release times for currently airing anime</p></div><Link to="/activity" className="text-link">Activity <ChevronRight size={15}/></Link></div><div className="release-schedule">{releaseSchedule.map(item=><Link to={'/anime/'+item.id} className="release-item" key={item.id}><img src={imageOf(item)} alt=""/><span><strong>{titleOf(item)}</strong><small>Episode {item.nextAiringEpisode?.episode}</small></span><time>{formatCountdown(item.nextAiringEpisode!.airingAt)}</time></Link>)}</div></section>}
     {history.length > 0 && <section className="section"><div className="section-head"><div><h2>Pick up where you left off</h2><p>Your recently opened anime</p></div></div><div className="history-row">{history.slice(0,5).map(item => <Link to={`/anime/${item.id}`} className="history-item" key={item.id}><img src={item.image} alt=""/><span>{item.title}</span><small>Recently viewed</small></Link>)}</div></section>}
     <div className="api-credit">Catalogue powered by the RykoCollection website database.</div>
   </main>;
