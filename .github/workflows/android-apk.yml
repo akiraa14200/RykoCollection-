@@ -3,7 +3,7 @@ name: Build Android APK
 on:
   workflow_dispatch:
   push:
-    branches: [main, ryko-collection-catalogue-app]
+    branches: [main, ryko-collection-catalogue-app, feature/hybrid-video-catalogue]
     paths:
       - 'src/**'
       - 'package.json'
@@ -85,11 +85,50 @@ jobs:
       - name: Copy web assets into Android app
         run: npx cap sync android
 
+      - name: Configure resilient Maven Central mirror
+        run: |
+          cat > "$RUNNER_TEMP/ryko-maven-mirror.init.gradle" <<'GRADLE'
+          def mirrorUrl = 'https://maven-central.storage-download.googleapis.com/maven2/'
+          gradle.beforeProject { project ->
+              project.buildscript.repositories.maven {
+                  name = 'googleMavenCentralMirror'
+                  url = mirrorUrl
+              }
+              project.repositories.maven {
+                  name = 'googleMavenCentralMirror'
+                  url = mirrorUrl
+              }
+          }
+          gradle.settingsEvaluated { settings ->
+              settings.pluginManagement.repositories.maven {
+                  name = 'googleMavenCentralMirror'
+                  url = mirrorUrl
+              }
+              try {
+                  settings.dependencyResolutionManagement.repositories.maven {
+                      name = 'googleMavenCentralMirror'
+                      url = mirrorUrl
+                  }
+              } catch (Exception ignored) {
+                  // Older generated projects may not use dependencyResolutionManagement.
+              }
+          }
+          GRADLE
+
       - name: Build debug APK
         run: |
           chmod +x android/gradlew
           cd android
-          ./gradlew assembleDebug --no-daemon
+          for attempt in 1 2 3; do
+            if ./gradlew assembleDebug --no-daemon --init-script "$RUNNER_TEMP/ryko-maven-mirror.init.gradle"; then
+              exit 0
+            fi
+            if [ "$attempt" -lt 3 ]; then
+              echo "Gradle dependency resolution failed; retrying in 20 seconds (attempt $attempt/3)..."
+              sleep 20
+            fi
+          done
+          exit 1
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
@@ -98,3 +137,5 @@ jobs:
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 14
+
+# Keep this workflow available for isolated hybrid-video-catalogue branch validation.

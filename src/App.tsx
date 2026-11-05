@@ -1,8 +1,8 @@
 import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { Link, Navigate, Route, Routes, useNavigate, useParams, useLocation, type Location } from 'react-router-dom';
-import { Search, Compass, Bookmark, ShieldCheck, Play, Star, ChevronRight, ArrowLeft, Heart, Clock3, Menu, X, ExternalLink, Sparkles, Tv, Info, Users, FileText, Globe, Youtube, ChevronDown, RotateCw, MessageCircle, Home as HomeIcon, UserRound, ChevronLeft, Shuffle, Minus, Plus, Settings, Trash2, Clock } from 'lucide-react';
+import { Search, Compass, Bookmark, ShieldCheck, Play, Star, ChevronRight, ArrowLeft, Heart, Clock3, Menu, X, ExternalLink, Sparkles, Tv, Info, Users, FileText, Globe, Youtube, ListVideo, ChevronDown, RotateCw, MessageCircle, Home as HomeIcon, UserRound, ChevronLeft, Shuffle, Minus, Plus, Settings, Trash2, Clock } from 'lucide-react';
 // The application UI and page components are defined below.
-import { Anime, AnimeCharacter, getAnime, peekAnime, rememberPreviews, applyCachedVideoMetadata, enrichVideoMetadataProgressive, getAnimeCharacters, getPopular, getPopularManga, getSeasonal, getTrending, getTrendingManga, getRelatedVideos, RelatedVideo, imageOf, searchAnime, titleOf } from './lib/catalogue';
+import { Anime, AnimeCharacter, getAnime, peekAnime, rememberPreviews, applyCachedVideoMetadata, enrichVideoMetadataProgressive, getAnimeCharacters, getPopular, getPopularManga, getSeasonal, getTrending, getTrendingManga, getRelatedVideos, getRelatedVideosBySourceIds, RelatedVideo, imageOf, searchAnime, titleOf } from './lib/catalogue';
 import type { User } from '@supabase/supabase-js';
 import { supabase } from './lib/supabase';
 import { AnimeComments } from './components/AnimeComments';
@@ -748,6 +748,9 @@ function VideoPage() {
   const [term,setTerm]=useState('');
   const [format,setFormat]=useState<'all'|'video'|'short'>('all');
   const [category,setCategory]=useState('All');
+  const [videoSources,setVideoSources]=useState<Array<{id:string;source_type:'channel'|'playlist';label:string;source_key:string}>>([]);
+  const [selectedSource,setSelectedSource]=useState('');
+  const [sourceTypeFilter,setSourceTypeFilter]=useState<'all'|'channel'|'playlist'>('all');
   const tabActive=useTabActive();
   useEffect(()=>{if(!tabActive)setPlayingId(null);},[tabActive]);
   // Lock browser zoom only while the Video tab is active. Restore the site's normal
@@ -767,6 +770,13 @@ function VideoPage() {
   },[tabActive]);
   const {savedVideos,toggleVideo}=useLibrary();
   const savedVideoIds=useMemo(()=>new Set(savedVideos.map(video=>video.id)),[savedVideos]);
+  const sourceFilteredIds=useMemo(()=>{
+    if(selectedSource)return [selectedSource];
+    if(sourceTypeFilter==='all')return [];
+    return videoSources.filter(source=>source.source_type===sourceTypeFilter).map(source=>source.id);
+  },[selectedSource,sourceTypeFilter,videoSources]);
+  const sourceFilterActive=!!selectedSource||sourceTypeFilter!=='all';
+
 
   // Patch titles/channels into cards as each background batch arrives (order never changes).
   const enrich=(list:RelatedVideo[],isActive:()=>boolean)=>{
@@ -776,32 +786,77 @@ function VideoPage() {
     });
   };
   useEffect(()=>{
+    if(!tabActive)return;
     let active=true;
-    // Instant first paint from the last visit, then refresh in the background.
-    const snapshot=readPersisted<RelatedVideo[]>('video-feed',12*60*60*1000);
-    if(snapshot?.length){setVideos(applyCachedVideoMetadata(snapshot));setLoading(false);}
-    getRelatedVideos(1).then(data=>{
+    const loadSources=async()=>{
+      const {data,error}=await supabase.from('video_discovery_sources')
+        .select('id,source_type,label,source_key').eq('enabled',true).order('label');
       if(!active)return;
-      // Show cards right away (with any titles cached on this device); fetch the rest progressively.
-      setVideos(applyCachedVideoMetadata(data));
-      setHasMore(data.length>0);
-      setLoading(false);
-      writePersisted('video-feed',data);
-      enrich(data,()=>active);
-    }).catch(e=>{
-      if(active&&!snapshot?.length)setError(e instanceof Error?e.message:'Could not load videos.');
-    }).finally(()=>{if(active)setLoading(false);});
+      if(error){setError(error.message);return;}
+      setVideoSources((data||[]) as Array<{id:string;source_type:'channel'|'playlist';label:string;source_key:string}>);
+    };
+    const refreshOnReturn=()=>{if(document.visibilityState==='visible')void loadSources();};
+    void loadSources();
+    window.addEventListener('focus',refreshOnReturn);
+    document.addEventListener('visibilitychange',refreshOnReturn);
+    return()=>{
+      active=false;
+      window.removeEventListener('focus',refreshOnReturn);
+      document.removeEventListener('visibilitychange',refreshOnReturn);
+    };
+  },[tabActive]);
+
+  useEffect(()=>{
+    let active=true;
+    setPage(1);
+    setLoading(true);
+    setError('');
+    if(sourceFilterActive){
+      // Source filters query the complete source-linked set in Supabase.
+      // Filtering only the first global 40 rows hid older channel/playlist videos.
+      if(!sourceFilteredIds.length){
+        setVideos([]);
+        setHasMore(false);
+        setLoading(false);
+        return()=>{active=false;};
+      }
+      getRelatedVideosBySourceIds(sourceFilteredIds,1).then(data=>{
+        if(!active)return;
+        setVideos(applyCachedVideoMetadata(data));
+        setHasMore(data.length===40);
+        setLoading(false);
+        enrich(data,()=>active);
+      }).catch(e=>{
+        if(active)setError(e instanceof Error?e.message:'Could not load source videos.');
+      }).finally(()=>{if(active)setLoading(false);});
+    }else{
+      const snapshot=readPersisted<RelatedVideo[]>('video-feed',12*60*60*1000);
+      if(snapshot?.length){setVideos(applyCachedVideoMetadata(snapshot));setLoading(false);}
+      getRelatedVideos(1).then(data=>{
+        if(!active)return;
+        setVideos(applyCachedVideoMetadata(data));
+        setHasMore(data.length===40);
+        setLoading(false);
+        writePersisted('video-feed',data);
+        enrich(data,()=>active);
+      }).catch(e=>{
+        if(active&&!snapshot?.length)setError(e instanceof Error?e.message:'Could not load videos.');
+      }).finally(()=>{if(active)setLoading(false);});
+    }
     return()=>{active=false;};
-  },[]);
+  },[selectedSource,sourceTypeFilter,sourceFilteredIds.join(','),sourceFilterActive]);
 
   const filtered=useMemo(()=>{
     const query=term.trim().toLowerCase();
     return videos.filter(video=>{
       const matchesText=!query||[video.videoTitle,video.creatorName,video.titleName].join(' ').toLowerCase().includes(query);
       const matchesCategory=category==='All'||(video.titleFormat||'').toLowerCase()===category.toLowerCase();
-      return matchesText&&matchesCategory;
+      const sourceMeta=videoSources.find(source=>source.id===video.sourceId);
+      const matchesSourceType=sourceTypeFilter==='all'||sourceMeta?.source_type===sourceTypeFilter;
+      const matchesSource=!selectedSource||video.sourceId===selectedSource;
+      return matchesText&&matchesCategory&&matchesSourceType&&matchesSource;
     });
-  },[videos,term,category]);
+  },[videos,term,category,selectedSource,sourceTypeFilter,videoSources]);
 
   // Build a lightweight taste profile from the user's own saved titles and history.
   const {recommendedRegular,recommendedShorts}=useMemo(()=>{
@@ -854,7 +909,9 @@ function VideoPage() {
     setLoadingMore(true);
     setError('');
     try{
-      const raw=await getRelatedVideos(page+1);
+      const raw=sourceFilterActive
+        ? await getRelatedVideosBySourceIds(sourceFilteredIds,page+1)
+        : await getRelatedVideos(page+1);
       const data=applyCachedVideoMetadata(raw);
       setVideos(old=>{const ids=new Set(old.map(video=>video.id));return [...old,...data.filter(video=>!ids.has(video.id))];});
       setPage(current=>current+1);
@@ -883,11 +940,27 @@ function VideoPage() {
     <label className="yt-search"><Search size={19}/><input value={term} onChange={event=>setTerm(event.target.value)} placeholder="Search videos, creators or titles" autoComplete="off"/>{term&&<button onClick={()=>setTerm('')} aria-label="Clear search"><X size={16}/></button>}</label>
   </header>;
 
-  const empty=<div className="yt-empty"><Play size={28}/><h3>{term||category!=='All'?'No matching videos':'No videos yet'}</h3><p>Try changing your search or filters.</p><button className="secondary-btn" onClick={()=>{setTerm('');setCategory('All');setFormat('all');}}>Clear filters</button></div>;
+  const sourceDirectory=<section className="yt-source-directory" aria-label="Browse YouTube channels and playlists">
+    <div className="yt-source-directory-head"><strong>Browse sources</strong><button type="button" onClick={()=>{setSelectedSource('');setSourceTypeFilter('all');}}>All sources</button></div>
+    {([{type:'channel',label:'Channels',icon:<Youtube size={16}/>},{type:'playlist',label:'Playlists',icon:<ListVideo size={16}/>} ] as const).map(group=>{
+      const items=videoSources.filter(source=>source.source_type===group.type);
+      return <div className="yt-source-group" key={group.type}>
+        <div className="yt-source-group-head">{group.icon}<strong>{group.label}</strong><span>{items.length}</span></div>
+        <div className="yt-source-chips">
+          <button type="button" className={sourceTypeFilter===group.type&&!selectedSource?'active':''} onClick={()=>{setSelectedSource('');setSourceTypeFilter(group.type);}}>All {group.label.toLowerCase()}</button>
+          {items.map(source=><button type="button" key={source.id} className={selectedSource===source.id?'active':''} onClick={()=>{setSelectedSource(source.id);setSourceTypeFilter(group.type);}}>{source.label}</button>)}
+          {!items.length&&<span className="yt-source-empty">No {group.label.toLowerCase()} added yet</span>}
+        </div>
+      </div>;
+    })}
+  </section>;
+
+  const empty=<div className="yt-empty"><Play size={28}/><h3>{term||category!=='All'?'No matching videos':'No videos yet'}</h3><p>Try changing your search or filters.</p><button className="secondary-btn" onClick={()=>{setTerm('');setCategory('All');setFormat('all');setSelectedSource('');setSourceTypeFilter('all');}}>Clear filters</button></div>;
   const videoCard=(video:RelatedVideo,short:boolean)=><LazyVideoCard key={video.id} video={video} short={short} playing={playingId===video.id} onPlay={()=>setPlayingId(current=>current===video.id?null:video.id)} saved={savedVideoIds.has(video.id)} onToggleSave={()=>toggleVideo(video)}/>;
 
   return <main className="video-page yt-page">
     {searchBar}
+    {sourceDirectory}
     {filterBar}
     {error&&<div className="notice">{error}</div>}
     {loading?<div className="yt-loading-grid" aria-label="Loading videos">{Array.from({length:4},(_,index)=><div className="yt-skeleton-card" key={index}><div className="yt-skeleton-thumb"/><div className="yt-skeleton-meta"><div className="yt-skeleton-avatar"/><div className="yt-skeleton-copy"><span className="yt-skeleton-line"/><span className="yt-skeleton-line"/></div></div></div>)}</div>
@@ -918,7 +991,7 @@ function BottomNavigation() {
   })}</nav>;
 }
 
-function AccountPage({ user }: { user: User | null }) {
+function AccountPage({ user, isAdmin }: { user: User | null; isAdmin: boolean }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
@@ -941,7 +1014,7 @@ function AccountPage({ user }: { user: User | null }) {
     finally { setBusy(false); }
   };
   return <main className="content-page account-page"><div className="page-heading"><span className="eyebrow">YOUR RYKOCOLLECTION PROFILE</span><h1>Your <em>Account.</em></h1><p>Sign in to join discussions and keep your profile connected.</p></div>
-    {user ? <section className="account-card"><div className="account-avatar">{String(user.user_metadata?.display_name || user.email || 'R').slice(0,1).toUpperCase()}</div><div><span className="eyebrow">SIGNED IN</span><h2>{String(user.user_metadata?.display_name || user.email?.split('@')[0] || 'Anime fan')}</h2><p>{user.email}</p><button className="secondary-btn" onClick={()=>void supabase.auth.signOut()}>Sign out</button></div></section> :
+    {user ? <><section className="account-card"><div className="account-avatar">{String(user.user_metadata?.display_name || user.email || 'R').slice(0,1).toUpperCase()}</div><div><span className="eyebrow">SIGNED IN</span><h2>{String(user.user_metadata?.display_name || user.email?.split('@')[0] || 'Anime fan')}</h2><p>{user.email}</p><button className="secondary-btn" onClick={()=>void supabase.auth.signOut()}>Sign out</button></div></section>{isAdmin && <section className="account-admin-card"><div className="account-admin-icon"><ShieldCheck size={21}/></div><div className="account-admin-copy"><span className="eyebrow">OWNER ACCESS</span><h2>Admin workspace</h2><p>Manage the catalogue, videos, community moderation and app content.</p></div><Link className="primary-btn account-admin-link" to="/admin">Open workspace <ChevronRight size={16}/></Link></section>}</> :
     <form className="account-card account-form" onSubmit={submit}><div className="account-avatar"><UserRound/></div><h2>{mode==='signin'?'Welcome back':'Create your account'}</h2><p>{mode==='signin'?'Sign in to your RykoCollection account.':'Create a profile to participate in community features.'}</p>
       {mode==='signup' && <input value={displayName} onChange={event=>setDisplayName(event.target.value)} placeholder="Display name" autoComplete="nickname"/>}
       <input type="email" value={email} onChange={event=>setEmail(event.target.value)} placeholder="Email address" autoComplete="email" required/>
@@ -998,12 +1071,12 @@ const isTabPath = (path: string): path is TabPath => (TAB_PATHS as readonly stri
  * open state, and each one is rendered with the last location it saw, so a hidden
  * tab never reacts to another tab's URL. Other routes (detail, admin, …) render normally.
  */
-function TabbedRoutes({ user }: { user: User | null }) {
+function TabbedRoutes({ user, isAdmin }: { user: User | null; isAdmin: boolean }) {
   const location = useLocation();
   const activeTab = isTabPath(location.pathname) ? location.pathname : null;
   const tabLocations = useRef<Partial<Record<TabPath, Location>>>({});
   if (activeTab) tabLocations.current[activeTab] = location;
-  const tabElement = (path: TabPath): ReactNode => path === '/' ? <Home/> : path === '/search' ? <SearchPage/> : path === '/video' ? <VideoPage/> : path === '/watchlist' ? <WatchlistPage/> : <AccountPage user={user}/>;
+  const tabElement = (path: TabPath): ReactNode => path === '/' ? <Home/> : path === '/search' ? <SearchPage/> : path === '/video' ? <VideoPage/> : path === '/watchlist' ? <WatchlistPage/> : <AccountPage user={user} isAdmin={isAdmin}/>;
   return <>
     <ScrollMemory scrollKey={activeTab ?? location.key}/>
     {TAB_PATHS.filter(path => tabLocations.current[path]).map(path => <div key={path} className="tab-keepalive" style={{display: path === activeTab ? 'contents' : 'none'}}>
@@ -1091,5 +1164,5 @@ export default function App() {
     return () => window.removeEventListener('online', retry);
   }, [user]);
   const signOut = () => { void supabase.auth.signOut(); };
-  return <><OfflineBanner/><Header user={user} isAdmin={isAdmin} onSignOut={signOut}/><TabbedRoutes user={user}/><BottomNavigation/><ToastHost/><footer className="footer"><Link to="/" className="brand"><img className="brand-mark brand-logo" src="/logo.svg" alt="" width="31" height="31" loading="lazy"/><span>RYKOCOLLECTION</span></Link><p>Discover stories. Find your next world.</p><span>Shared Ryko catalogue · Independent fan discovery project</span></footer></>;
+  return <><OfflineBanner/><Header user={user} isAdmin={isAdmin} onSignOut={signOut}/><TabbedRoutes user={user} isAdmin={isAdmin}/><BottomNavigation/><ToastHost/><footer className="footer"><Link to="/" className="brand"><img className="brand-mark brand-logo" src="/logo.svg" alt="" width="31" height="31" loading="lazy"/><span>RYKOCOLLECTION</span></Link><p>Discover stories. Find your next world.</p><span>Shared Ryko catalogue · Independent fan discovery project</span></footer></>;
 }

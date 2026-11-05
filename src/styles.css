@@ -592,3 +592,21 @@ body{padding-bottom:104px}
 .yt-thumbnail{contain:layout paint size;isolation:isolate;}
 .yt-thumbnail iframe{max-width:none!important;min-width:0!important;min-height:0!important;}
 .yt-page .yt-video-card{min-width:0;contain:layout style;}
+
+/* RykoTube source directory */
+.yt-source-directory{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:4px 0 12px}
+.yt-source-group{min-width:0;padding:13px;border:1px solid #ffffff12;border-radius:13px;background:linear-gradient(145deg,#121212,#090909)}
+.yt-source-group-head{display:flex;align-items:center;gap:8px;margin-bottom:10px;color:#e9e9ee}
+.yt-source-group-head svg{color:#e8c875}
+.yt-source-group-head strong{font-size:12px}
+.yt-source-group-head span{margin-left:auto;color:#888;font-size:10px}
+.yt-source-chips{display:flex;gap:7px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+.yt-source-chips::-webkit-scrollbar{display:none}
+.yt-source-chips button{flex:none;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:7px 10px;border:1px solid #ffffff15;border-radius:20px;background:#ffffff08;color:#c8c8d0;font-size:10px;cursor:pointer}
+.yt-source-chips button.active{border-color:#e8c87566;background:#e8c87518;color:#f2d78f}
+.yt-source-empty{align-self:center;color:#777;font-size:10px}
+@media(max-width:650px){.yt-source-directory{grid-template-columns:1fr;gap:8px;margin:2px 4% 8px}.yt-source-group{padding:11px}.yt-source-chips button{font-size:10px}}
+
+.yt-source-directory-head{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 2px}
+.yt-source-directory-head strong{color:#a8a8b1;font-size:10px;letter-spacing:.1em;text-transform:uppercase}
+.yt-source-directory-head button{border:0;background:transparent;color:#e8c875;font-size:10px;font-weight:700;cursor:pointer}
