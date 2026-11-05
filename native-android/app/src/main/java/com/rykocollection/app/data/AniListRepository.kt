@@ -57,7 +57,7 @@ class AniListRepository {
 
     suspend fun trendingMedia(manga: Boolean = false): List<AniListMedia> {
         val query = """
-            query(${': MediaType!) {
+            query(${'$'}type: MediaType!) {
               Page(page: 1, perPage: 18) {
                 media(type: ${'$'}type, sort: TRENDING_DESC, isAdult: false) {
                   id
