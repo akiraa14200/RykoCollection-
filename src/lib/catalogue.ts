@@ -94,10 +94,18 @@ export async function getRelatedVideos(page = 1, titleId?: string): Promise<Rela
   const { data, error } = await request;
   throwIf(error);
   const videos = ((data || []) as RelatedVideoRow[]).map(mapRelatedVideo);
-  const titleIds = [...new Set(videos.map(video => video.titleId).filter((id): id is string => typeof id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)))];
+  // Only query UUID-backed title rows. Legacy AniList IDs and empty legacy_title_id
+  // values are text identifiers, not PostgreSQL UUIDs; never pass them to .in('id', ...).
+  const isDatabaseUuid = (value: unknown): value is string =>
+    typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value.trim());
+  const titleIds = [...new Set(videos.map(video => video.titleId.trim()).filter(isDatabaseUuid))];
   if (titleIds.length) {
-    const { data: titles, error: titleError } = await supabase.from('titles').select('id,name,cover_url,media_type,release_year,genres').in('id', titleIds);
-    throwIf(titleError);
+    const { data: titles, error: titleError } = await supabase.from('titles')
+      .select('id,name,cover_url,media_type,release_year,genres')
+      .in('id', titleIds);
+    // Metadata is optional: a stale/malformed legacy title reference must never
+    // prevent channel and playlist videos from rendering in RykoTube.
+    if (titleError) console.warn('Video title metadata lookup failed; showing videos without title metadata.', titleError);
     const byId = new Map((titles || []).map((title: any) => [title.id, title]));
     videos.forEach(video => {
       const title: any = byId.get(video.titleId);
