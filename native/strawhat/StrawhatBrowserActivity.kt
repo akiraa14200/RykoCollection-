@@ -1059,7 +1059,10 @@ class StrawhatBrowserActivity : Activity() {
         panelIds.filter { it != 0 }.forEach { id ->
             decor.findViewById<View>(id)?.setBackgroundColor(Color.TRANSPARENT)
         }
-        dialog.findViewById<TextView>(android.R.id.alertTitle)?.setTextColor(Color.WHITE)
+        val alertTitleId = resources.getIdentifier("alertTitle", "id", "android")
+        if (alertTitleId != 0) {
+            dialog.findViewById<TextView>(alertTitleId)?.setTextColor(Color.WHITE)
+        }
         dialog.findViewById<TextView>(android.R.id.message)?.apply {
             setTextColor(Color.rgb(225, 220, 239))
             setLineSpacing(dp(3).toFloat(), 1f)
