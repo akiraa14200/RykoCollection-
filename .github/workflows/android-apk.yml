@@ -142,7 +142,7 @@ jobs:
           root = Path("android")
           app = root / "app"
           source = Path("native/strawhat/StrawhatBrowserActivity.kt").read_text()
-          target = app / "src/main/java/com/rykocollection/app/browser/StrawhatBrowserActivity.kt"
+          target = app / "src/main/kotlin/com/rykocollection/app/browser/StrawhatBrowserActivity.kt"
           target.parent.mkdir(parents=True, exist_ok=True)
           target.write_text(source)
           assets = app / "src/main/assets"
