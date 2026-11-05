@@ -3,7 +3,7 @@ name: Build Android APK
 on:
   workflow_dispatch:
   push:
-    branches: [main, ryko-collection-catalogue-app, feature/hybrid-video-catalogue]
+    branches: [main, ryko-collection-catalogue-app, feature/hybrid-video-catalogue, hybrid-native-merge]
     paths:
       - 'src/**'
       - 'package.json'
@@ -42,8 +42,25 @@ jobs:
       - name: Build web app
         run: npm run build
 
-      - name: Generate Android project
-        run: npx cap add android
+      - name: Generate or reuse Android project
+        run: |
+          if [ -d android/app ]; then
+            echo "Using the checked-in Android project"
+            npx cap sync android
+          else
+            echo "Generating the initial Capacitor Android project"
+            npx cap add android
+          fi
+
+      - name: Verify Android application identity
+        run: |
+          node --input-type=module <<'NODE'
+          import config from './capacitor.config.ts';
+          if (config.appId !== 'com.rykocollection.app') {
+            throw new Error(`Unexpected Android application id: ${config.appId}`);
+          }
+          console.log(`Building ${config.appName} (${config.appId})`);
+          NODE
 
       - name: Set up Python
         uses: actions/setup-python@v5
