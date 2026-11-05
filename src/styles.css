@@ -672,3 +672,10 @@ body{padding-bottom:104px}
 
 /* Entry pages stay within the device viewport instead of creating a wider layout. */
 .detail-page{width:100%;max-width:100%;overflow-x:clip}.detail-content{width:100%;min-width:0}.detail-main>*{min-width:0}.detail-info{overflow-wrap:anywhere}
+
+.home-catalogue-header{display:flex;align-items:center;justify-content:space-between;gap:18px;max-width:680px;margin:24px auto 16px}
+.home-catalogue-heading{display:flex;flex-direction:column;gap:5px}.home-catalogue-heading .eyebrow{font-size:9px}.home-catalogue-heading strong{font:700 18px Manrope,sans-serif;letter-spacing:-.03em}
+.catalogue-switch{display:flex;align-items:center;gap:4px;padding:4px;border:1px solid rgba(196,181,255,.2);border-radius:999px;background:rgba(25,21,38,.76);backdrop-filter:blur(22px) saturate(160%);-webkit-backdrop-filter:blur(22px) saturate(160%);box-shadow:inset 0 1px 0 rgba(255,255,255,.09),0 8px 26px rgba(0,0,0,.22)}
+.catalogue-switch button{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:38px;padding:0 15px;border:1px solid transparent;border-radius:999px;background:transparent;color:#c9c3d8;font-size:12px;font-weight:700;transition:background .2s,color .2s,box-shadow .2s}
+.catalogue-switch button.active{color:#fff;background:linear-gradient(135deg,rgba(157,137,235,.94),rgba(99,78,165,.94));border-color:rgba(229,221,255,.42);box-shadow:inset 0 1px 0 rgba(255,255,255,.24),0 4px 15px rgba(105,83,180,.28)}
+@media(max-width:520px){.home-catalogue-header{margin:18px auto 13px;align-items:center}.home-catalogue-heading strong{font-size:15px}.catalogue-switch button{min-height:35px;padding:0 11px;font-size:11px}}
