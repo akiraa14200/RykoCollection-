@@ -815,21 +815,8 @@ function VideoPage() {
       if(nativeListener)void nativeListener.remove();
     };
   },[tabActive]);
-  // Lock browser zoom only while the Video tab is active. Restore the site's normal
-  // viewport settings as soon as the user leaves this tab.
-  useEffect(()=>{
-    if(!tabActive)return;
-    const viewport=document.querySelector('meta[name="viewport"]');
-    if(!viewport)return;
-    const previous=viewport.getAttribute('content')||'width=device-width, initial-scale=1.0';
-    viewport.setAttribute('content','width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no');
-    const preventPinch=(event:TouchEvent)=>{if(event.touches.length>1)event.preventDefault();};
-    document.addEventListener('touchmove',preventPinch,{passive:false});
-    return()=>{
-      viewport.setAttribute('content',previous);
-      document.removeEventListener('touchmove',preventPinch);
-    };
-  },[tabActive]);
+  // Keep native/browser zoom available on every tab. Preventing pinch zoom
+  // makes video controls and captions harder to use for low-vision users.
   const {savedVideos,toggleVideo}=useLibrary();
   const savedVideoIds=useMemo(()=>new Set(savedVideos.map(video=>video.id)),[savedVideos]);
   const sourceFilteredIds=useMemo(()=>{
