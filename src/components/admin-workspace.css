@@ -50,3 +50,10 @@
 .account-admin-copy p{margin:0;font-size:12px;line-height:1.55;color:#aaa6b7}
 .account-admin-link{display:inline-flex;align-items:center;justify-content:center;gap:8px;white-space:nowrap;text-decoration:none}
 @media(max-width:620px){.account-admin-card{align-items:flex-start;flex-wrap:wrap;padding:16px}.account-admin-copy{flex:1 1 calc(100% - 64px)}.account-admin-link{width:100%}}
+
+.video-source-group{padding:13px 0 5px;border-top:1px solid rgba(255,255,255,.08)}
+.video-source-group-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 6px}
+.video-source-group-head h4{margin:0;color:#f2efff;font-size:13px}
+.video-source-group-head span{font-size:10px;color:#89869a}
+.video-source-group-icon{display:grid;place-items:center;width:32px;height:32px;border-radius:9px;background:#a99bff14;color:#c2b7ff}
+.video-source-empty{padding:14px;margin:8px 0;background:#ffffff04}
