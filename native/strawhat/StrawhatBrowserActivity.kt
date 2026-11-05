@@ -130,7 +130,7 @@ class StrawhatBrowserActivity : Activity() {
     private fun animateIn(view: View, distance: Float = 10f) {
         view.animate().cancel()
         view.alpha = 0f
-        view.translationY = dp(distance).toFloat()
+        view.translationY = dp(distance.toInt()).toFloat()
         view.animate().alpha(1f).translationY(0f).setDuration(230)
             .setInterpolator(android.view.animation.DecelerateInterpolator()).start()
     }
