@@ -22,7 +22,7 @@ import java.net.URL
 import java.util.Locale
 import android.os.SystemClock
 
-class MainActivity : Activity() {
+class StrawhatBrowserActivity : Activity() {
     private data class SiteEntry(val name: String, val url: String, val category: String)
     private data class MusicTrack(val id: String, val title: String, val artist: String, val album: String, val duration: Int, val image: String)
     private var musicSearchRequest = 0
