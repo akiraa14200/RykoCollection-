@@ -63,9 +63,9 @@ function Header({ user, isAdmin, onSignOut }: { user: User | null; isAdmin: bool
   return <header className="topbar"><div className="nav-wrap">
     <Link to="/" className="brand"><img className="brand-mark brand-logo" src="/logo.svg" alt="" width="31" height="31"/><span>RYKOCOLLECTION</span></Link>
     <nav className={open ? 'nav-links open' : 'nav-links'}>
-      <Link to="/"><Compass size={16}/> Discover</Link><Link to="/search">Explore</Link><Link to="/watchlist"><Bookmark size={16}/> My list</Link><Link to="/video"><Tv size={16}/> Video</Link><button type="button" className="nav-browser-link" onClick={() => { const native = (window as Window & { RykoNative?: { openStrawhatBrowser?: () => void } }).RykoNative; if (native?.openStrawhatBrowser) native.openStrawhatBrowser(); else showToast("Strawhat Pirate is available in the Android APK."); }}><Globe size={16}/> Strawhat Browser</button><Link to="/privacy"><ShieldCheck size={16}/> Privacy</Link>{isAdmin && <Link to="/admin"><ShieldCheck size={16}/> Admin workspace</Link>}
+      <Link to="/"><Compass size={16}/> Discover</Link><Link to="/search">Explore</Link><Link to="/watchlist"><Bookmark size={16}/> My list</Link><Link to="/video"><Tv size={16}/> Video</Link><Link to="/privacy"><ShieldCheck size={16}/> Privacy</Link>{isAdmin && <Link to="/admin"><ShieldCheck size={16}/> Admin workspace</Link>}
     </nav>
-    <form className="nav-search" onSubmit={submit}><Search size={17}/><input value={term} onChange={e => setTerm(e.target.value)} placeholder="Search anime..." aria-label="Search anime"/><kbd>↵</kbd></form>
+    <form className="nav-search" onSubmit={submit}><Search size={17}/><input value={term} onChange={e => setTerm(e.target.value)} onFocus={() => { navigate(term.trim() ? `/search?q=${encodeURIComponent(term.trim())}` : "/search"); setOpen(false); }} placeholder="Search anime..." aria-label="Search anime"/><kbd>↵</kbd></form>
     {user && <div className="nav-account"><span>{String(user.user_metadata?.display_name || "Reader")}</span><button onClick={onSignOut}>Sign out</button></div>}
     <button className="icon-btn mobile-menu" onClick={() => setOpen(!open)} aria-label="Toggle menu">{open ? <X/> : <Menu/>}</button>
   </div></header>;
@@ -1003,17 +1003,27 @@ function VideoPage() {
 }
 function BottomNavigation() {
   const location = useLocation();
+  const openStrawhat = () => {
+    const native = (window as Window & { RykoNative?: { openStrawhatBrowser?: () => void } }).RykoNative;
+    if (native?.openStrawhatBrowser) native.openStrawhatBrowser();
+    else showToast('Strawhat Pirate browser is available in the Android app.');
+  };
   const links = [
     { to: '/', label: 'Home', icon: <HomeIcon size={19}/> },
-    { to: '/search', label: 'Browse', icon: <Compass size={19}/> },
     { to: '/video', label: 'Video', icon: <Play size={19}/> },
     { to: '/watchlist', label: 'Library', icon: <Bookmark size={19}/> },
     { to: '/account', label: 'Account', icon: <UserRound size={19}/> }
   ];
-  return <nav className="bottom-navigation" aria-label="Main navigation">{links.map(item => {
-    const active = item.to === '/' ? location.pathname === '/' : location.pathname === item.to;
+  return <nav className="bottom-navigation" aria-label="Main navigation">{links.slice(0,1).map(item => {
+    const active = location.pathname === item.to;
     return <Link key={item.to} to={item.to} onClick={event => { if (active) { event.preventDefault(); window.scrollTo({ top: 0, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); } }} className={active?'bottom-nav-item active':'bottom-nav-item'} aria-current={active?'page':undefined}>{item.icon}<span>{item.label}</span></Link>;
-  })}</nav>;
+  })}
+    <button type="button" className="bottom-nav-item bottom-nav-browser" onClick={openStrawhat} aria-label="Open Strawhat Pirate browser"><Globe size={19}/><span>Strawhat</span></button>
+    {links.slice(1).map(item => {
+      const active = location.pathname === item.to;
+      return <Link key={item.to} to={item.to} onClick={event => { if (active) { event.preventDefault(); window.scrollTo({ top: 0, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); } }} className={active?'bottom-nav-item active':'bottom-nav-item'} aria-current={active?'page':undefined}>{item.icon}<span>{item.label}</span></Link>;
+    })}
+  </nav>;
 }
 
 function AccountPage({ user, isAdmin }: { user: User | null; isAdmin: boolean }) {
