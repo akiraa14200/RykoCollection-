@@ -172,6 +172,14 @@ jobs:
                   app_text = app_text.replace("apply plugin: 'com.android.application'", "apply plugin: 'com.android.application'\napply plugin: 'kotlin-android'", 1)
               app_gradle.write_text(app_text)
 
+          # Keep Kotlin and Java bytecode targets aligned with Capacitor's Java 17 target.
+          if "jvmTarget" not in app_text:
+              if app_gradle.suffix == ".kts":
+                  app_text += '\n\nandroid {\n    compileOptions {\n        sourceCompatibility = JavaVersion.VERSION_17\n        targetCompatibility = JavaVersion.VERSION_17\n    }\n    kotlinOptions {\n        jvmTarget = "17"\n    }\n}\n'
+              else:
+                  app_text += """\n\nandroid {\n    compileOptions {\n        sourceCompatibility JavaVersion.VERSION_17\n        targetCompatibility JavaVersion.VERSION_17\n    }\n}\ntasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {\n    kotlinOptions { jvmTarget = '17' }\n}\n"""
+              app_gradle.write_text(app_text)
+
           manifest = app / "src/main/AndroidManifest.xml"
           xml = manifest.read_text()
           activity = '<activity android:name=".browser.StrawhatBrowserActivity" android:exported="false" android:configChanges="orientation|screenSize|keyboardHidden" />'
