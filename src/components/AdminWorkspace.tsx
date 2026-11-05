@@ -148,9 +148,11 @@ export function AdminWorkspace() {
     if(!items.length)return;
     setDiscoveryBusy(true);setError('');
     try{
-      const payload=items.map(video=>({title_id:approvalTitle||null,source_id:video.source_id||null,video_url:video.video_url,platform:'youtube',video_title:video.video_title,creator_name:video.creator_name,creator_avatar_url:video.creator_avatar_url||null,action_type:'watch',action_url:video.video_url,sort_order:0}));
-      const {error:publishError}=await supabase.from('related_videos').insert(payload);
-      if(publishError)throw publishError;
+      const payload=items.map(video=>({title_id:approvalTitle||null,source_id:video.source_id||null,video_url:video.video_url,platform:'youtube',video_title:video.video_title||'Untitled YouTube video',creator_name:video.creator_name?.trim()||'YouTube',creator_avatar_url:video.creator_avatar_url||'',action_type:'watch',action_url:video.video_url,sort_order:0}));
+      // A video may already have been published manually or through another source.
+      // Ignore duplicates instead of failing the entire approval batch.
+      const {error:publishError}=await supabase.from('related_videos').upsert(payload,{onConflict:'title_id,video_url',ignoreDuplicates:true});
+      if(publishError)throw new Error('Could not publish approved videos: '+publishError.message);
       const {error:reviewError}=await supabase.from('video_discovery_queue').update({status:'approved',reviewed_at:new Date().toISOString()}).in('id',items.map(video=>video.id));
       if(reviewError)throw reviewError;
       await Promise.all([loadVideos(),loadDiscovery()]);
