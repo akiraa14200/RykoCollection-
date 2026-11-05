@@ -990,7 +990,8 @@ function VideoPage() {
     }
   };
 
-  const videoSentinel=useNearViewport(()=>{void loadMore();},!loading&&hasMore&&!loadingMore&&!error);
+  const canLoadMore=hasMore||(format!=='video'&&shortHasMore);
+  const videoSentinel=useNearViewport(()=>{void loadMore();},!loading&&canLoadMore&&!loadingMore&&!error);
 
   const filterBar=<>
     <nav className="yt-filter-bar" aria-label="Video format">
@@ -1038,7 +1039,7 @@ function VideoPage() {
       <div className="yt-section-heading"><div><h2>{format==='short'?'Shorts':'Videos'}</h2><p>{format==='short'?'Quick vertical clips':'Trailers, edits and community videos'}</p></div><span>{selected.length} results</span></div>
       <div className={format==='short'?'yt-shorts-grid':'yt-video-feed'}>{selected.map(video=>videoCard(video,format==='short'))}</div>
     </section>:empty;})()}
-    {!loading&&(hasMore||(format!=='video'&&shortHasMore))&&<div className="load-more-wrap" ref={videoSentinel}><button className="secondary-btn load-more-btn" onClick={loadMore} disabled={loadingMore}>{loadingMore?'Loading…':'Load more'}</button></div>}
+    {!loading&&<div className="load-more-wrap" ref={videoSentinel}><button className="secondary-btn load-more-btn" onClick={loadMore} disabled={loadingMore||!canLoadMore}>{loadingMore?'Loading…':canLoadMore?'Load more videos':'No more videos'}</button></div>}
     <p className="yt-disclaimer">Playback availability depends on each original video provider and its embedding settings.</p>
   </main>;
 }
