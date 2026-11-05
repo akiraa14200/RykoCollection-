@@ -699,3 +699,29 @@ body{padding-bottom:104px}
  .yt-instagram-card .yt-thumbnail{height:min(610px,calc(100vw * 1.72));min-height:470px;border-radius:12px}
  .yt-instagram-card .yt-thumbnail iframe{height:100%;width:100%}
 }
+
+
+/* Compact Explore search sits directly beside the home Anime/Manga selector. */
+.topbar-catalogue-tools{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex:0 1 auto;min-width:0}
+.topbar-explore-search{width:clamp(150px,17vw,220px);flex:0 1 220px;height:35px;margin:0;border-radius:999px;background:rgba(255,255,255,.045);border-color:rgba(196,181,255,.18);transition:border-color .2s,background .2s}
+.topbar-explore-search:focus-within{border-color:rgba(180,163,255,.6);background:rgba(151,130,224,.09)}
+.topbar-explore-search input{font-size:11px}
+.topbar-explore-search kbd{display:none}
+.topbar-catalogue-switch{gap:2px;padding:2px}
+.topbar-catalogue-switch button{min-height:27px;padding:0 8px;gap:4px;font-size:10px}
+.topbar-catalogue-switch button svg{width:12px;height:12px}
+@media(max-width:700px){
+ .topbar-catalogue-tools{gap:6px;flex:1 1 auto;width:auto}
+ .topbar-explore-search{width:auto;min-width:0;flex:1 1 110px;height:33px;padding:0 9px;gap:6px}
+ .topbar-explore-search input{font-size:10px}
+ .topbar-explore-search input::placeholder{color:#85818f}
+ .topbar-catalogue-switch{margin:0;flex:0 0 auto}
+ .topbar-catalogue-switch button{min-height:27px;padding:0 7px;font-size:9px}
+ .topbar-catalogue-switch button svg{width:11px;height:11px}
+}
+@media(max-width:390px){
+ .topbar-explore-search{flex-basis:76px}
+ .topbar-explore-search input::placeholder{color:transparent}
+ .topbar-catalogue-switch button span{display:none}
+ .topbar-catalogue-switch button{width:27px;padding:0}
+}
