@@ -16,7 +16,7 @@ export type AnimeCharacter = {
 };
 export type AnimeStaff = { role: string; node: { name: { full?: string } } };
 export type AnimeExternalLink = { url: string; site: string; type?: string; language?: string };
-export type RelatedVideo = { id: string; titleId: string; videoUrl: string; platform: 'youtube' | 'instagram' | 'dailymotion'; videoTitle: string; creatorName: string; creatorAvatarUrl: string; actionType: 'read' | 'watch'; actionUrl: string; sortOrder: number; createdAt: string; titleName?: string; titleCover?: string; titleFormat?: string; releaseYear?: number; genres?: string[] };
+export type RelatedVideo = { id: string; titleId: string; videoUrl: string; platform: 'youtube' | 'instagram' | 'dailymotion'; videoTitle: string; creatorName: string; creatorAvatarUrl: string; actionType: 'read' | 'watch'; actionUrl: string; sortOrder: number; createdAt: string; titleName?: string; titleCover?: string; titleFormat?: string; releaseYear?: number; genres?: string[]; sourceId?: string };
 export type Anime = {
   id: string;
   anilistId?: number;
@@ -72,19 +72,19 @@ const youtubeId = (url = '') => {
 };
 
 type RelatedVideoRow = {
-  id: string; title_id: string | null; legacy_title_id?: string | null; video_url: string; platform: 'youtube' | 'instagram' | 'dailymotion' | 'tiktok';
+  id: string; title_id: string | null; legacy_title_id?: string | null; source_id?: string | null; video_url: string; platform: 'youtube' | 'instagram' | 'dailymotion' | 'tiktok';
   video_title?: string; creator_name?: string; creator_avatar_url?: string; action_type?: 'read' | 'watch';
   action_url?: string; sort_order?: number; created_at: string;
 };
 const mapRelatedVideo = (row: RelatedVideoRow): RelatedVideo => ({
-  id: row.id, titleId: row.title_id || row.legacy_title_id || '', videoUrl: row.video_url, platform: row.platform as RelatedVideo['platform'],
+  id: row.id, titleId: row.title_id || row.legacy_title_id || '', sourceId: row.source_id || undefined, videoUrl: row.video_url, platform: row.platform as RelatedVideo['platform'],
   videoTitle: row.video_title || '', creatorName: row.creator_name || '',
   creatorAvatarUrl: row.creator_avatar_url || '', actionType: row.action_type || 'watch',
   actionUrl: row.action_url || row.video_url, sortOrder: row.sort_order || 0, createdAt: row.created_at
 });
 export async function getRelatedVideos(page = 1, titleId?: string): Promise<RelatedVideo[]> {
   const from = (page - 1) * 40;
-  let request = supabase.from('related_videos').select('id,title_id,legacy_title_id,video_url,platform,video_title,creator_name,creator_avatar_url,action_type,action_url,sort_order,created_at').order('sort_order', { ascending: true }).order('created_at', { ascending: false }).range(from, from + 39);
+  let request = supabase.from('related_videos').select('id,title_id,legacy_title_id,source_id,video_url,platform,video_title,creator_name,creator_avatar_url,action_type,action_url,sort_order,created_at').order('sort_order', { ascending: true }).order('created_at', { ascending: false }).range(from, from + 39);
   if (titleId) request = request.or(`title_id.eq.${titleId},legacy_title_id.eq.${titleId}`);
 
   // Start the AniList trailer request at the same time as the database query
