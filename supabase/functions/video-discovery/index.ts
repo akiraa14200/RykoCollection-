@@ -47,7 +47,7 @@ function parsePlaylistPage(html:string) {
       const creator=v.shortBylineText?.runs?.map((x:any)=>x.text||"").join("")||v.ownerText?.runs?.map((x:any)=>x.text||"").join("")||"";
       const thumbs=v.thumbnail?.thumbnails||[];
       const thumbnail=thumbs.length?thumbs[thumbs.length-1].url||"": "";
-      if(title)found.push({video_id:v.videoId,video_url:\`https://www.youtube.com/watch?v=\${v.videoId}\`,video_title:title.slice(0,300),creator_name:creator.slice(0,160)||null,thumbnail_url:thumbnail.slice(0,2048)||null,category:"channel upload",relevance_score:50,description:null,view_count:null,published_at:null});
+      if(title)found.push({video_id:v.videoId,video_url:`https://www.youtube.com/watch?v=${v.videoId}`,video_title:title.slice(0,300),creator_name:creator.slice(0,160)||null,thumbnail_url:thumbnail.slice(0,2048)||null,category:"channel upload",relevance_score:50,description:null,view_count:null,published_at:null});
     }
     for(const child of Object.values(value))if(child&&typeof child==="object")walk(child);
   };
