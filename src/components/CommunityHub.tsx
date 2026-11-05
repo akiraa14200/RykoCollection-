@@ -29,7 +29,7 @@ function communityTextCheck(value: string) {
   return '';
 }
 
-export function CommunityHub({ user }: { user: User | null }) {
+export function CommunityHub({ user, isAdmin = false }: { user: User | null; isAdmin?: boolean }) {
   const [anilistId, setAnilistId] = useState('');
   const [posts, setPosts] = useState<CommunityPost[]>([]);
   const [body, setBody] = useState('');
@@ -39,6 +39,7 @@ export function CommunityHub({ user }: { user: User | null }) {
   const [busy, setBusy] = useState(false);
   const [revealed, setRevealed] = useState<string[]>([]);
   const [guidelinesOpen, setGuidelinesOpen] = useState(true);
+  const [pendingPosts, setPendingPosts] = useState<CommunityPost[]>([]);
 
   const loadPosts = async () => {
     const id = Number(anilistId);
@@ -52,6 +53,23 @@ export function CommunityHub({ user }: { user: User | null }) {
   };
 
   useEffect(() => { void loadPosts(); }, [anilistId]);
+  const loadPending = async () => {
+    if (!isAdmin) return;
+    const { data, error } = await supabase.from('anime_entry_comments')
+      .select('id,anilist_id,user_id,parent_comment_id,body,spoiler,moderation_status,created_at')
+      .eq('moderation_status', 'pending').order('created_at', { ascending: true }).limit(100);
+    if (error) { setStatus(error.message); return; }
+    setPendingPosts((data || []) as CommunityPost[]);
+  };
+  useEffect(() => { void loadPending(); }, [isAdmin]);
+  const moderate = async (post: CommunityPost, decision: 'approved' | 'rejected') => {
+    const { error } = await supabase.from('anime_entry_comments')
+      .update({ moderation_status: decision, moderation_reason: decision === 'rejected' ? 'Did not meet Community Guidelines' : null })
+      .eq('id', post.id);
+    if (error) { setStatus(error.message); return; }
+    setPendingPosts(old => old.filter(item => item.id !== post.id));
+    if (String(post.anilist_id) === anilistId) void loadPosts();
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -124,6 +142,10 @@ export function CommunityHub({ user }: { user: User | null }) {
         </article>;
       })}{anilistId && !posts.length && <p className="fine-print">No approved discussions yet for this title.</p>}</div>
     </section>
+    {isAdmin && <section className="settings-card">
+      <div className="section-head"><div><span className="eyebrow">MODERATION QUEUE</span><h2><ShieldCheck size={18}/> Pending community posts</h2></div><button className="secondary-btn" onClick={()=>void loadPending()}>Refresh</button></div>
+      {pendingPosts.length ? <div className="community-post-list">{pendingPosts.map(post=><article className="community-post" key={post.id}><small>AniList ID {post.anilist_id} · {new Date(post.created_at).toLocaleString()}</small><p>{post.spoiler && <strong>Possible spoiler · </strong>}{post.body}</p><div className="community-compose-foot"><button className="secondary-btn" onClick={()=>void moderate(post,'rejected')}>Reject</button><button className="primary-btn" onClick={()=>void moderate(post,'approved')}>Approve</button></div></article>)}</div> : <p className="fine-print">No pending posts.</p>}
+    </section>}
     {user && <section className="settings-card">
       <div className="section-head"><div><span className="eyebrow">PUBLIC READER PROFILE</span><h2><UserRound size={18}/> Your profile</h2></div></div>
       <form className="community-profile-form" onSubmit={saveProfile}>
