@@ -57,7 +57,7 @@ jobs:
           node --input-type=module <<'NODE'
           import { readFileSync } from 'node:fs';
           const config = readFileSync('capacitor.config.ts', 'utf8');
-          if (!/appId:\s*['\"]com\\.rykocollection\\.app['\"]/.test(config)) {
+          if (!config.includes("appId: 'com.rykocollection.app'")) {
             throw new Error('capacitor.config.ts must use com.rykocollection.app');
           }
           console.log('Verified Android application id: com.rykocollection.app');
