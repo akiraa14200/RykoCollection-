@@ -257,12 +257,12 @@ fun NativeRykoTube() {
 
     Column(Modifier.fillMaxSize().background(Color.Black)) {
         Row(
-            Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
+            Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(Modifier.weight(1f)) {
-                Text("RYKOTUBE", color = Color(0xFFA99BFF), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
-                Text("Anime videos, trailers & Shorts", color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.Bold)
+                Text("RYKO VIDEO", color = Color(0xFFA99BFF), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
+                Text("Watch what you love.", color = Color.White, fontSize = 23.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = (-0.6).sp)
             }
             IconButton(onClick = { refreshToken++ }) { Icon(Icons.Default.Refresh, "Refresh", tint = Color.White) }
         }
@@ -434,7 +434,7 @@ fun NativeRykoTube() {
 private fun TubeVideoCard(video: TubeVideo, onClick: () -> Unit) {
     Column(
         (if (video.short) Modifier.width(170.dp) else Modifier.fillMaxWidth())
-            .clip(RoundedCornerShape(14.dp)).background(Color(0xFF111111)).clickable(onClick = onClick)
+            .clip(RoundedCornerShape(18.dp)).background(Color(0xFF111116)).clickable(onClick = onClick)
     ) {
         Box(
             Modifier.fillMaxWidth()
@@ -453,9 +453,9 @@ private fun TubeVideoCard(video: TubeVideo, onClick: () -> Unit) {
             Icon(Icons.Default.PlayArrow, "Play", Modifier.size(48.dp), tint = Color.White)
             if (video.short) Text("SHORT", Modifier.align(Alignment.BottomEnd).padding(8.dp).background(Color.Black).padding(5.dp), color = Color.White, fontSize = 10.sp)
         }
-        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.padding(horizontal = 13.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
             if (video.creatorAvatar.isNotBlank()) {
-                AsyncImage(video.creatorAvatar, video.creator, Modifier.size(38.dp).clip(RoundedCornerShape(50)))
+                AsyncImage(video.creatorAvatar, video.creator, Modifier.size(40.dp).clip(RoundedCornerShape(50)))
                 Spacer(Modifier.width(10.dp))
             }
             Column(Modifier.weight(1f)) {
