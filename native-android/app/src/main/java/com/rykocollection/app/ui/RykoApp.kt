@@ -524,6 +524,7 @@ private fun SearchResultRow(media: AniListMedia, onClick: () -> Unit) {
 
 @Composable
 private fun EntryDetails(id: Int, mangaMode: Boolean) {
+    val context = LocalContext.current
     var entry by remember(id) { mutableStateOf<AniListDetail?>(null) }
     var loading by remember(id) { mutableStateOf(true) }
     var error by remember(id) { mutableStateOf<String?>(null) }
@@ -561,7 +562,7 @@ private fun EntryDetails(id: Int, mangaMode: Boolean) {
                             Spacer(Modifier.height(8.dp))
                             Box(Modifier.fillMaxWidth().height(205.dp).clip(RoundedCornerShape(16.dp)).background(Surface).clickable {
                                 val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.youtube.com/watch?v=${trailer?.id}"))
-                                LocalContext.current.startActivity(intent)
+                                context.startActivity(intent)
                             }) {
                                 AsyncImage(trailer?.thumbnail ?: entry!!.coverImage?.imageUrl, "Official trailer", Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
                                 Icon(Icons.Default.PlayCircle, contentDescription = "Play trailer", tint = Color.White, modifier = Modifier.align(Alignment.Center).size(54.dp))
