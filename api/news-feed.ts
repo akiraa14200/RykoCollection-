@@ -66,7 +66,7 @@ const parseItem = (block: string, feed: typeof FEEDS[number]) => {
   const content = tagValue(block, 'encoded') || tagValue(block, 'content') || description;
   const pubDate = tagValue(block, 'pubDate') || tagValue(block, 'published') || tagValue(block, 'updated') || tagValue(block, 'date');
   const enclosure = tagAttributes(block, 'enclosure').find(attrs => attrs.url && (!attrs.type || attrs.type.startsWith('image/')));
-  const media = [...tagAttributes(block, 'thumbnail'), ...tagAttributes(block, 'content')].find(attrs => attrs.url && (attrs.medium === 'image' || attrs.type?.startsWith('image/') || /\\.(?:jpe?g|png|webp|avif)(?:$|[?#])/i.test(attrs.url)));
+  const media = [...tagAttributes(block, 'thumbnail'), ...tagAttributes(block, 'content')].find(attrs => attrs.url && (attrs.medium === 'image' || attrs.type?.startsWith('image/') || /\.(?:jpe?g|png|webp|avif)(?:$|[?#])/i.test(attrs.url)));
   const atomEnclosure = tagAttributes(block, 'link').find(attrs => attrs.rel === 'enclosure' && attrs.href && (!attrs.type || attrs.type.startsWith('image/')));
   const base = feed.url;
   const thumbnail = (media?.url && safeImage(media.url, base)) ||
