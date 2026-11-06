@@ -10,6 +10,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -261,16 +262,33 @@ fun NativeRykoTube() {
                             regularIndex += batch.size
                             if (shortIndex < shorts.size) {
                                 val shortBatch = shorts.drop(shortIndex).take(8)
-                                item(key = "shorts-heading-$shortIndex") {
-                                    Text("Shorts", color = Color(0xFFA99BFF), fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                                item(key = "shorts-row-$shortIndex") {
+                                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        Text("Shorts", color = Color(0xFFA99BFF), fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                                        LazyRow(
+                                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                            contentPadding = PaddingValues(end = 4.dp)
+                                        ) {
+                                            items(shortBatch, key = { it.id }) { video ->
+                                                TubeVideoCard(video) { selected = video }
+                                            }
+                                        }
+                                    }
                                 }
-                                items(shortBatch, key = { it.id }) { video -> TubeVideoCard(video) { selected = video } }
                                 shortIndex += shortBatch.size
                             }
                         }
                         if (regular.isEmpty() && shorts.isNotEmpty()) {
-                            item { Text("Shorts", color = Color(0xFFA99BFF), fontSize = 18.sp, fontWeight = FontWeight.Bold) }
-                            items(shorts, key = { it.id }) { video -> TubeVideoCard(video) { selected = video } }
+                            item(key = "shorts-only-row") {
+                                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Text("Shorts", color = Color(0xFFA99BFF), fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                                    LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                        items(shorts, key = { it.id }) { video ->
+                                            TubeVideoCard(video) { selected = video }
+                                        }
+                                    }
+                                }
+                            }
                         }
                     } else {
                         items(filtered, key = { it.id }) { video -> TubeVideoCard(video) { selected = video } }
@@ -316,7 +334,8 @@ fun NativeRykoTube() {
 @Composable
 private fun TubeVideoCard(video: TubeVideo, onClick: () -> Unit) {
     Column(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Color(0xFF111111)).clickable(onClick = onClick)
+        (if (video.short) Modifier.width(170.dp) else Modifier.fillMaxWidth())
+            .clip(RoundedCornerShape(14.dp)).background(Color(0xFF111111)).clickable(onClick = onClick)
     ) {
         Box(
             Modifier.fillMaxWidth()
