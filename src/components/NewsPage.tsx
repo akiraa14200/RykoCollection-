@@ -16,7 +16,7 @@ type FeedResponse = { items?: NewsItem[]; failedSources?: string[] };
 
 // The Android app bundles its frontend locally, so relative /api URLs cannot
 // reach Vercel. The APK workflow supplies this deployed API origin at build time.
-const NEWS_API_ORIGIN = (import.meta.env.VITE_NEWS_API_ORIGIN || '').replace(/\\/$/, '');
+const NEWS_API_ORIGIN = (import.meta.env.VITE_NEWS_API_ORIGIN || '').replace(/\/$/, '');
 
 const cleanText = (value = '') => value.replace(/<[^>]*>/g, ' ').replace(/&nbsp;|&#160;/g, ' ').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;|&apos;/g, "'").replace(/\s+/g, ' ').trim();
 const isRecent = (date: string) => {
