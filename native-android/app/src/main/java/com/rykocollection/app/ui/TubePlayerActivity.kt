@@ -259,10 +259,7 @@ class TubePlayerActivity : Activity() {
         }
         val ambientLayer = FrameLayout(this).apply {
             clipChildren = true
-            background = android.graphics.drawable.GradientDrawable(
-                android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM,
-                intArrayOf(Color.rgb(20, 8, 30), Color.rgb(8, 8, 8), Color.BLACK)
-            )
+            background = android.graphics.drawable.ColorDrawable(Color.BLACK)
         }
         details.addView(ambientLayer, FrameLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, dp(300), Gravity.TOP
@@ -504,16 +501,16 @@ class TubePlayerActivity : Activity() {
      */
     private fun startAmbientPreviewCycle(layer: FrameLayout) {
         val previewUrls = listOf(
-            "https://i.ytimg.com/vi/\$currentVideoId/mqdefault.jpg",
-            "https://i.ytimg.com/vi/\$currentVideoId/mq1.jpg",
-            "https://i.ytimg.com/vi/\$currentVideoId/mq2.jpg",
-            "https://i.ytimg.com/vi/\$currentVideoId/mq3.jpg"
+            "https://i.ytimg.com/vi/$currentVideoId/mqdefault.jpg",
+            "https://i.ytimg.com/vi/$currentVideoId/mq1.jpg",
+            "https://i.ytimg.com/vi/$currentVideoId/mq2.jpg",
+            "https://i.ytimg.com/vi/$currentVideoId/mq3.jpg"
         )
         ambientImages.clear()
         previewUrls.forEachIndexed { index, url ->
             val image = ImageView(this).apply {
                 scaleType = ImageView.ScaleType.CENTER_CROP
-                alpha = if (index == 0) 0.42f else 0f
+                alpha = if (index == 0) 0.72f else 0f
                 if (android.os.Build.VERSION.SDK_INT >= 31) {
                     setRenderEffect(RenderEffect.createBlurEffect(dp(42).toFloat(), dp(42).toFloat(), Shader.TileMode.CLAMP))
                 }
@@ -539,7 +536,7 @@ class TubePlayerActivity : Activity() {
                         }
                     }
                 } catch (error: Exception) {
-                    Log.w(TAG, "Ambient preview \$index unavailable: \$url", error)
+                    Log.w(TAG, "Ambient preview $index unavailable: $url", error)
                 }
             }.start()
         }
@@ -560,7 +557,7 @@ class TubePlayerActivity : Activity() {
                 val next = (ambientCycleIndex + 1) % ambientImages.size
                 ambientImages.forEachIndexed { index, image ->
                     image.animate().cancel()
-                    image.animate().alpha(if (index == next) 0.42f else 0f)
+                    image.animate().alpha(if (index == next) 0.72f else 0f)
                         .setDuration(1800L).start()
                 }
                 ambientCycleIndex = next
