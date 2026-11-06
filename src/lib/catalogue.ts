@@ -76,6 +76,7 @@ type RelatedVideoRow = {
   video_title?: string; creator_name?: string; creator_avatar_url?: string; action_type?: 'read' | 'watch';
   action_url?: string; sort_order?: number; created_at: string;
 };
+const VIDEO_PAGE_SIZE = 20;
 const mapRelatedVideo = (row: RelatedVideoRow): RelatedVideo => ({
   id: row.id, titleId: row.title_id || row.legacy_title_id || '', sourceId: row.source_id || undefined, videoUrl: row.video_url, platform: row.platform as RelatedVideo['platform'],
   videoTitle: row.video_title || '', creatorName: row.creator_name || '',
@@ -87,22 +88,22 @@ export async function getRelatedVideosBySourceIds(sourceIds: string[], page = 1)
     typeof id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id.trim())
   ))];
   if (!ids.length) return [];
-  const from = Math.max(0, page - 1) * 40;
+  const from = Math.max(0, page - 1) * VIDEO_PAGE_SIZE;
   const { data, error } = await supabase.from('related_videos')
     .select('id,title_id,legacy_title_id,source_id,video_url,platform,video_title,creator_name,creator_avatar_url,action_type,action_url,sort_order,created_at')
     .in('source_id', ids)
     .order('sort_order', { ascending: true }).order('created_at', { ascending: false })
-    .range(from, from + 39);
+    .range(from, from + VIDEO_PAGE_SIZE - 1);
   throwIf(error);
   return ((data || []) as RelatedVideoRow[]).map(mapRelatedVideo);
 }
 
 // Query Shorts separately so rows beyond the first general-feed page are not hidden.
 export async function getRelatedShortVideos(page = 1): Promise<RelatedVideo[]> {
-  const from = Math.max(0, page - 1) * 40;
+  const from = Math.max(0, page - 1) * VIDEO_PAGE_SIZE;
   const columns = 'id,title_id,legacy_title_id,source_id,video_url,platform,video_title,creator_name,creator_avatar_url,action_type,action_url,sort_order,created_at';
   const requests = await Promise.all([
-    supabase.from('related_videos').select(columns).ilike('video_url', '%youtube.com/shorts/%').order('created_at', { ascending: false }).range(from, from + 39),
+    supabase.from('related_videos').select(columns).ilike('video_url', '%youtube.com/shorts/%').order('created_at', { ascending: false }).range(from, from + VIDEO_PAGE_SIZE - 1),
     supabase.from('related_videos').select(columns).or('video_url.ilike.%instagram.com/reel/%,video_url.ilike.%instagram.com/reels/%,video_url.ilike.%instagr.am/reel/%').order('created_at', { ascending: false }).range(from, from + 39),
     supabase.from('related_videos').select(columns).ilike('video_url', '%tiktok.com/%').order('created_at', { ascending: false }).range(from, from + 39)
   ]);
@@ -171,8 +172,8 @@ export async function searchRelatedVideos(query: string, page = 1): Promise<Rela
 }
 
 export async function getRelatedVideos(page = 1, titleId?: string): Promise<RelatedVideo[]> {
-  const from = (page - 1) * 40;
-  let request = supabase.from('related_videos').select('id,title_id,legacy_title_id,source_id,video_url,platform,video_title,creator_name,creator_avatar_url,action_type,action_url,sort_order,created_at').order('sort_order', { ascending: true }).order('created_at', { ascending: false }).range(from, from + 39);
+  const from = (page - 1) * VIDEO_PAGE_SIZE;
+  let request = supabase.from('related_videos').select('id,title_id,legacy_title_id,source_id,video_url,platform,video_title,creator_name,creator_avatar_url,action_type,action_url,sort_order,created_at').order('sort_order', { ascending: true }).order('created_at', { ascending: false }).range(from, from + VIDEO_PAGE_SIZE - 1);
   if (titleId) request = request.or(`title_id.eq.${titleId},legacy_title_id.eq.${titleId}`);
 
   // Start the AniList trailer request at the same time as the database query
