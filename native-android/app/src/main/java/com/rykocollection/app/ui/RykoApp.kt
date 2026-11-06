@@ -146,7 +146,7 @@ fun RykoApp() {
             when {
                 selectedEntry != null -> EntryDetails(selectedEntry!!, mangaMode)
                 extraPage == ExtraPage.TRENDING -> NativePlaceholder("Ryko Top Trending", "Entry ranking will use real community likes once account services are configured.")
-                extraPage == ExtraPage.NEWS -> NativePlaceholder("Ryko Newsroom", "Anime and manga headlines, release updates and studio announcements.")
+                extraPage == ExtraPage.NEWS -> NativeNewsroomPage()
                 extraPage == ExtraPage.SETTINGS -> NativePlaceholder("Settings", "Appearance, language, notifications and app preferences.")
                 tab == MainTab.HOME -> NativeHome(mangaMode, onEntry = { selectedEntry = it })
                 tab == MainTab.BROWSE -> BrowsePage(mangaMode, onEntry = { selectedEntry = it })
