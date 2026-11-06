@@ -484,25 +484,28 @@ class TubePlayerActivity : Activity() {
                 *{box-sizing:border-box}
                 html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#000}
                 .player-wrapper{position:relative;width:100%;height:100%;background:#000;overflow:hidden}
-                #main-player{display:block;position:absolute;inset:0;width:100%;height:100%;border:0;background:#000}
+                #main-player{display:block;position:absolute;inset:0;width:100%;height:100%;border:0;background:#000}#short-playback-indicator{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:72px;height:72px;border-radius:50%;background:#0008;color:#fff;display:flex;align-items:center;justify-content:center;font:700 32px Arial;opacity:0;transition:opacity .18s;pointer-events:none}
               </style>
             </head><body>
               <div class="player-wrapper">
-                <iframe id="main-player" src="https://www.youtube-nocookie.com/embed/$currentVideoId?autoplay=1&playsinline=${if (isShort) 0 else 1}&rel=0&origin=$appOrigin" frameborder="0" title="YouTube video player" referrerpolicy="origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+                \${if (isShort) '<div id="main-player"></div><div id="short-playback-indicator">Ⅱ</div>' else '<iframe id="main-player" src="https://www.youtube-nocookie.com/embed/$currentVideoId?autoplay=1&playsinline=1&rel=0&origin=$appOrigin" frameborder="0" title="YouTube video player" referrerpolicy="origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>'}
               </div>
               <script>
+                var rykoPlayer = null;
+                var indicatorTimer = null;
                 var ambientApiScript = document.createElement('script');
                 ambientApiScript.src = 'https://www.youtube.com/iframe_api';
                 document.head.appendChild(ambientApiScript);
                 function onYouTubeIframeAPIReady() {
-                  new YT.Player('main-player', {
+                  \${if (isShort) "rykoPlayer = new YT.Player('main-player', { videoId: '$currentVideoId', playerVars: { autoplay: 1, controls: 0, playsinline: 1, rel: 0, fs: 1, disablekb: 1, origin: '$appOrigin' }," else "new YT.Player('main-player', {"}
                     events: { onStateChange: function(event) {
-                      if (window.ambientBridge) {
-                        window.ambientBridge.onPlaybackState(event.data === YT.PlayerState.PLAYING);
-                      }
+                      if (window.ambientBridge) window.ambientBridge.onPlaybackState(event.data === YT.PlayerState.PLAYING);
+                      \${if (isShort) "var indicator = document.getElementById('short-playback-indicator'); if (indicator) indicator.textContent = event.data === YT.PlayerState.PLAYING ? 'Ⅱ' : '▶';" else ""}
                     }}
                   });
                 }
+                \${if (isShort) "document.addEventListener('click', function() { if (!rykoPlayer) return; var state = rykoPlayer.getPlayerState(); if (state === YT.PlayerState.PLAYING) rykoPlayer.pauseVideo(); else rykoPlayer.playVideo(); var indicator = document.getElementById('short-playback-indicator'); if (indicator) { indicator.style.opacity = '1'; clearTimeout(indicatorTimer); indicatorTimer = setTimeout(function(){ indicator.style.opacity = '0'; }, 650); } });" else ""}
+                window.loadRykoShort = function(id) { if (rykoPlayer && id) rykoPlayer.loadVideoById({videoId:id, startSeconds:0}); };
               </script>
             </body></html>
         """.trimIndent()
@@ -737,38 +740,20 @@ class TubePlayerActivity : Activity() {
         if (next < shortTitles.size) currentTitle = shortTitles[next]
         if (next < shortCreators.size) currentCreator = shortCreators[next]
 
-        // Swipe up: the current Short exits upward and the next one enters from below.
-        // Swipe down: reverse the direction to reveal the previous Short.
-        val height = (root.height.takeIf { it > 0 } ?: heightPx()).toFloat()
-        val exitY = if (direction > 0) -height * 0.82f else height * 0.82f
-        val enterY = -exitY
-
+        // Reuse the initialized iframe player; switching clips does not reload the WebView.
         webView.animate().cancel()
         webView.animate()
-            .translationY(exitY)
-            .alpha(0.35f)
-            .scaleX(0.965f)
-            .scaleY(0.965f)
-            .setDuration(190)
-            .setInterpolator(AccelerateInterpolator(1.35f))
+            .translationY(if (direction > 0) -dp(42).toFloat() else dp(42).toFloat())
+            .alpha(0.82f)
+            .setDuration(90)
             .withEndAction {
                 if (generation != shortTransitionGeneration || isFinishing) return@withEndAction
-                webView.translationY = enterY
-                webView.alpha = 0.72f
-                webView.scaleX = 0.965f
-                webView.scaleY = 0.965f
-                loadShortDocument()
-                // Safety unlock in case WebView never reports onPageFinished.
-                webView.postDelayed({
-                    if (generation == shortTransitionGeneration) {
-                        webView.animate()
-                            .translationY(0f).alpha(1f).scaleX(1f).scaleY(1f)
-                            .setDuration(360)
-                            .setInterpolator(OvershootInterpolator(0.72f))
-                            .withEndAction { swipeHandled = false }
-                            .start()
-                    }
-                }, 1800)
+                webView.translationY = if (direction > 0) dp(42).toFloat() else -dp(42).toFloat()
+                webView.evaluateJavascript("window.loadRykoShort && window.loadRykoShort('$currentVideoId')", null)
+                webView.animate().translationY(0f).alpha(1f)
+                    .setDuration(110)
+                    .withEndAction { swipeHandled = false }
+                    .start()
             }
             .start()
     }
