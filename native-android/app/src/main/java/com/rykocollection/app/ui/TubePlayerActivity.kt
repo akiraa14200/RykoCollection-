@@ -38,6 +38,7 @@ class TubePlayerActivity : Activity() {
         const val EXTRA_SHORT_TITLES = "tube_short_titles"
         const val EXTRA_SHORT_CREATORS = "tube_short_creators"
         const val EXTRA_SHORT_INDEX = "tube_short_index"
+        const val EXTRA_THUMB = "tube_video_thumb"
         private const val TAG = "RykoTubePlayer"
         private const val PREFS = "ryko_tube_saved"
     }
@@ -50,6 +51,10 @@ class TubePlayerActivity : Activity() {
     private var currentVideoId = ""
     private var currentTitle = ""
     private var currentCreator = ""
+    private var currentThumb = ""
+    private var likeAction: TextView? = null
+    private var dislikeAction: TextView? = null
+    private var subscribeAction: TextView? = null
     private var isShort = false
     private var shortQueue = arrayListOf<String>()
     private var shortTitles = arrayListOf<String>()
@@ -82,6 +87,7 @@ class TubePlayerActivity : Activity() {
         currentVideoId = intent.getStringExtra(EXTRA_VIDEO_ID).orEmpty()
         currentTitle = intent.getStringExtra(EXTRA_TITLE).orEmpty()
         currentCreator = intent.getStringExtra(EXTRA_CREATOR).orEmpty()
+        currentThumb = intent.getStringExtra(EXTRA_THUMB).orEmpty()
         isShort = intent.getBooleanExtra(EXTRA_IS_SHORT, false)
         shortQueue = intent.getStringArrayListExtra(EXTRA_SHORT_QUEUE) ?: arrayListOf()
         shortTitles = intent.getStringArrayListExtra(EXTRA_SHORT_TITLES) ?: arrayListOf()
@@ -201,39 +207,28 @@ class TubePlayerActivity : Activity() {
 
         val details = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(16), dp(14), dp(16), dp(10))
-            setBackgroundColor(Color.rgb(8, 8, 8))
+            setPadding(dp(18), dp(18), dp(18), dp(18))
+            background = android.graphics.drawable.GradientDrawable(android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM, intArrayOf(Color.rgb(43, 20, 62), Color.rgb(18, 10, 28))).apply { cornerRadii = floatArrayOf(dp(22).toFloat(),dp(22).toFloat(),dp(22).toFloat(),dp(22).toFloat(),0f,0f,0f,0f) }
         }
-        details.addView(TextView(this).apply {
-            text = currentTitle.ifBlank { "YouTube video" }
-            setTextColor(Color.WHITE)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
-            setTypeface(null, android.graphics.Typeface.BOLD)
-            maxLines = 3
-        })
-        details.addView(TextView(this).apply {
-            text = currentCreator
-            setTextColor(Color.LTGRAY)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
-            setPadding(0, dp(7), 0, dp(8))
-        })
-        val actions = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-        }
-        saveAction = actionLabel(if (isSaved()) "✓ Saved" else "＋ Save", 13f).apply {
-            setOnClickListener { toggleSaved() }
-        }
-        actions.addView(saveAction, LinearLayout.LayoutParams(0, dp(46), 1f))
-        actions.addView(actionLabel("↗ Share", 13f).apply {
-            setOnClickListener { shareVideo() }
-        }, LinearLayout.LayoutParams(0, dp(46), 1f))
-        actions.addView(actionLabel("⚑ Report", 13f).apply {
-            setOnClickListener { reportVideo() }
-        }, LinearLayout.LayoutParams(0, dp(46), 1f))
-        details.addView(actions)
+        details.addView(TextView(this).apply { text = currentTitle.ifBlank { "YouTube video" }; setTextColor(Color.WHITE); setTextSize(21f); setTypeface(null, android.graphics.Typeface.BOLD); maxLines = 3 })
+        details.addView(TextView(this).apply { text = "@" + currentCreator.ifBlank { "RykoCollection" } + "   •   YouTube"; setTextColor(Color.rgb(208,190,220)); setTextSize(13f); setPadding(0,dp(8),0,dp(14)) })
+        val channelRow = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL }
+        channelRow.addView(TextView(this).apply { text = "▶"; gravity = Gravity.CENTER; setTextColor(Color.WHITE); textSize = 18f; background = android.graphics.drawable.GradientDrawable().apply { shape = android.graphics.drawable.GradientDrawable.OVAL; setColor(Color.rgb(83,58,111)) } }, LinearLayout.LayoutParams(dp(48),dp(48)))
+        channelRow.addView(TextView(this).apply { text = currentCreator.ifBlank { "RykoCollection" }; setTextColor(Color.WHITE); textSize = 14f; setTypeface(null,android.graphics.Typeface.BOLD); setPadding(dp(10),0,dp(8),0) }, LinearLayout.LayoutParams(0,dp(48),1f))
+        subscribeAction = actionLabel("Subscribe",13f).apply { background = android.graphics.drawable.GradientDrawable().apply { cornerRadius=dp(24).toFloat(); setColor(Color.WHITE) }; setTextColor(Color.BLACK); setOnClickListener { val prefs=getSharedPreferences(PREFS,MODE_PRIVATE); val k="sub_"+currentCreator; val next=!prefs.getBoolean(k,false); prefs.edit().putBoolean(k,next).apply(); text=if(next) "Subscribed" else "Subscribe" } }
+        channelRow.addView(subscribeAction,LinearLayout.LayoutParams(dp(118),dp(42))); details.addView(channelRow)
+        val actions = LinearLayout(this).apply { gravity=Gravity.CENTER_VERTICAL; setPadding(0,dp(12),0,dp(10)) }
+        likeAction = actionLabel("♡  Like",14f).apply { setOnClickListener { val prefs=getSharedPreferences(PREFS,MODE_PRIVATE); val next=!prefs.getBoolean("like_"+currentVideoId,false); prefs.edit().putBoolean("like_"+currentVideoId,next).apply(); text=if(next) "♥  Liked" else "♡  Like"; dislikeAction?.text="♧  Dislike" }; text=if(getSharedPreferences(PREFS,MODE_PRIVATE).getBoolean("like_"+currentVideoId,false)) "♥  Liked" else "♡  Like" }
+        dislikeAction = actionLabel("♧  Dislike",14f).apply { setOnClickListener { val next=!getSharedPreferences(PREFS,MODE_PRIVATE).getBoolean("dislike_"+currentVideoId,false); getSharedPreferences(PREFS,MODE_PRIVATE).edit().putBoolean("dislike_"+currentVideoId,next).apply(); text=if(next) "Disliked" else "♧  Dislike"; likeAction?.text="♡  Like" } }
+        actions.addView(likeAction,LinearLayout.LayoutParams(0,dp(46),1f)); actions.addView(dislikeAction,LinearLayout.LayoutParams(0,dp(46),1f))
+        actions.addView(actionLabel("↗",23f).apply { setOnClickListener { shareVideo() } },LinearLayout.LayoutParams(dp(48),dp(46)))
+        saveAction=actionLabel(if(isSaved()) "▣" else "♧",22f).apply { setOnClickListener { toggleSaved(); text=if(isSaved()) "▣" else "♧" } }; actions.addView(saveAction,LinearLayout.LayoutParams(dp(48),dp(46)))
+        actions.addView(actionLabel("⋮",23f).apply { setOnClickListener { showMoreMenu(it) } },LinearLayout.LayoutParams(dp(42),dp(46))); details.addView(actions)
+        val commentsCard=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL; setPadding(dp(14),dp(12),dp(14),dp(12)); background=android.graphics.drawable.GradientDrawable().apply { cornerRadius=dp(18).toFloat(); setColor(Color.rgb(43,35,49)) } }
+        commentsCard.addView(TextView(this).apply { text="Comments"; setTextColor(Color.WHITE); textSize=16f; setTypeface(null,android.graphics.Typeface.BOLD) })
+        commentsCard.addView(TextView(this).apply { text="Join the conversation on YouTube"; setTextColor(Color.LTGRAY); textSize=13f; setPadding(0,dp(8),0,0) })
+        commentsCard.setOnClickListener { startActivity(Intent(Intent.ACTION_VIEW,Uri.parse("https://www.youtube.com/watch?v=$currentVideoId"))) }; details.addView(commentsCard)
         if (!isShort) page.addView(details)
-
         if (isShort) {
             root.addView(webView, FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT
@@ -254,8 +249,7 @@ class TubePlayerActivity : Activity() {
               <meta name="referrer" content="origin">
               <style>
                 *{box-sizing:border-box}
-                html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#000}
-                iframe{display:block;border:0;width:100%;height:100%;${if (isShort) "aspect-ratio:auto" else "aspect-ratio:16/9"}}
+                html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#000}body{position:relative;display:flex;align-items:center;justify-content:center}body:before{content:"";position:absolute;inset:-24px;background-image:url('$currentThumb');background-size:cover;background-position:center;filter:blur(24px) saturate(1.5);opacity:.78;transform:scale(1.08)}iframe{position:relative;z-index:1;display:block;border:0;width:96%;height:88%;border-radius:10px;box-shadow:0 0 34px rgba(155,90,255,.24)}
               </style>
             </head><body>
               <iframe src="https://www.youtube.com/embed/$currentVideoId?autoplay=1&playsinline=${if (isShort) 0 else 1}&rel=0&origin=$appOrigin&enablejsapi=1"
