@@ -301,7 +301,7 @@ fun NativeRykoTube() {
         }
 
         if (selected != null) {
-            TubePlayer(selected!!, filtered.filter { it.short }) { selected = null }
+            TubePlayer(selected!!, filtered, filtered.filter { it.short }) { selected = null }
         } else {
             when {
                 loading && videos.isEmpty() -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -468,7 +468,7 @@ private fun TubeVideoCard(video: TubeVideo, onClick: () -> Unit) {
 }
 
 @Composable
-private fun TubePlayer(video: TubeVideo, shortQueue: List<TubeVideo>, onClose: () -> Unit) {
+private fun TubePlayer(video: TubeVideo, recommendations: List<TubeVideo>, shortQueue: List<TubeVideo>, onClose: () -> Unit) {
     val context = LocalContext.current
     LaunchedEffect(video.id) {
         val youtubeId = youtubeVideoId(video.url)
@@ -479,6 +479,11 @@ private fun TubePlayer(video: TubeVideo, shortQueue: List<TubeVideo>, onClose: (
                 putExtra(TubePlayerActivity.EXTRA_CREATOR, video.creator)
                 putExtra(TubePlayerActivity.EXTRA_THUMB, video.thumb)
                 putExtra(TubePlayerActivity.EXTRA_AVATAR, video.creatorAvatar)
+                val related = recommendations.filter { it.id != video.id && youtubeVideoId(it.url) != null }.take(24)
+                putStringArrayListExtra(TubePlayerActivity.EXTRA_RECOMMEND_IDS, ArrayList(related.mapNotNull { youtubeVideoId(it.url) }))
+                putStringArrayListExtra(TubePlayerActivity.EXTRA_RECOMMEND_TITLES, ArrayList(related.map { it.title }))
+                putStringArrayListExtra(TubePlayerActivity.EXTRA_RECOMMEND_CREATORS, ArrayList(related.map { it.creator }))
+                putStringArrayListExtra(TubePlayerActivity.EXTRA_RECOMMEND_THUMBS, ArrayList(related.map { it.thumb }))
                 val recommendations = videos.filter { !it.short && youtubeVideoId(it.url) != null && it.id != video.id }.take(24)
                 putStringArrayListExtra(TubePlayerActivity.EXTRA_RECOMMEND_IDS, ArrayList(recommendations.mapNotNull { youtubeVideoId(it.url) }))
                 putStringArrayListExtra(TubePlayerActivity.EXTRA_RECOMMEND_TITLES, ArrayList(recommendations.map { it.title }))
