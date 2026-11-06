@@ -355,8 +355,10 @@ private fun TubePlayer(video: TubeVideo, onClose: () -> Unit) {
                     factory = { ctx ->
                         WebView(ctx).apply {
                             playerView = this
-                            // YouTube's video surface needs a hardware-composited WebView layer.
-                            setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null)
+                            // Keep the WebView on its normal compositor path. The app/activity
+                            // already have hardware acceleration enabled; forcing a separate
+                            // View hardware layer can interfere with WebView video surfaces.
+                            setLayerType(android.view.View.LAYER_TYPE_NONE, null)
                             setBackgroundColor(android.graphics.Color.BLACK)
                             settings.javaScriptEnabled = true
                             settings.domStorageEnabled = true
