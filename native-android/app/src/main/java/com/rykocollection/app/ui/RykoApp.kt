@@ -216,7 +216,7 @@ private fun NativeHome(mangaMode: Boolean, onEntry: (Int) -> Unit) {
                     ) { page ->
                         val media = slides[page]
                         Card(
-                            Modifier.fillMaxWidth().height(224.dp).clickable { onEntry(media.id) },
+                            Modifier.fillMaxWidth().height(252.dp).clickable { onEntry(media.id) },
                             shape = RoundedCornerShape(18.dp),
                             colors = CardDefaults.cardColors(containerColor = Surface)
                         ) {
@@ -229,11 +229,14 @@ private fun NativeHome(mangaMode: Boolean, onEntry: (Int) -> Unit) {
                                 )
                                 Column(
                                     Modifier.align(Alignment.BottomStart).fillMaxWidth()
-                                        .background(Color(0xCC09090F)).padding(horizontal = 14.dp, vertical = 11.dp)
+                                        .background(Brush.verticalGradient(listOf(Color.Transparent, Color(0xF508080C))))
+                                    .padding(horizontal = 15.dp, vertical = 12.dp)
                                 ) {
-                                    Text("FEATURED", color = Violet, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp)
-                                    Text(media.title.display, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                    Text(listOfNotNull(media.format, media.seasonYear?.toString()).joinToString(" · "), color = Color.LightGray, fontSize = 10.sp)
+                                    Text("RYKO SPOTLIGHT", color = Violet, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.6.sp)
+                                    Text(media.title.display, color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Text(listOfNotNull(media.format, media.seasonYear?.toString(), media.averageScore?.let { "★ $it%" }).joinToString("  ·  "), color = Color(0xFFE0DCEB), fontSize = 10.sp)
+                                    Text(media.description?.replace(Regex("<[^>]*>"), "")?.replace("&mdash;", "—").orEmpty(), color = Color(0xFFE2E0E8), fontSize = 10.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, lineHeight = 14.sp, modifier = Modifier.padding(top = 5.dp))
+                                    Text("VIEW DETAILS  ›", color = Color(0xFFBDF56A), fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 7.dp))
                                 }
                             }
                         }
