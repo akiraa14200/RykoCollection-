@@ -19,8 +19,10 @@ import kotlinx.serialization.json.put
 @Serializable data class AniListEnvelope(val data: AniListData? = null, val errors: List<AniListError> = emptyList())
 @Serializable data class AniListError(val message: String = "AniList request failed")
 @Serializable data class AniListData(val Page: AniListPage? = null, val Media: AniListDetail? = null)
-@Serializable data class AniListPage(val media: List<AniListMedia> = emptyList())
-@Serializable data class AniListMedia(val id: Int, val title: AniListTitle, val coverImage: AniListCover? = null, val bannerImage: String? = null, val averageScore: Int? = null, val format: String? = null, val seasonYear: Int? = null, val description: String? = null, val episodes: Int? = null, val chapters: Int? = null, val status: String? = null, val genres: List<String> = emptyList(), val countryOfOrigin: String? = null, val source: String? = null, val studios: AniListStudios? = null, val characters: AniListCharacters? = null)
+@Serializable data class AniListPage(val media: List<AniListMedia> = emptyList(), val airingSchedules: List<AniListAiring> = emptyList())
+@Serializable data class AniListAiring(val airingAt: Long = 0, val episode: Int = 0, val media: AniListMedia)
+@Serializable data class AniListMedia(val id: Int, val title: AniListTitle, val coverImage: AniListCover? = null, val bannerImage: String? = null, val averageScore: Int? = null, val format: String? = null, val seasonYear: Int? = null, val description: String? = null, val episodes: Int? = null, val chapters: Int? = null, val status: String? = null, val genres: List<String> = emptyList(), val countryOfOrigin: String? = null, val source: String? = null, val studios: AniListStudios? = null, val characters: AniListCharacters? = null, val trailer: AniListTrailer? = null)
+@Serializable data class AniListTrailer(val id: String? = null, val site: String? = null, val thumbnail: String? = null)
 @Serializable data class AniListDetail(val id: Int, val title: AniListTitle, val coverImage: AniListCover? = null, val bannerImage: String? = null, val averageScore: Int? = null, val format: String? = null, val seasonYear: Int? = null, val description: String? = null, val episodes: Int? = null, val chapters: Int? = null, val status: String? = null, val genres: List<String> = emptyList(), val countryOfOrigin: String? = null, val source: String? = null, val studios: AniListStudios? = null, val characters: AniListCharacters? = null)
 @Serializable data class AniListTitle(val english: String? = null, val romaji: String? = null, val native: String? = null) { val display: String get() = english ?: romaji ?: native ?: "Untitled" }
 @Serializable data class AniListCover(val large: String? = null, val extraLarge: String? = null) { val imageUrl: String? get() = extraLarge ?: large }
@@ -51,6 +53,81 @@ class AniListRepository {
         """.trimIndent()
         val variables = buildJsonObject { put("type", if (manga) "MANGA" else "ANIME") }
         return request(query, variables).data?.Page?.media.orEmpty()
+    }
+
+
+    suspend fun featuredMedia(manga: Boolean = false): List<AniListMedia> {
+        val query = """
+            query($type: MediaType!) {
+              Page(page: 1, perPage: 5) {
+                media(type: $type, sort: TRENDING_DESC, isAdult: false) {
+                  id title { english romaji native }
+                  coverImage { large extraLarge } bannerImage
+                  averageScore format seasonYear description(asHtml: false)
+                }
+              }
+            }
+        """.trimIndent()
+        return request(query, buildJsonObject { put("type", if (manga) "MANGA" else "ANIME") }).data?.Page?.media.orEmpty()
+    }
+
+    suspend fun popularRecommendations(manga: Boolean = false): List<AniListMedia> {
+        val query = """
+            query($type: MediaType!) {
+              Page(page: 1, perPage: 12) {
+                media(type: $type, sort: POPULARITY_DESC, isAdult: false) {
+                  id title { english romaji native }
+                  coverImage { large extraLarge } averageScore format seasonYear
+                }
+              }
+            }
+        """.trimIndent()
+        return request(query, buildJsonObject { put("type", if (manga) "MANGA" else "ANIME") }).data?.Page?.media.orEmpty()
+    }
+
+    suspend fun latestAiringEpisodes(): List<AniListAiring> {
+        val query = """
+            query {
+              Page(page: 1, perPage: 12) {
+                airingSchedules(notYetAired: false, sort: TIME_DESC) {
+                  airingAt episode
+                  media { id title { english romaji native } coverImage { large extraLarge } format seasonYear }
+                }
+              }
+            }
+        """.trimIndent()
+        return request(query, buildJsonObject {}).data?.Page?.airingSchedules.orEmpty()
+    }
+
+    suspend fun recentlyUpdatedManga(): List<AniListMedia> {
+        val query = """
+            query {
+              Page(page: 1, perPage: 12) {
+                media(type: MANGA, sort: UPDATED_AT_DESC, isAdult: false) {
+                  id title { english romaji native }
+                  coverImage { large extraLarge } format chapters status
+                }
+              }
+            }
+        """.trimIndent()
+        return request(query, buildJsonObject {}).data?.Page?.media.orEmpty()
+    }
+
+    suspend fun popularVideoTrailers(): List<AniListMedia> {
+        val query = """
+            query {
+              Page(page: 1, perPage: 20) {
+                media(type: ANIME, sort: TRENDING_DESC, isAdult: false) {
+                  id title { english romaji native }
+                  coverImage { large extraLarge }
+                  trailer { id site thumbnail }
+                  averageScore
+                }
+              }
+            }
+        """.trimIndent()
+        return request(query, buildJsonObject {}).data?.Page?.media.orEmpty()
+            .filter { it.trailer?.id?.isNotBlank() == true && it.trailer.site.equals("youtube", true) }
     }
 
     suspend fun searchMedia(term: String, manga: Boolean = false): List<AniListMedia> {
