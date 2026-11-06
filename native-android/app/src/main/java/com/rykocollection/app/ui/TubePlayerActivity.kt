@@ -31,6 +31,7 @@ class TubePlayerActivity : Activity() {
         const val EXTRA_VIDEO_ID = "tube_video_id"
         const val EXTRA_TITLE = "tube_video_title"
         const val EXTRA_CREATOR = "tube_video_creator"
+        const val EXTRA_IS_SHORT = "tube_video_is_short"
         private const val TAG = "RykoTubePlayer"
         private const val PREFS = "ryko_tube_saved"
     }
@@ -43,6 +44,7 @@ class TubePlayerActivity : Activity() {
     private var currentVideoId = ""
     private var currentTitle = ""
     private var currentCreator = ""
+    private var isShort = false
     private var saveAction: TextView? = null
 
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
@@ -64,6 +66,7 @@ class TubePlayerActivity : Activity() {
         currentVideoId = intent.getStringExtra(EXTRA_VIDEO_ID).orEmpty()
         currentTitle = intent.getStringExtra(EXTRA_TITLE).orEmpty()
         currentCreator = intent.getStringExtra(EXTRA_CREATOR).orEmpty()
+        isShort = intent.getBooleanExtra(EXTRA_IS_SHORT, false)
         if (currentVideoId.isBlank()) {
             Toast.makeText(this, "This video link is not a supported YouTube URL.", Toast.LENGTH_LONG).show()
             finish()
@@ -71,6 +74,12 @@ class TubePlayerActivity : Activity() {
         }
 
         root = FrameLayout(this).apply { setBackgroundColor(Color.BLACK) }
+        if (isShort) {
+            window.decorView.systemUiVisibility = (
+                View.SYSTEM_UI_FLAG_FULLSCREEN or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
+                View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+            )
+        }
         val page = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(Color.rgb(8, 8, 8))
@@ -91,7 +100,7 @@ class TubePlayerActivity : Activity() {
         toolbar.addView(actionLabel("⋮", 25f).apply {
             setOnClickListener { showMoreMenu(it) }
         }, LinearLayout.LayoutParams(dp(48), dp(52)))
-        page.addView(toolbar)
+        if (!isShort) page.addView(toolbar)
 
         webView = WebView(this).apply {
             setBackgroundColor(Color.BLACK)
@@ -147,7 +156,8 @@ class TubePlayerActivity : Activity() {
         val screenWidthDp = (resources.displayMetrics.widthPixels / resources.displayMetrics.density).toInt()
         val playerHeightDp = (screenWidthDp * 9f / 16f).toInt()
         page.addView(webView, LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, dp(playerHeightDp)
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            if (isShort) ViewGroup.LayoutParams.MATCH_PARENT else dp(playerHeightDp)
         ))
 
         val details = LinearLayout(this).apply {
@@ -183,13 +193,19 @@ class TubePlayerActivity : Activity() {
             setOnClickListener { reportVideo() }
         }, LinearLayout.LayoutParams(0, dp(46), 1f))
         details.addView(actions)
-        page.addView(details)
+        if (!isShort) page.addView(details)
 
-        val scroll = ScrollView(this).apply { isFillViewport = true }
-        scroll.addView(page)
-        root.addView(scroll, FrameLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT
-        ))
+        if (isShort) {
+            root.addView(webView, FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT
+            ))
+        } else {
+            val scroll = ScrollView(this).apply { isFillViewport = true }
+            scroll.addView(page)
+            root.addView(scroll, FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT
+            ))
+        }
         setContentView(root)
 
         val appOrigin = "https://rykocollection.vercel.app"
@@ -200,10 +216,10 @@ class TubePlayerActivity : Activity() {
               <style>
                 *{box-sizing:border-box}
                 html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#000}
-                iframe{display:block;border:0;width:100%;height:100%;aspect-ratio:16/9}
+                iframe{display:block;border:0;width:100%;height:100%;${isShort ? "aspect-ratio:auto" : "aspect-ratio:16/9"}}
               </style>
             </head><body>
-              <iframe src="https://www.youtube.com/embed/$currentVideoId?autoplay=1&playsinline=1&rel=0&origin=$appOrigin"
+              <iframe src="https://www.youtube.com/embed/$currentVideoId?autoplay=1&playsinline=${if (isShort) 0 else 1}&rel=0&origin=$appOrigin"
                 title="YouTube video player" referrerpolicy="strict-origin-when-cross-origin"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                 allowfullscreen></iframe>
