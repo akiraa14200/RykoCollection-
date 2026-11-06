@@ -1,6 +1,8 @@
 package com.rykocollection.app.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -59,6 +61,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -66,6 +69,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalContext
 import android.content.Intent
+import android.content.Context
 import android.net.Uri
 import coil.compose.AsyncImage
 import com.rykocollection.app.data.AniListMedia
@@ -410,40 +414,110 @@ private fun HomeLoading() {
 }
 
 @Composable
+private fun readSearchHistory(context: Context, key: String): List<String> =
+    context.getSharedPreferences("ryko_search", Context.MODE_PRIVATE)
+        .getString(key, "").orEmpty().split("¦").filter { it.isNotBlank() }
+
+private fun saveSearchHistory(context: Context, key: String, value: String) {
+    val clean = value.trim()
+    if (clean.length < 2) return
+    val history = (listOf(clean) + readSearchHistory(context, key).filterNot { it.equals(clean, true) }).take(8)
+    context.getSharedPreferences("ryko_search", Context.MODE_PRIVATE)
+        .edit().putString(key, history.joinToString("¦")).apply()
+}
+
+@Composable
 private fun BrowsePage(mangaMode: Boolean, onEntry: (Int) -> Unit) {
-    var search by remember { mutableStateOf("") }
-    var results by remember { mutableStateOf<List<AniListMedia>>(emptyList()) }
-    var loading by remember { mutableStateOf(false) }
-    var error by remember { mutableStateOf<String?>(null) }
+    val context = LocalContext.current
+    val historyKey = if (mangaMode) "browse_manga" else "browse_anime"
+    var search by remember(mangaMode) { mutableStateOf("") }
+    var results by remember(mangaMode) { mutableStateOf<List<AniListMedia>>(emptyList()) }
+    var loading by remember(mangaMode) { mutableStateOf(false) }
+    var error by remember(mangaMode) { mutableStateOf<String?>(null) }
+    var format by remember(mangaMode) { mutableStateOf("All") }
+    var status by remember(mangaMode) { mutableStateOf("All") }
+    var genre by remember(mangaMode) { mutableStateOf("All") }
+    var sort by remember(mangaMode) { mutableStateOf("Match") }
+    val history = remember(mangaMode) { readSearchHistory(context, historyKey) }
+    val genres = listOf("All", "Action", "Adventure", "Comedy", "Drama", "Fantasy", "Romance", "Sci-Fi", "Slice of Life", "Sports", "Supernatural")
     LaunchedEffect(mangaMode, search) {
         if (search.trim().length < 2) { results = emptyList(); error = null; return@LaunchedEffect }
-        kotlinx.coroutines.delay(350)
+        kotlinx.coroutines.delay(400)
         loading = true; error = null
         val repository = AniListRepository()
-        try { results = repository.searchMedia(search, mangaMode) }
-        catch (t: Throwable) { error = t.message ?: "Search failed." }
+        try {
+            results = repository.searchMedia(search, mangaMode)
+            saveSearchHistory(context, historyKey, search)
+        } catch (t: Throwable) { error = t.message ?: "Search failed." }
         finally { repository.close(); loading = false }
     }
-    Column(Modifier.fillMaxSize().background(Color.Black).padding(horizontal = 18.dp, vertical = 14.dp)) {
-        Text(if (mangaMode) "EXPLORE MANGA" else "EXPLORE ANIME", color = Violet, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
-        Text("Browse catalogue", color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.Bold)
-        OutlinedTextField(value = search, onValueChange = { search = it }, modifier = Modifier.fillMaxWidth().padding(top = 14.dp), label = { Text("Search titles") }, singleLine = true)
-        if (loading) CircularProgressIndicator(color = Violet, modifier = Modifier.padding(16.dp).size(24.dp))
-        error?.let { Text(it, color = Color(0xFFFF9C9C), modifier = Modifier.padding(top = 12.dp)) }
-        LazyColumn(contentPadding = PaddingValues(vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            items(results, key = { it.id }) { media -> SearchResultRow(media) { onEntry(media.id) } }
+    val visible = results.filter { media ->
+        (format == "All" || media.format.equals(format, true)) &&
+        (status == "All" || media.status.equals(status, true)) &&
+        (genre == "All" || media.genres.any { it.equals(genre, true) })
+    }.let { list -> when (sort) {
+        "Score" -> list.sortedByDescending { it.averageScore ?: 0 }
+        "Newest" -> list.sortedByDescending { it.seasonYear ?: 0 }
+        else -> list
+    } }
+    Column(Modifier.fillMaxSize().background(Color.Black).padding(horizontal = 18.dp, vertical = 12.dp)) {
+        Text(if (mangaMode) "DISCOVER STORIES" else "DISCOVER ANIME", color = Violet, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
+        Text(if (mangaMode) "Find your next manga" else "Find your next anime", color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold)
+        OutlinedTextField(value = search, onValueChange = { search = it }, modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+            label = { Text("Search titles on AniList") }, singleLine = true,
+            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+            trailingIcon = { if (search.isNotBlank()) IconButton(onClick = { search = "" }) { Text("×", color = Color.White, fontSize = 20.sp) } })
+        if (search.isBlank() && history.isNotEmpty()) {
+            Row(Modifier.fillMaxWidth().padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text("RECENT SEARCHES", color = Violet, fontSize = 9.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                Text("Clear", color = Muted, fontSize = 10.sp, modifier = Modifier.clickable {
+                    context.getSharedPreferences("ryko_search", Context.MODE_PRIVATE).edit().remove(historyKey).apply()
+                })
+            }
+            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                history.forEach { term -> androidx.compose.material3.AssistChip(onClick = { search = term }, label = { Text(term, maxLines = 1) }) }
+            }
         }
-        if (search.length < 2) Text("Type at least two characters to search AniList.", color = Muted, fontSize = 12.sp, modifier = Modifier.padding(top = 16.dp))
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+            listOf("All", "TV", "TV_SHORT", "MOVIE", "OVA", "ONA", "SPECIAL", "MANGA", "NOVEL", "ONE_SHOT").forEach { value ->
+                FilterChip(selected = format == value, onClick = { format = value }, label = { Text(if (value == "TV_SHORT") "Short" else value.replace("_", " ")) })
+            }
+        }
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+            listOf("All", "RELEASING", "FINISHED", "NOT_YET_RELEASED", "CANCELLED").forEach { value ->
+                FilterChip(selected = status == value, onClick = { status = value }, label = { Text(value.replace("_", " ")) })
+            }
+        }
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+            genres.forEach { value -> FilterChip(selected = genre == value, onClick = { genre = value }, label = { Text(value) }) }
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+            listOf("Match", "Score", "Newest").forEach { value ->
+                Text(value, color = if (sort == value) Violet else Muted, fontSize = 11.sp, fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.clickable { sort = value }.padding(start = 14.dp, top = 8.dp, bottom = 4.dp))
+            }
+        }
+        if (loading) CircularProgressIndicator(color = Violet, modifier = Modifier.padding(12.dp).size(22.dp))
+        error?.let { Text(it, color = Color(0xFFFF9C9C), modifier = Modifier.padding(top = 8.dp)) }
+        if (search.length < 2) {
+            Text("Search AniList's anime and manga catalogue. Suggestions and recent searches appear here.", color = Muted, fontSize = 12.sp, modifier = Modifier.padding(top = 12.dp))
+        } else if (!loading && visible.isEmpty() && error == null) {
+            Text("No titles match these filters. Try another genre or format.", color = Muted, fontSize = 12.sp, modifier = Modifier.padding(top = 14.dp))
+        }
+        LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            items(visible, key = { it.id }) { media -> SearchResultRow(media) { onEntry(media.id) } }
+        }
     }
 }
 
 @Composable
 private fun SearchResultRow(media: AniListMedia, onClick: () -> Unit) {
     Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Surface).clickable(onClick = onClick).padding(9.dp), verticalAlignment = Alignment.CenterVertically) {
-        AsyncImage(media.coverImage?.imageUrl, media.title.display, Modifier.size(62.dp, 82.dp).clip(RoundedCornerShape(8.dp)), contentScale = ContentScale.Crop)
-        Column(Modifier.padding(start = 12.dp)) {
-            Text(media.title.display, color = Color.White, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        AsyncImage(media.coverImage?.imageUrl, media.title.display, Modifier.size(72.dp, 96.dp).clip(RoundedCornerShape(10.dp)), contentScale = ContentScale.Crop)
+        Column(Modifier.weight(1f).padding(start = 12.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+            Text(media.title.display, color = Color.White, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
             Text(listOfNotNull(media.format, media.seasonYear?.toString(), media.averageScore?.let { "$it%" }).joinToString(" · "), color = Muted, fontSize = 11.sp)
+            Text(media.genres.take(3).joinToString(" · "), color = Violet, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
 }
@@ -474,11 +548,27 @@ private fun EntryDetails(id: Int, mangaMode: Boolean) {
             }
             item {
                 TabRow(selectedTabIndex = selectedTab, containerColor = Color(0xFF090909), contentColor = Violet) {
-                    listOf("Overview", "Characters", "Details").forEachIndexed { index, label -> Tab(selected = selectedTab == index, onClick = { selectedTab = index }, text = { Text(label) }) }
+                    listOf("Overview", "Characters", "Details", "Comments").forEachIndexed { index, label -> Tab(selected = selectedTab == index, onClick = { selectedTab = index }, text = { Text(label) }) }
                 }
             }
             when (selectedTab) {
-                0 -> item { Text(entry!!.description?.replace(Regex("<[^>]*>"), "")?.replace("&mdash;", "—") ?: "No description available.", color = Color(0xFFCCCCD2), modifier = Modifier.padding(18.dp)) }
+                0 -> {
+                    item { Text(entry!!.description?.replace(Regex("<[^>]*>"), "")?.replace("&mdash;", "—") ?: "No description available.", color = Color(0xFFCCCCD2), lineHeight = 21.sp, modifier = Modifier.padding(horizontal = 18.dp, vertical = 16.dp)) }
+                    val trailer = entry!!.trailer
+                    if (!trailer?.id.isNullOrBlank() && trailer?.site.equals("youtube", true)) item {
+                        Column(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 8.dp)) {
+                            Text("OFFICIAL TRAILER", color = Violet, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp)
+                            Spacer(Modifier.height(8.dp))
+                            Box(Modifier.fillMaxWidth().height(205.dp).clip(RoundedCornerShape(16.dp)).background(Surface).clickable {
+                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.youtube.com/watch?v=${trailer?.id}"))
+                                LocalContext.current.startActivity(intent)
+                            }) {
+                                AsyncImage(trailer?.thumbnail ?: entry!!.coverImage?.imageUrl, "Official trailer", Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                                Icon(Icons.Default.PlayCircle, contentDescription = "Play trailer", tint = Color.White, modifier = Modifier.align(Alignment.Center).size(54.dp))
+                            }
+                        }
+                    } else item { Text("No official trailer is listed on AniList.", color = Muted, fontSize = 12.sp, modifier = Modifier.padding(18.dp)) }
+                }
                 1 -> {
                     val characters = entry!!.characters?.edges.orEmpty()
                     if (characters.isEmpty()) item { Text("Character information is not available.", color = Muted, modifier = Modifier.padding(18.dp)) }
@@ -489,7 +579,7 @@ private fun EntryDetails(id: Int, mangaMode: Boolean) {
                         }
                     }
                 }
-                else -> item {
+                2 -> item {
                     Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         DetailLine("Type", entry!!.format)
                         DetailLine("Status", entry!!.status)
@@ -499,6 +589,13 @@ private fun EntryDetails(id: Int, mangaMode: Boolean) {
                         DetailLine("Country", entry!!.countryOfOrigin)
                         DetailLine("Source", entry!!.source)
                         DetailLine("Studio", entry!!.studios?.nodes?.joinToString { it.name })
+                        DetailLine("Genres", entry!!.genres.joinToString())
+                    }
+                }
+                else -> item {
+                    Column(Modifier.fillMaxWidth().padding(22.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                        Text("Community discussion", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        Text("Comments are not connected to the native app yet. No sample comments are shown.", color = Muted, fontSize = 12.sp, lineHeight = 18.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                     }
                 }
             }
