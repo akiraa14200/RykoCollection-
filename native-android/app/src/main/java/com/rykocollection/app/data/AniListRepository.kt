@@ -338,7 +338,75 @@ class AniListRepository {
 
     suspend fun getCharacters(id: Int, page: Int): List<AniListCharacterEdge> {
         val query = """
-            query($id: Int!, $page: Int!) {
+            query(${'
+              Media(id: $id) {
+                characters(page: $page, perPage: 18, sort: ROLE) {
+                  edges { role node {
+                    id name { full } image { large medium } description(asHtml: false)
+                    gender age dateOfBirth { year month day } favourites siteUrl
+                  } }
+                }
+              }
+            }
+        """.trimIndent()
+        val variables = buildJsonObject { put("id", id); put("page", page) }
+        return request(query, variables).data?.Media?.characters?.edges.orEmpty()
+    }
+
+    private suspend fun request(
+        query: String,
+        variables: JsonObject
+    ): AniListEnvelope {
+        val result: AniListEnvelope = client.post("https://graphql.anilist.co") {
+            contentType(ContentType.Application.Json)
+            setBody(AniListGraphQLRequest(query, variables))
+        }.body()
+
+        if (result.errors.isNotEmpty() && result.data == null) {
+            throw IllegalStateException(
+                result.errors.joinToString(" · ") { it.message }
+            )
+        }
+        return result
+    }
+
+    fun close() = client.close()
+}
+}id: Int!, ${'
+              Media(id: $id) {
+                characters(page: $page, perPage: 18, sort: ROLE) {
+                  edges { role node {
+                    id name { full } image { large medium } description(asHtml: false)
+                    gender age dateOfBirth { year month day } favourites siteUrl
+                  } }
+                }
+              }
+            }
+        """.trimIndent()
+        val variables = buildJsonObject { put("id", id); put("page", page) }
+        return request(query, variables).data?.Media?.characters?.edges.orEmpty()
+    }
+
+    private suspend fun request(
+        query: String,
+        variables: JsonObject
+    ): AniListEnvelope {
+        val result: AniListEnvelope = client.post("https://graphql.anilist.co") {
+            contentType(ContentType.Application.Json)
+            setBody(AniListGraphQLRequest(query, variables))
+        }.body()
+
+        if (result.errors.isNotEmpty() && result.data == null) {
+            throw IllegalStateException(
+                result.errors.joinToString(" · ") { it.message }
+            )
+        }
+        return result
+    }
+
+    fun close() = client.close()
+}
+}page: Int!) {
               Media(id: $id) {
                 characters(page: $page, perPage: 18, sort: ROLE) {
                   edges { role node {
