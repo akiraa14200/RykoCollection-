@@ -184,6 +184,20 @@ export async function getTrailerCatalogue(page = 1): Promise<{ anime: Anime[]; m
   return { anime: data.anime?.media || [], manga: data.manga?.media || [] };
 }
 
+/** Search anime and manga together for entries that actually have YouTube trailers. */
+export async function searchTrailerCatalogue(search: string, page = 1): Promise<{ anime: Anime[]; manga: Anime[] }> {
+  const term = search.trim().slice(0, 80);
+  if (term.length < 2) return { anime: [], manga: [] };
+  const data = await query<{ anime: { media: Anime[] }; manga: { media: Anime[] } }>(
+    `query($search: String, $page: Int) {
+      anime: Page(page: $page, perPage: 20) { media(type: ANIME, search: $search, sort: SEARCH_MATCH, isAdult: false) { ${fields} } }
+      manga: Page(page: $page, perPage: 20) { media(type: MANGA, search: $search, sort: SEARCH_MATCH, isAdult: false) { ${fields} } }
+    }`,
+    { search: term, page }
+  );
+  return { anime: data.anime?.media || [], manga: data.manga?.media || [] };
+}
+
 /** Every AniList list shown on Home, fetched in a single request. */
 export async function getHomeCollections(): Promise<{ trending: Anime[]; popular: Anime[]; trendingManga: Anime[]; popularManga: Anime[] }> {
   const data = await query<Record<'trending' | 'popular' | 'trendingManga' | 'popularManga', { media: Anime[] }>>(
@@ -249,6 +263,15 @@ export async function searchMedia(
     }
   );
   return data.Page?.media || [];
+}
+
+/** Fetch several AniList entries in one GraphQL request for ranked lists. */
+export async function getAniListMediaByIds(ids: number[], mediaType: 'ANIME' | 'MANGA' = 'ANIME'): Promise<Anime[]> {
+  const uniqueIds = [...new Set(ids.filter(id => Number.isSafeInteger(id) && id > 0))].slice(0, 30);
+  if (!uniqueIds.length) return [];
+  const aliases = uniqueIds.map((id, index) => `media${index}: Media(id: ${id}, type: ${mediaType}) { ${fields} }`).join('\n');
+  const data = await query<Record<string, Anime | null>>(`query { ${aliases} }`);
+  return uniqueIds.map((_, index) => data[`media${index}`]).filter((item): item is Anime => !!item);
 }
 
 export async function getAniListMediaById(id: number, mediaType: 'ANIME' | 'MANGA' = 'ANIME'): Promise<Anime | null> {

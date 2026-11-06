@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.rykoccllection.animediscovery',
+  appId: 'com.rykocollection.app',
   appName: 'RykoCollection',
   webDir: 'dist',
   bundledWebRuntime: false,

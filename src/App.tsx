@@ -1,11 +1,11 @@
-import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { Link, Navigate, Route, Routes, useNavigate, useParams, useLocation, type Location } from 'react-router-dom';
-import { Search, Compass, Bookmark, ShieldCheck, Play, Star, ChevronRight, ArrowLeft, Heart, Clock3, Menu, X, ExternalLink, Sparkles, Tv, Info, Users, FileText, Globe, Youtube, ChevronDown, RotateCw, MessageCircle, Home as HomeIcon, UserRound, ChevronLeft, Shuffle, Minus, Plus, Settings, Trash2, Clock } from 'lucide-react';
+import { Search, Compass, Bookmark, ShieldCheck, Play, Star, ChevronRight, ArrowLeft, Heart, Clock3, Menu, X, ExternalLink, Sparkles, Tv, Info, Users, FileText, Globe, Youtube, ListVideo, ChevronDown, RotateCw, Home as HomeIcon, UserRound, ChevronLeft, Shuffle, Minus, Plus, Settings, Trash2, Clock, BookOpen, Mail, Shield, Newspaper } from 'lucide-react';
 // The application UI and page components are defined below.
-import { Anime, AnimeCharacter, getAnime, peekAnime, rememberPreviews, applyCachedVideoMetadata, enrichVideoMetadataProgressive, getAnimeCharacters, getPopular, getPopularManga, getSeasonal, getTrending, getTrendingManga, getRelatedVideos, RelatedVideo, imageOf, searchAnime, titleOf } from './lib/catalogue';
+// Home recommendations replace the seasonal shelf; release countdowns remain in their own schedule.
+import { Anime, AnimeCharacter, getAnime, peekAnime, rememberPreviews, applyCachedVideoMetadata, enrichVideoMetadataProgressive, getAnimeCharacters, getPopular, getPopularManga, getSeasonal, getTrending, getTrendingManga, getRelatedVideos, getRelatedShortVideos, searchRelatedVideos, getRelatedVideosBySourceIds, RelatedVideo, imageOf, searchAnime, titleOf } from './lib/catalogue';
 import type { User } from '@supabase/supabase-js';
 import { supabase } from './lib/supabase';
-import { AnimeComments } from './components/AnimeComments';
 import { AdminWorkspace } from './components/AdminWorkspace';
 import './components/admin-workspace.css';
 import { useAmbientGlow } from './components/AmbientGlow';
@@ -15,8 +15,14 @@ import { readPersisted, writePersisted } from './lib/persist';
 import { isAmbientEnabled, setAmbientEnabled } from './lib/ambient';
 import { VideoActionMenu, flushPendingReports } from './components/VideoActions';
 import { useAppBackNavigation, useBackLayer } from './lib/backNav';
+import { App as CapApp } from '@capacitor/app';
+import { Capacitor } from '@capacitor/core';
 import { ToastHost, OfflineBanner, ShareButton, formatCountdown, useNow, showToast, readRecentSearches, pushRecentSearch, clearRecentSearches } from './components/Extras';
 import './components/extras.css';
+import { LibraryStudio } from './components/LibraryStudio';
+import './components/community-library.css';
+import { EntryLikeButton, RykoTrendingPage } from './components/EntryEngagement';
+import { NewsPage } from './components/NewsPage';
 
 /** Calls onReach when the returned element scrolls near the viewport (infinite loading). */
 function useNearViewport(onReach: () => void, enabled: boolean) {
@@ -53,19 +59,51 @@ const readStore = <T,>(key: string, fallback: T): T => {
 function Header({ user, isAdmin, onSignOut }: { user: User | null; isAdmin: boolean; onSignOut: () => void }) {
   const [open, setOpen] = useState(false);
   const [term, setTerm] = useState('');
+  const [catalogueMode, setCatalogueMode] = useState<'anime' | 'manga'>(() => localStorage.getItem('rykoc-home-catalogue-mode') === 'manga' ? 'manga' : 'anime');
+  const chooseCatalogue = (mode: 'anime' | 'manga') => {
+    setCatalogueMode(mode);
+    localStorage.setItem('rykoc-home-catalogue-mode', mode);
+    window.dispatchEvent(new CustomEvent('rykoc-catalogue-mode', { detail: mode }));
+  };
   const navigate = useNavigate();
   const location = useLocation();
   useEffect(() => setOpen(false), [location.pathname]);
   useBackLayer(open, () => setOpen(false));
-  const submit = (event: FormEvent) => { event.preventDefault(); navigate(term.trim() ? `/search?q=${encodeURIComponent(term.trim())}` : '/search'); setOpen(false); };
+  const openExplore = (query = term.trim()) => navigate(query ? `/search?q=${encodeURIComponent(query)}` : '/search', { state: { focusBrowseSearch: true } });
+  const submit = (event: FormEvent) => { event.preventDefault(); openExplore(); setOpen(false); };
   return <header className="topbar"><div className="nav-wrap">
-    <Link to="/" className="brand"><img className="brand-mark brand-logo" src="/logo.svg" alt="" width="31" height="31"/><span>RYKOCOLLECTION</span></Link>
-    <nav className={open ? 'nav-links open' : 'nav-links'}>
-      <Link to="/"><Compass size={16}/> Discover</Link><Link to="/search">Explore</Link><Link to="/watchlist"><Bookmark size={16}/> My list</Link><Link to="/video"><Tv size={16}/> Video</Link><Link to="/privacy"><ShieldCheck size={16}/> Privacy</Link>{isAdmin && <Link to="/admin"><ShieldCheck size={16}/> Admin workspace</Link>}
-    </nav>
-    <form className="nav-search" onSubmit={submit}><Search size={17}/><input value={term} onChange={e => setTerm(e.target.value)} placeholder="Search anime..." aria-label="Search anime"/><kbd>↵</kbd></form>
-    {user && <div className="nav-account"><span>{String(user.user_metadata?.display_name || "Reader")}</span><button onClick={onSignOut}>Sign out</button></div>}
-    <button className="icon-btn mobile-menu" onClick={() => setOpen(!open)} aria-label="Toggle menu">{open ? <X/> : <Menu/>}</button>
+    <Link to="/" className="brand"><img className="brand-mark brand-logo" src="/logo.jpg" alt="" width="31" height="31"/><span>RYKOCOLLECTION</span></Link>
+    <div className="topbar-catalogue-tools">
+      <form className="nav-search topbar-explore-search" onSubmit={submit} onClick={() => { if (location.pathname !== '/search') openExplore(); }} role="search" aria-label="Open Browse and Explore">
+        <Search size={16}/>
+        <input value={term} onChange={e => setTerm(e.target.value)} onFocus={() => { if (location.pathname !== '/search') openExplore(); setOpen(false); }} placeholder="Search & explore..." aria-label="Search and explore anime or manga"/>
+        <kbd>↵</kbd>
+      </form>
+      <div className="topbar-menu-wrap">
+        <button type="button" className="icon-btn topbar-menu-button" aria-label="Open Ryko menu" aria-expanded={open} onClick={() => setOpen(value => !value)}>{open ? <X size={19}/> : <Menu size={19}/>}</button>
+        {open && <div className="topbar-menu-panel" role="menu" aria-label="RykoCollection menu">
+          <div className="topbar-menu-heading">Catalogue mode</div>
+          <div className="topbar-menu-mode">
+            <button type="button" className={catalogueMode === 'anime' ? 'active' : ''} aria-pressed={catalogueMode === 'anime'} onClick={() => { chooseCatalogue('anime'); setOpen(false); }}><Tv size={15}/> Anime</button>
+            <button type="button" className={catalogueMode === 'manga' ? 'active' : ''} aria-pressed={catalogueMode === 'manga'} onClick={() => { chooseCatalogue('manga'); setOpen(false); }}><BookOpen size={15}/> Manga</button>
+          </div>
+          <div className="topbar-menu-divider"/>
+          <Link role="menuitem" to="/"><Compass size={16}/> Discover</Link>
+          <Link role="menuitem" to="/search"><Search size={16}/> Explore</Link>
+          <Link role="menuitem" to="/watchlist"><Bookmark size={16}/> My list</Link>
+          <Link role="menuitem" to="/video"><Tv size={16}/> RykoTube</Link>
+          <Link role="menuitem" to="/trending"><Star size={16}/> Ryko Top Trending</Link>
+          <button type="button" role="menuitem" onClick={() => { const native = (window as Window & { RykoNative?: { openStrawhatBrowser?: () => void } }).RykoNative; setOpen(false); if (native?.openStrawhatBrowser) native.openStrawhatBrowser(); else showToast('Strawhat Browser is available in the Android app.'); }}><Globe size={16}/> Strawhat Browser</button>
+          <Link role="menuitem" to="/library-studio"><BookOpen size={16}/> Library studio</Link>
+          <Link role="menuitem" to="/settings"><Settings size={16}/> Settings</Link>
+          <Link role="menuitem" to="/about"><Info size={16}/> About Ryko</Link>
+          <Link role="menuitem" to="/privacy"><ShieldCheck size={16}/> Privacy</Link>
+          {isAdmin && <Link role="menuitem" to="/admin"><ShieldCheck size={16}/> Admin workspace</Link>}
+          {user && <button type="button" className="topbar-menu-signout" onClick={() => { setOpen(false); onSignOut(); }}>Sign out</button>}
+        </div>}
+      </div>
+    </div>
+    {user && <div className="nav-account"><span>{String(user.user_metadata?.display_name || "Reader")}</span></div>}
   </div></header>;
 }
 
@@ -123,7 +161,11 @@ function useLibrary() {
   const toggle = (anime: Anime) => setSaved(old => old.some(item => item.id === anime.id) ? old.filter(item => item.id !== anime.id) : [anime, ...old]);
   const remember = (anime: Anime) => setHistory(old => [{ id: anime.id, title: titleOf(anime), image: imageOf(anime), progress: 0, updated: Date.now() }, ...old.filter(item => item.id !== anime.id)].slice(0, 20));
   const setLibraryStatus = (id: string, status: 'Watching' | 'Plan to Watch' | 'Completed' | 'Waiting') => setStatuses(old => ({ ...old, [id]: status }));
-  const setProgress = (id: string, value: number, max?: number) => setProgressMap(old => ({ ...old, [id]: Math.max(0, Math.min(max && max > 0 ? max : 9999, Math.round(value))) }));
+  const setProgress = (id: string, value: number, max?: number) => {
+    const next = Math.max(0, Math.min(max && max > 0 ? max : 9999, Math.round(value)));
+    setProgressMap(old => ({ ...old, [id]: next }));
+    try { const key = new Date().toISOString().slice(0,10); const days = readStore<Record<string,number>>('rykoc-activity-days',{}); days[key] = (days[key] || 0) + 1; localStorage.setItem('rykoc-activity-days',JSON.stringify(days)); } catch {}
+  };
   const toggleVideo = (video: RelatedVideo) => {
     const exists = current.current.savedVideos.some(item => item.id === video.id);
     showToast(exists ? 'Removed from Watch later' : 'Saved to Watch later');
@@ -135,45 +177,112 @@ function useLibrary() {
 type HomeSnapshot = { trending: Anime[]; popular: Anime[]; seasonal: Anime[]; trendingManga: Anime[]; popularManga: Anime[] };
 const HOME_CACHE_KEY = 'home';
 const HOME_CACHE_AGE = 24 * 60 * 60 * 1000;
+const isAnimeCatalogueEntry = (item: Anime) => !/MANGA|MANHWA|MANHUA|LIGHT NOVEL|WEB NOVEL|ONE.?SHOT|NOVEL/i.test(item.format || '');
+
 
 function Home() {
-  // Stale-while-revalidate: show the last good catalogue instantly, then refresh it.
-  const [snapshot] = useState(() => { const value = readPersisted<HomeSnapshot>(HOME_CACHE_KEY, HOME_CACHE_AGE); if (value) Object.values(value).forEach(rememberPreviews); return value; });
+  const navigate = useNavigate();
+  const [homeSearchTerm, setHomeSearchTerm] = useState('');
+  const [catalogueMode, setCatalogueMode] = useState<'anime' | 'manga'>(() => localStorage.getItem('rykoc-home-catalogue-mode') === 'manga' ? 'manga' : 'anime');
+  useEffect(() => {
+    const onModeChange = (event: Event) => {
+      const mode = (event as CustomEvent<'anime' | 'manga'>).detail;
+      if (mode === 'anime' || mode === 'manga') { setCatalogueMode(mode); setHeroIndex(0); }
+    };
+    window.addEventListener('rykoc-catalogue-mode', onModeChange);
+    return () => window.removeEventListener('rykoc-catalogue-mode', onModeChange);
+  }, []);
+  const openBrowseSearch = (event: FormEvent) => {
+    event.preventDefault();
+    const query = homeSearchTerm.trim();
+    navigate(query ? `/search?q=${encodeURIComponent(query)}` : '/search');
+  };
+  // Read cached collections immediately, but fetch each collection only when its
+  // section is needed. AniList requests are separated so Home no longer downloads
+  // anime, manga and popularity lists together on first paint.
+  const [snapshot] = useState(() => {
+    const value = readPersisted<HomeSnapshot>(HOME_CACHE_KEY, HOME_CACHE_AGE);
+    if (value) Object.values(value).forEach(rememberPreviews);
+    return value;
+  });
   const [trending, setTrending] = useState<Anime[]>(snapshot?.trending || []);
   const [popular, setPopular] = useState<Anime[]>(snapshot?.popular || []);
   const [seasonal, setSeasonal] = useState<Anime[]>(snapshot?.seasonal || []);
   const [trendingManga, setTrendingMangaItems] = useState<Anime[]>(snapshot?.trendingManga || []);
   const [popularManga, setPopularMangaItems] = useState<Anime[]>(snapshot?.popularManga || []);
-  const [loading, setLoading] = useState(!snapshot);
+  const [loading, setLoading] = useState(!snapshot?.trending?.length && catalogueMode === 'anime' || !snapshot?.trendingManga?.length && catalogueMode === 'manga');
   const [error, setError] = useState('');
+  const requestedSections = useRef(new Set<string>());
   const { saved, history, toggle } = useLibrary();
-  useEffect(() => {
-    let active = true;
-    // Each section appears as soon as its own data arrives; one failing source no longer blanks the page.
-    const sources: [keyof HomeSnapshot, () => Promise<Anime[]>, (items: Anime[]) => void][] = [
-      ['trending', getTrending, setTrending], ['popular', getPopular, setPopular], ['seasonal', getSeasonal, setSeasonal],
-      ['trendingManga', getTrendingManga, setTrendingMangaItems], ['popularManga', getPopularManga, setPopularMangaItems]
-    ];
-    const fresh: Partial<HomeSnapshot> = {};
-    Promise.allSettled(sources.map(([key, load, set]) => load().then(items => {
-      if (!active) return;
-      fresh[key] = items;
-      if (items.length || !snapshot?.[key]?.length) set(items);
-      setLoading(false);
-    }))).then(results => {
-      if (!active) return;
-      setLoading(false);
-      const failed = results.filter(result => result.status === 'rejected') as PromiseRejectedResult[];
-      if (failed.length === results.length && !snapshot) setError(failed[0].reason instanceof Error ? failed[0].reason.message : 'Could not load anime right now.');
-      else setError('');
-      if (!failed.length) writePersisted(HOME_CACHE_KEY, fresh);
-      else if (Object.keys(fresh).length) writePersisted(HOME_CACHE_KEY, { ...(snapshot || {}), ...fresh });
-    });
-    return () => { active = false; };
+
+  const loadHomeSection = useCallback(async (
+    key: keyof HomeSnapshot,
+    load: () => Promise<Anime[]>,
+    setItems: (items: Anime[]) => void
+  ) => {
+    if (requestedSections.current.has(key)) return;
+    requestedSections.current.add(key);
+    try {
+      const items = await load();
+      setItems(items);
+      const cached = readPersisted<HomeSnapshot>(HOME_CACHE_KEY, HOME_CACHE_AGE) || {} as HomeSnapshot;
+      writePersisted(HOME_CACHE_KEY, { ...cached, [key]: items });
+      if (key === 'trending' || key === 'trendingManga') setError('');
+    } catch (reason) {
+      requestedSections.current.delete(key);
+      if (key === 'trending' || key === 'trendingManga') {
+        setError(reason instanceof Error ? reason.message : 'Could not load the catalogue right now.');
+      }
+    } finally {
+      if (key === 'trending' || key === 'trendingManga') setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    if (catalogueMode === 'anime') {
+      void loadHomeSection('trending', getTrending, setTrending);
+    } else {
+      void loadHomeSection('trendingManga', getTrendingManga, setTrendingMangaItems);
+    }
+  }, [catalogueMode, loadHomeSection]);
+
+  const popularSentinel = useNearViewport(
+    () => void loadHomeSection('popular', getPopular, setPopular),
+    catalogueMode === 'anime' && !popular.length
+  );
+  const mangaPopularSentinel = useNearViewport(
+    () => void loadHomeSection('popularManga', getPopularManga, setPopularMangaItems),
+    catalogueMode === 'manga' && !popularManga.length
+  );
+  const seasonalSentinel = useNearViewport(
+    () => void loadHomeSection('seasonal', getSeasonal, setSeasonal),
+    !seasonal.length
+  );
   const [heroIndex, setHeroIndex] = useState(0);
-  const featured = trending.slice(0, 5);
-  const hero = featured[heroIndex] || trending[0];
+  // Local Supabase rows can contain both media types; never trust their source
+  // query alone when rendering the Anime mode.
+  const animeTrending = trending.filter(isAnimeCatalogueEntry);
+  const animePopular = popular.filter(isAnimeCatalogueEntry);
+  const animeSeasonal = seasonal.filter(isAnimeCatalogueEntry);
+  const activeTrending = catalogueMode === 'anime' ? animeTrending : trendingManga;
+  const savedGenres = new Set(saved.flatMap(item => item.genres || []).map(value => value.toLowerCase()));
+  const recentIds = new Set(history.map(item => item.id));
+  const candidatePool = [...(catalogueMode === 'anime' ? animePopular : popularManga), ...activeTrending, ...(catalogueMode === 'anime' ? animeSeasonal : [])];
+  const recommendations = [...new Map(candidatePool.map(item => [item.id, item])).values()]
+    .filter(item => !saved.some(entry => entry.id === item.id) && !recentIds.has(item.id))
+    .map(item => {
+      const genreMatches = (item.genres || []).filter(genre => savedGenres.has(genre.toLowerCase())).length;
+      const score = genreMatches * 5 + (item.averageScore || 0) / 20;
+      return { item, score };
+    })
+    .sort((a,b)=>b.score-a.score || (b.item.averageScore || 0)-(a.item.averageScore || 0))
+    .slice(0,8).map(entry=>entry.item);
+  const releaseSchedule = [...animeSeasonal, ...animeTrending]
+    .filter(item => item.nextAiringEpisode?.airingAt && item.nextAiringEpisode.airingAt * 1000 > Date.now())
+    .sort((a,b)=>(a.nextAiringEpisode?.airingAt || 0)-(b.nextAiringEpisode?.airingAt || 0))
+    .filter((item,index,all)=>all.findIndex(other=>other.id===item.id)===index).slice(0,5);
+  const featured = activeTrending.slice(0, 5);
+  const hero = featured[heroIndex] || activeTrending[0];
   const tabActive = useTabActive();
   useEffect(() => {
     if (featured.length < 2 || !tabActive) return;
@@ -185,18 +294,31 @@ function Home() {
     return () => window.clearInterval(timer);
   }, [featured.length, tabActive]);
   return <main className="page-shell">
-    {hero && <section className="hero" aria-label="Featured anime carousel">
+    <form className="nav-search home-search" role="search" onSubmit={openBrowseSearch} style={{ display: 'flex', width: 'min(100%, 680px)', margin: '0 auto 24px', minHeight: 48 }}>
+      <Search size={18}/>
+      <input value={homeSearchTerm} onChange={event => setHomeSearchTerm(event.target.value)} onFocus={() => navigate(homeSearchTerm.trim() ? `/search?q=${encodeURIComponent(homeSearchTerm.trim())}` : '/search')} placeholder={catalogueMode === 'anime' ? 'Search anime...' : 'Search manga, manhwa & manhua...'} aria-label={catalogueMode === 'anime' ? 'Search anime' : 'Search manga, manhwa and manhua'} />
+      <button type="submit" aria-label="Open browse search" className="home-search-submit"><Search size={17}/></button>
+    </form>
+    {hero && <section className="hero" aria-label={catalogueMode === 'anime' ? 'Featured anime carousel' : 'Featured manga carousel'}>
       <img className="hero-banner-image" src={hero.bannerImage || imageOf(hero)} alt="" fetchPriority="high" decoding="async"/>
-      <div className="hero-copy"><span className="eyebrow"><Sparkles size={14}/> YOUR NEXT FAVORITE STARTS HERE</span><h1>Find your next<br/><em>anime obsession.</em></h1><p>Explore stories worth getting lost in. Discover trending series, seasonal gems and timeless favorites.</p><div className="hero-actions"><Link className="primary-btn" to={hero ? `/anime/${hero.id}` : '/search'}><Play size={16} fill="currentColor"/> Explore featured</Link><Link className="secondary-btn" to="/search">Browse library <ChevronRight size={16}/></Link></div><div className="hero-featured">{hero && <><span>FEATURED PICK · {heroIndex + 1}/5</span><strong>{titleOf(hero)}</strong></>}</div><div className="hero-carousel-controls"><button aria-label="Previous featured anime" onClick={() => setHeroIndex(i => (i + 4) % Math.max(1, featured.length))}><ChevronLeft size={16}/></button>{featured.map((item,index)=><button key={item.id} aria-label={`Show ${titleOf(item)}`} className={index===heroIndex?"active":""} onClick={()=>setHeroIndex(index)} />)}<button aria-label="Next featured anime" onClick={() => setHeroIndex(i => (i + 1) % Math.max(1, featured.length))}><ChevronRight size={16}/></button></div></div>
+      <div className="hero-copy"><span className="eyebrow"><Sparkles size={14}/> YOUR NEXT FAVORITE STARTS HERE</span><h1>Find your next<br/><em>{catalogueMode === 'anime' ? 'anime obsession.' : 'manga obsession.'}</em></h1><p>{catalogueMode === 'anime' ? 'Explore stories worth getting lost in. Discover trending series, seasonal gems and timeless favorites.' : 'Explore manga, manhwa and manhua. Discover trending chapters, unforgettable worlds and reader favorites.'}</p><div className="hero-actions"><Link className="primary-btn" to={hero ? `/anime/${hero.id}` : '/search'}><Play size={16} fill="currentColor"/> Explore featured</Link><Link className="secondary-btn" to={catalogueMode === 'anime' ? '/search' : '/search?format=MANGA'}>Browse library <ChevronRight size={16}/></Link></div><div className="hero-featured">{hero && <><span>FEATURED PICK · {heroIndex + 1}/5</span><strong>{titleOf(hero)}</strong></>}</div><div className="hero-carousel-controls"><button aria-label="Previous featured anime" onClick={() => setHeroIndex(i => (i + 4) % Math.max(1, featured.length))}><ChevronLeft size={16}/></button>{featured.map((item,index)=><button key={item.id} aria-label={`Show ${titleOf(item)}`} className={index===heroIndex?"active":""} onClick={()=>setHeroIndex(index)} />)}<button aria-label="Next featured anime" onClick={() => setHeroIndex(i => (i + 1) % Math.max(1, featured.length))}><ChevronRight size={16}/></button></div></div>
     </section>}
-    {!hero && <div className="hero hero-loading"><div className="hero-copy"><span className="eyebrow">RYKOCOLLECTION ANIME DISCOVERY</span><h1>Stories that stay<br/><em>with you.</em></h1><p>Find your next anime, one discovery at a time.</p><Link className="primary-btn" to="/search">Explore anime <ChevronRight size={16}/></Link></div></div>}
+    {!hero && <div className="hero hero-loading"><div className="hero-copy"><span className="eyebrow">RYKOCOLLECTION {catalogueMode.toUpperCase()} DISCOVERY</span><h1>Stories that stay<br/><em>with you.</em></h1><p>{catalogueMode === 'anime' ? 'Find your next anime, one discovery at a time.' : 'Find your next manga, manhwa or manhua, one discovery at a time.'}</p><Link className="primary-btn" to={catalogueMode === 'anime' ? '/search' : '/search?format=MANGA'}>Explore {catalogueMode} <ChevronRight size={16}/></Link></div></div>}
     {error && <div className="notice"><strong>Catalogue unavailable.</strong> {error} Check your connection and try again.</div>}
     {loading && <div className="section"><div className="section-head"><h2>Finding something great</h2></div><div className="anime-grid">{Array.from({length: 6}, (_,i) => <div className="skeleton-card" key={i}><div className="skeleton-poster"/><div className="skeleton-line"/></div>)}</div></div>}
-    <Section title="Trending now" subtitle="What the anime community is watching" items={trending} saved={saved.map(a => a.id)} onSave={toggle} to="/search?sort=trending"/>
-    <Section title="This season" subtitle="Fresh stories airing right now" items={seasonal} saved={saved.map(a => a.id)} onSave={toggle}/>
-    <Section title="Popular picks" subtitle="Fan favorites worth your time" items={popular} saved={saved.map(a => a.id)} onSave={toggle}/>
-    <Section title="Trending manga & manhwa" subtitle="Popular manga, manhwa and manhua from AniList" items={trendingManga} saved={saved.map(a => a.id)} onSave={toggle} to="/search?format=Manga"/>
-    <Section title="Popular manga" subtitle="Reader favorites across the AniList catalogue" items={popularManga} saved={saved.map(a => a.id)} onSave={toggle} to="/search?format=Manga"/>
+    {catalogueMode === 'anime' ? <>
+      <Section title="Trending anime" subtitle="What the anime community is watching" items={animeTrending} saved={saved.map(a => a.id)} onSave={toggle} to="/search?sort=trending"/>
+      {recommendations.length > 0 && <Section title="Recommended for you" subtitle={saved.length ? 'Picked from your saved genres, themes and viewing activity' : 'Popular, highly rated picks to help shape your taste profile'} items={recommendations} saved={saved.map(a=>a.id)} onSave={toggle} to="/search"/>}
+      {!popular.length && <div className="load-more-wrap" ref={popularSentinel}><span className="muted">Loading popular anime as you scroll…</span></div>}
+      <Section title="Popular anime" subtitle="Fan favorites worth your time" items={animePopular} saved={saved.map(a => a.id)} onSave={toggle}/>
+    </> : <>
+      <Section title="Trending manga & manhwa" subtitle="Popular manga, manhwa and manhua" items={trendingManga} saved={saved.map(a => a.id)} onSave={toggle} to="/search?format=MANGA"/>
+      {recommendations.length > 0 && <Section title="Recommended for you" subtitle={saved.length ? 'Picked from your saved genres, themes and reading activity' : 'Popular, highly rated picks to help shape your taste profile'} items={recommendations} saved={saved.map(a=>a.id)} onSave={toggle} to="/search?format=MANGA"/>}
+      {!popularManga.length && <div className="load-more-wrap" ref={mangaPopularSentinel}><span className="muted">Loading popular manga as you scroll…</span></div>}
+      <Section title="Popular manga" subtitle="Reader favorites across the AniList catalogue" items={popularManga} saved={saved.map(a => a.id)} onSave={toggle} to="/search?format=MANGA"/>
+    </>}
+    {!seasonal.length && <div className="load-more-wrap" ref={seasonalSentinel}><span className="muted">Loading release schedule when needed…</span></div>}
+    {releaseSchedule.length > 0 && <section className="section"><div className="section-head"><div><h2>Upcoming episodes</h2><p>Next release times for currently airing anime</p></div><Link to="/activity" className="text-link">Activity <ChevronRight size={15}/></Link></div><div className="release-schedule">{releaseSchedule.map(item=><Link to={'/anime/'+item.id} className="release-item" key={item.id}><img src={imageOf(item)} alt=""/><span><strong>{titleOf(item)}</strong><small>Episode {item.nextAiringEpisode?.episode}</small></span><time>{formatCountdown(item.nextAiringEpisode!.airingAt)}</time></Link>)}</div></section>}
     {history.length > 0 && <section className="section"><div className="section-head"><div><h2>Pick up where you left off</h2><p>Your recently opened anime</p></div></div><div className="history-row">{history.slice(0,5).map(item => <Link to={`/anime/${item.id}`} className="history-item" key={item.id}><img src={item.image} alt=""/><span>{item.title}</span><small>Recently viewed</small></Link>)}</div></section>}
     <div className="api-credit">Catalogue powered by the RykoCollection website database.</div>
   </main>;
@@ -204,6 +326,10 @@ function Home() {
 
 function SearchPage() {
   const location = useLocation();
+  const browseSearchRef = useRef<HTMLInputElement | null>(null);
+  useEffect(() => {
+    if ((location.state as { focusBrowseSearch?: boolean } | null)?.focusBrowseSearch) browseSearchRef.current?.focus();
+  }, [location.key, location.state]);
   const params = new URLSearchParams(location.search);
   const [term, setTerm] = useState(params.get('q') || '');
   const [genre, setGenre] = useState('');
@@ -214,6 +340,7 @@ function SearchPage() {
   const [recent, setRecent] = useState<string[]>(() => readRecentSearches());
   const navigate = useNavigate();
   const [items, setItems] = useState<Anime[]>([]);
+  const [visibleCount, setVisibleCount] = useState(24);
   const [busy, setBusy] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [page, setPage] = useState(1);
@@ -237,7 +364,7 @@ function SearchPage() {
   useEffect(() => {
     let active = true;
     const timer = window.setTimeout(() => {
-      setBusy(true); setError(''); setPage(1); setHasMore(true);
+      setBusy(true); setError(''); setPage(1); setHasMore(true); setVisibleCount(24);
       searchAnime(term.trim(), 1, genre || undefined, status || undefined, format || undefined, sort || undefined)
         .then(data => { if (active) { setItems(data); setHasMore(data.length === 50); } })
         .catch(e => { if (active) setError(e instanceof Error ? e.message : 'Search failed.'); })
@@ -247,6 +374,7 @@ function SearchPage() {
   }, [term, genre, status, format, sort]);
 
   const loadMore = async () => {
+    if (visibleCount < items.length) { setVisibleCount(current => Math.min(current + 24, items.length)); return; }
     if (loadingMore || !hasMore) return;
     setLoadingMore(true); setError('');
     const next = page + 1;
@@ -257,10 +385,10 @@ function SearchPage() {
     } catch (e) { setError(e instanceof Error ? e.message : 'Could not load more titles.'); }
     finally { setLoadingMore(false); }
   };
-  const searchSentinel = useNearViewport(() => { void loadMore(); }, hasMore && !busy && !loadingMore && !error && items.length > 0);
+  const searchSentinel = useNearViewport(() => { void loadMore(); }, (visibleCount < items.length || hasMore) && !busy && !loadingMore && !error && items.length > 0);
   const genres = ['Action','Adventure','Comedy','Drama','Fantasy','Horror','Mystery','Romance','Sci-Fi','Slice of Life','Sports','Supernatural'];
   return <main className="content-page browse-page"><div className="page-heading"><span className="eyebrow">THE ANILIST CATALOGUE</span><h1>Explore <em>anime & manga.</em></h1><p>Search across anime, manga, manhwa, manhua and light novels.</p></div>
-    <div className="filter-bar browse-filters"><label className="large-search"><Search size={19}/><input value={term} onChange={e => setTerm(e.target.value)} placeholder="Search titles, series, stories..." autoComplete="off"/></label>
+    <div className="filter-bar browse-filters"><label className="large-search"><Search size={19}/><input ref={browseSearchRef} value={term} onChange={e => setTerm(e.target.value)} placeholder="Search titles, series, stories..." autoComplete="off"/></label>
       <div className="browse-filter-selects"><label className="genre-select"><span>Genre</span><select aria-label="Filter by genre" value={genre} onChange={e => setGenre(e.target.value)}><option value="">All genres</option>{genres.map(g => <option key={g}>{g}</option>)}</select></label>
       <label className="genre-select"><span>Status</span><select aria-label="Filter by status" value={status} onChange={e=>setStatus(e.target.value)}><option value="">Any status</option><option value="RELEASING">Airing</option><option value="FINISHED">Finished</option><option value="NOT_YET_RELEASED">Upcoming</option><option value="HIATUS">Hiatus</option></select></label>
       <label className="genre-select"><span>Format</span><select aria-label="Filter by format" value={format} onChange={e=>setFormat(e.target.value)}><option value="">Any format</option><option value="Anime">Anime</option><option value="Manga">Manga</option><option value="Manhwa">Manhwa</option><option value="Manhua">Manhua</option><option value="Movie">Movie</option><option value="TV Series">TV Series</option><option value="Light Novel">Light Novel</option><option value="Web Novel">Web Novel</option></select></label>
@@ -270,8 +398,8 @@ function SearchPage() {
     <div className="browse-results-head"><div className="results-caption">{busy ? 'Updating catalogue…' : `${items.length} AniList titles loaded`}{term && <span> for “{term}”</span>}</div><button type="button" className="secondary-btn surprise-btn" onClick={surprise} disabled={!items.length}><Shuffle size={15}/> Surprise me</button></div>
     {error && <div className="notice">{error}</div>}
     {busy && !items.length ? <div className="anime-grid">{Array.from({length:8},(_,i)=><div className="skeleton-card" key={i}><div className="skeleton-poster"/><div className="skeleton-line"/></div>)}</div> :
-      items.length ? <><div className="anime-grid">{items.map(item=><AnimeCard key={item.id} anime={item} saved={saved.some(a=>a.id===item.id)} onSave={toggle}/>)}</div>{hasMore && <div className="load-more-wrap" ref={searchSentinel}><button className="secondary-btn load-more-btn" onClick={loadMore} disabled={loadingMore}>{loadingMore?'Loading more titles…':'Load more titles'}</button></div>}</> :
-      <div className="empty-state"><Search size={28}/><h3>No anime or manga found</h3><p>Try another title or choose a different filter.</p></div>}
+      items.length ? <><div className="anime-grid">{items.slice(0, visibleCount).map(item=><AnimeCard key={item.id} anime={item} saved={saved.some(a=>a.id===item.id)} onSave={toggle}/>)}</div>{(visibleCount < items.length || hasMore) && <div className="load-more-wrap" ref={searchSentinel}><button className="secondary-btn load-more-btn" onClick={loadMore} disabled={loadingMore}>{loadingMore?'Loading more titles…':visibleCount < items.length?'Show more titles':'Load more titles'}</button></div>}</> :
+      <div className="empty-state"><Search size={28}/><h3>No anime or manga found</h3><p>Try a different title, remove a filter, or return to discovery.</p><div className="empty-state-actions"><button className="secondary-btn" onClick={()=>{setTerm("");setGenre("");setStatus("");setFormat("");setSort("");}}>Reset search</button><Link className="primary-btn" to="/">Go to Home <ChevronRight size={15}/></Link></div></div>}
   </main>;
 }
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -309,7 +437,7 @@ function DetailPage({ user }: { user: User | null }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [attempt, setAttempt] = useState(0);
-  const [activeTab, setActiveTab] = useState<'overview' | 'characters' | 'details' | 'comments'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'characters' | 'details'>('overview');
   const [selectedCharacter, setSelectedCharacter] = useState<AnimeCharacter | null>(null);
   const [characterPage, setCharacterPage] = useState(1);
   const [loadingCharacters, setLoadingCharacters] = useState(false);
@@ -368,7 +496,6 @@ function DetailPage({ user }: { user: User | null }) {
     { id: 'overview' as const, label: 'Overview', icon: <Info size={16}/> },
     { id: 'characters' as const, label: 'Characters', icon: <Users size={16}/>, count: anime.characters?.edges.length },
     { id: 'details' as const, label: 'Details', icon: <FileText size={16}/> },
-    { id: 'comments' as const, label: 'Comments', icon: <MessageCircle size={16}/> }
   ];
 
   return <main className="detail-page">
@@ -391,7 +518,7 @@ function DetailPage({ user }: { user: User | null }) {
           <div className="hero-actions">
             <button className="primary-btn" onClick={start}><Play size={16} fill="currentColor"/> Open player</button>
             <button className="secondary-btn" onClick={()=>toggle(anime)}>{isSaved ? <Heart size={16} fill="currentColor"/> : <Bookmark size={16}/>} {isSaved ? 'In my list' : 'Add to list'}</button>
-            {anime.siteUrl && <a className="secondary-btn" href={anime.siteUrl} target="_blank" rel="noreferrer">AniList <ExternalLink size={14}/></a>}
+            <EntryLikeButton animeId={anime.id} user={user}/>{anime.siteUrl && <a className="secondary-btn" href={anime.siteUrl} target="_blank" rel="noreferrer">AniList <ExternalLink size={14}/></a>}
             <ShareButton title={titleOf(anime)} url={anime.siteUrl || window.location.href}/>
           </div>
         </div>
@@ -473,7 +600,6 @@ function DetailPage({ user }: { user: User | null }) {
         <div className="entry-source-links"><h3><Globe size={17}/> Source links</h3><div>{anime.siteUrl && <a href={anime.siteUrl} target="_blank" rel="noreferrer">AniList entry <ExternalLink size={13}/></a>}{sourceLinks.map(link=><a key={link.url} href={link.url} target="_blank" rel="noreferrer">{link.label} <ExternalLink size={13}/></a>)}{loading&&!sourceLinks.length&&<span className="fine-print">Loading links…</span>}</div></div>
       </section>}
 
-      {activeTab === 'comments' && <div className="entry-comments-panel"><AnimeComments animeId={anime.id} animeTitle={titleOf(anime)} user={user}/></div>}
 
       {showPlayer && <div className="player-panel"><div className="section-head"><div><h2>Watch panel</h2><p>Use a video URL you are authorized to access.</p></div><button className="icon-btn" onClick={()=>setShowPlayer(false)} aria-label="Close player"><X/></button></div><div className="source-input"><input value={source} onChange={e=>setSource(e.target.value)} placeholder="Paste an authorized HTTPS video URL"/><button className="primary-btn" onClick={()=>{if(source.startsWith('https://')) window.open(source,'_blank','noopener,noreferrer');}}>Open source</button></div><p className="fine-print">RykoCollection does not host episodes or provide unauthorized streams. Playback and advertising behavior on external providers is controlled by those providers.</p></div>}
     </div>
@@ -574,7 +700,7 @@ function WatchlistPage() {
           <LibrarySelect label="Sort" value={f.sort} onChange={sort => set({ sort })} options={sortOptions}/>
         </div></div>
       {filtered && <div className="browse-results-head"><div className="results-caption">{list.length} of {items.length} titles</div><button type="button" className="secondary-btn surprise-btn" onClick={() => set({ q: '', status: '', genre: '', type: '' })}>Clear filters</button></div>}
-      {!list.length ? <div className="empty-state"><Search size={26}/><h3>No matches</h3><p>Try another search or filter.</p></div> :
+      {!list.length ? <div className="empty-state"><Search size={26}/><h3>No matches</h3><p>Try another search or clear the filters to see your saved titles.</p><button className="secondary-btn" onClick={() => set({ q: "", status: "", genre: "", type: "" })}>Clear filters</button></div> :
         groups.map(group => { const entries = list.filter(item => statusOf(item) === group); if (filtered && !entries.length) return null; return <section className="section library-group" key={group}><div className="section-head"><div><h2>{libraryStatusLabel(group, reading)}</h2><p>{entries.length} {entries.length===1?'title':'titles'}</p></div></div>{entries.length ? <div className="anime-grid">{entries.map(titleCard)}</div> : <p className="library-empty">No titles in this category yet.</p>}</section>; })}
     </>;
   };
@@ -623,7 +749,7 @@ function WatchlistPage() {
 function videoEmbedUrl(video: RelatedVideo) {
   try {
     const url = new URL(video.videoUrl);
-    const host = url.hostname.replace(/^www\./, '').toLowerCase();
+    const host = url.hostname.replace(/^www\./, '').replace(/^m\./, '').toLowerCase();
     const parts = url.pathname.split('/').filter(Boolean);
 
     // Detect the provider from the actual URL as well as the saved platform value.
@@ -647,6 +773,12 @@ function videoEmbedUrl(video: RelatedVideo) {
       const kind = ['p', 'reel', 'reels', 'tv'].includes(parts[0]) ? parts[0] : '';
       const id = kind ? parts[1] : '';
       return kind && id ? `https://www.instagram.com/${kind}/${id}/embed/` : '';
+    }
+
+    if (host === 'tiktok.com' || host.endsWith('.tiktok.com')) {
+      const videoIndex = parts.indexOf('video');
+      const id = videoIndex >= 0 ? parts[videoIndex + 1] : '';
+      return id && id.length>0 && [...id].every(char=>char>='0'&&char<='9') ? `https://www.tiktok.com/embed/v2/${id}` : '';
     }
   } catch { return ''; }
   return '';
@@ -680,13 +812,28 @@ function videoThumbnail(video: RelatedVideo) {
 }
 function detectVideoFormat(url:string) {
   try {
-    const u=new URL(String(url||'').trim()),host=u.hostname.toLowerCase().replace(/^www\./,'').replace(/^m\./,'');
-    const parts=u.pathname.split('/').filter(Boolean);
-    if((host==='youtube.com'||host==='youtube-nocookie.com')&&parts[0]==='shorts')return 'short';
-    if(host==='instagram.com'&&['reel','reels'].includes(parts[0]))return 'short';
-    if(host==='tiktok.com'&&parts.includes('video'))return 'short';
+    const u = new URL(String(url || '').trim());
+    const host = u.hostname.toLowerCase().replace(/^www\./, '').replace(/^m\./, '');
+    const parts = u.pathname.split('/').filter(Boolean).map(part => part.toLowerCase());
+
+    // YouTube Shorts have an explicit /shorts/ path. A youtu.be short link
+    // cannot be distinguished from a regular video URL by URL alone.
+    if ((host === 'youtube.com' || host.endsWith('.youtube.com') ||
+         host === 'youtube-nocookie.com' || host.endsWith('.youtube-nocookie.com')) &&
+        parts[0] === 'shorts' && !!parts[1]) return 'short';
+
+    // Instagram supports both /reel/ and legacy /reels/ paths.
+    if ((host === 'instagram.com' || host.endsWith('.instagram.com') || host === 'instagr.am') &&
+        ['reel', 'reels'].includes(parts[0] || '') && !!parts[1]) return 'short';
+
+    // TikTok video links use /@creator/video/<id>, including mobile subdomains.
+    if ((host === 'tiktok.com' || host.endsWith('.tiktok.com')) &&
+        parts.includes('video')) return 'short';
+
     return 'video';
-  } catch { return 'video'; }
+  } catch {
+    return 'video';
+  }
 }
 function LazyVideoCard({ video, short, playing, onPlay, saved = false, onToggleSave }: { video: RelatedVideo; short: boolean; playing: boolean; onPlay: () => void; saved?: boolean; onToggleSave?: () => void }) {
   const cardRef = useRef<HTMLElementTagNameMap['article'] | null>(null);
@@ -713,13 +860,16 @@ function LazyVideoCard({ video, short, playing, onPlay, saved = false, onToggleS
   const [menuOpen, setMenuOpen] = useState(false);
   const tabActive = useTabActive();
   useEffect(() => { if (!tabActive) setMenuOpen(false); }, [tabActive]);
-  return <article ref={cardRef} className={`yt-video-card ${short?'yt-short-card':'yt-standard-card'}`}>
+  const isInstagramReel = /instagram\.com|instagr\.am/i.test(video.videoUrl);
+  let instagramOpenUrl = video.videoUrl;
+  try { const parsed = new URL(video.videoUrl); parsed.search = ''; parsed.hash = ''; instagramOpenUrl = parsed.toString(); } catch {}
+  return <article ref={cardRef} className={`yt-video-card ${short?'yt-short-card':'yt-standard-card'} ${isInstagramReel?'yt-instagram-card':''}`}>
     {!nearViewport ? <>
       <div className="yt-thumbnail"><div className="yt-skeleton-thumb"/></div>
       <div className="yt-video-info"><span className="yt-skeleton-avatar"/><div className="yt-video-text"><span className="yt-skeleton-line"/><span className="yt-skeleton-line"/></div></div>
     </> : <>
       <div ref={thumbRef} className="yt-thumbnail">
-        {playing&&embed?<iframe key={video.id} src={embed} title={video.videoTitle||video.titleName||'Ryko video'} loading="eager" allow="autoplay; accelerometer; clipboard-write; encrypted-media; gyroscope" referrerPolicy="origin"/>:
+        {playing&&embed?<iframe key={video.id} src={embed} title={video.videoTitle||video.titleName||'Ryko video'} loading="eager" allow="autoplay; accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen referrerPolicy="origin" scrolling={isInstagramReel?'no':undefined}/>:
         <button className="yt-thumbnail-button" onClick={onPlay} aria-label={playing?'Close player':'Play video'}>
           {thumbnail?<img src={thumbnail} alt={video.videoTitle||video.titleName||'Video thumbnail'} loading="lazy" decoding="async" fetchPriority="low" onError={e=>{e.currentTarget.onerror=null;e.currentTarget.src=video.titleCover||'/placeholder-poster.svg';}}/>:<span className="yt-thumbnail-fallback"/>}
           <span className="yt-play-overlay"><Play size={short?24:30} fill="currentColor"/></span>
@@ -729,7 +879,7 @@ function LazyVideoCard({ video, short, playing, onPlay, saved = false, onToggleS
       </div>
       <div className="yt-video-info">
         {video.creatorAvatarUrl?<img className="yt-channel-avatar" src={video.creatorAvatarUrl} alt="" loading="lazy" decoding="async"/>:<span className="yt-channel-avatar yt-avatar-fallback">{(video.creatorName||video.titleName||'R').slice(0,1).toUpperCase()}</span>}
-        <div className="yt-video-text"><h3>{(video.videoTitle||video.titleName||'Related video').length>50?(video.videoTitle||video.titleName||'Related video').slice(0,47).trimEnd()+'…':video.videoTitle||video.titleName||'Related video'}</h3><p>{video.creatorName||'RykoCollection'}</p><p>{video.titleName||'Ryko video catalogue'}</p>{video.actionUrl&&<a className="yt-related" href={video.actionUrl} target="_blank" rel="noopener noreferrer">{video.actionType==='read'?'View title':'Related link'} <ExternalLink size={11}/></a>}</div>
+        <div className="yt-video-text"><h3>{(video.videoTitle||video.titleName||'Related video').length>50?(video.videoTitle||video.titleName||'Related video').slice(0,47).trimEnd()+'…':video.videoTitle||video.titleName||'Related video'}</h3><p>{video.creatorName||'RykoCollection'}</p><p>{video.titleName||'Ryko video catalogue'}</p>{video.actionUrl&&<a className="yt-related" href={video.actionUrl} target="_blank" rel="noopener noreferrer">{video.actionType==='read'?'View title':'Related link'} <ExternalLink size={11}/></a>}{isInstagramReel&&<a className="yt-related yt-instagram-open" href={instagramOpenUrl} target="_blank" rel="noopener noreferrer">Open in Instagram <ExternalLink size={11}/></a>}</div>
         <button ref={moreRef} type="button" className="yt-more" onClick={()=>setMenuOpen(open=>!open)} aria-label="More options" aria-haspopup="dialog" aria-expanded={menuOpen}><span>•••</span></button>
         <VideoActionMenu video={video} anchor={moreRef.current} open={menuOpen} onClose={()=>setMenuOpen(false)} playing={playing} onPlay={onPlay} saved={saved} onToggleSave={onToggleSave}/>
       </div>
@@ -740,33 +890,58 @@ function LazyVideoCard({ video, short, playing, onPlay, saved = false, onToggleS
 function VideoPage() {
   const [videos,setVideos]=useState<RelatedVideo[]>([]);
   const [page,setPage]=useState(1);
+  const [shortPage,setShortPage]=useState(1);
+  const [shortHasMore,setShortHasMore]=useState(false);
   const [hasMore,setHasMore]=useState(true);
   const [playingId,setPlayingId]=useState<string|null>(null);
   const [loading,setLoading]=useState(true);
   const [loadingMore,setLoadingMore]=useState(false);
+  const [visibleCount,setVisibleCount]=useState(12);
   const [error,setError]=useState('');
   const [term,setTerm]=useState('');
+  const [remoteSearchVideos,setRemoteSearchVideos]=useState<RelatedVideo[]>([]);
+  const [suggestionsOpen,setSuggestionsOpen]=useState(false);
   const [format,setFormat]=useState<'all'|'video'|'short'>('all');
   const [category,setCategory]=useState('All');
+  const [videoSources,setVideoSources]=useState<Array<{id:string;source_type:'channel'|'playlist';label:string;source_key:string}>>([]);
+  const [selectedSource,setSelectedSource]=useState('');
+  const [sourceTypeFilter,setSourceTypeFilter]=useState<'all'|'channel'|'playlist'>('all');
   const tabActive=useTabActive();
   useEffect(()=>{if(!tabActive)setPlayingId(null);},[tabActive]);
-  // Lock browser zoom only while the Video tab is active. Restore the site's normal
-  // viewport settings as soon as the user leaves this tab.
+  // Never leave an embedded player running after Android backgrounds the app.
+  // Playback is intentionally not auto-resumed when the app becomes active again.
   useEffect(()=>{
     if(!tabActive)return;
-    const viewport=document.querySelector('meta[name="viewport"]');
-    if(!viewport)return;
-    const previous=viewport.getAttribute('content')||'width=device-width, initial-scale=1.0';
-    viewport.setAttribute('content','width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no');
-    const preventPinch=(event:TouchEvent)=>{if(event.touches.length>1)event.preventDefault();};
-    document.addEventListener('touchmove',preventPinch,{passive:false});
+    let mounted=true;
+    let nativeListener:{remove:()=>Promise<void>}|undefined;
+    const pausePlayback=()=>setPlayingId(null);
+    const onVisibilityChange=()=>{if(document.visibilityState!=='visible')pausePlayback();};
+    document.addEventListener('visibilitychange',onVisibilityChange);
+    if(Capacitor.isNativePlatform()){
+      void CapApp.addListener('appStateChange',state=>{
+        if(!state.isActive)pausePlayback();
+      }).then(listener=>{
+        if(mounted)nativeListener=listener;
+        else void listener.remove();
+      }).catch(error=>console.warn('Could not attach native app lifecycle listener.',error));
+    }
     return()=>{
-      viewport.setAttribute('content',previous);
-      document.removeEventListener('touchmove',preventPinch);
+      mounted=false;
+      document.removeEventListener('visibilitychange',onVisibilityChange);
+      if(nativeListener)void nativeListener.remove();
     };
   },[tabActive]);
+  // Keep native/browser zoom available on every tab. Preventing pinch zoom
+  // makes video controls and captions harder to use for low-vision users.
   const {savedVideos,toggleVideo}=useLibrary();
   const savedVideoIds=useMemo(()=>new Set(savedVideos.map(video=>video.id)),[savedVideos]);
+  const sourceFilteredIds=useMemo(()=>{
+    if(selectedSource)return [selectedSource];
+    if(sourceTypeFilter==='all')return [];
+    return videoSources.filter(source=>source.source_type===sourceTypeFilter).map(source=>source.id);
+  },[selectedSource,sourceTypeFilter,videoSources]);
+  const sourceFilterActive=!!selectedSource||sourceTypeFilter!=='all';
+
 
   // Patch titles/channels into cards as each background batch arrives (order never changes).
   const enrich=(list:RelatedVideo[],isActive:()=>boolean)=>{
@@ -776,32 +951,98 @@ function VideoPage() {
     });
   };
   useEffect(()=>{
+    if(!tabActive)return;
     let active=true;
-    // Instant first paint from the last visit, then refresh in the background.
-    const snapshot=readPersisted<RelatedVideo[]>('video-feed',12*60*60*1000);
-    if(snapshot?.length){setVideos(applyCachedVideoMetadata(snapshot));setLoading(false);}
-    getRelatedVideos(1).then(data=>{
+    const loadSources=async()=>{
+      const {data,error}=await supabase.from('video_discovery_sources')
+        .select('id,source_type,label,source_key').eq('enabled',true).order('label');
       if(!active)return;
-      // Show cards right away (with any titles cached on this device); fetch the rest progressively.
-      setVideos(applyCachedVideoMetadata(data));
-      setHasMore(data.length>0);
-      setLoading(false);
-      writePersisted('video-feed',data);
-      enrich(data,()=>active);
-    }).catch(e=>{
-      if(active&&!snapshot?.length)setError(e instanceof Error?e.message:'Could not load videos.');
-    }).finally(()=>{if(active)setLoading(false);});
+      if(error){setError(error.message);return;}
+      setVideoSources((data||[]) as Array<{id:string;source_type:'channel'|'playlist';label:string;source_key:string}>);
+    };
+    const refreshOnReturn=()=>{if(document.visibilityState==='visible')void loadSources();};
+    void loadSources();
+    window.addEventListener('focus',refreshOnReturn);
+    document.addEventListener('visibilitychange',refreshOnReturn);
+    return()=>{
+      active=false;
+      window.removeEventListener('focus',refreshOnReturn);
+      document.removeEventListener('visibilitychange',refreshOnReturn);
+    };
+  },[tabActive]);
+
+  useEffect(()=>{
+    let active=true;
+    setPage(1);
+    setLoading(true);
+    setError('');
+    if(sourceFilterActive){
+      // Source filters query the complete source-linked set in Supabase.
+      // Filtering only the first global 40 rows hid older channel/playlist videos.
+      if(!sourceFilteredIds.length){
+        setVideos([]);
+        setHasMore(false);
+        setLoading(false);
+        return()=>{active=false;};
+      }
+      getRelatedVideosBySourceIds(sourceFilteredIds,1).then(data=>{
+        if(!active)return;
+        setVideos(applyCachedVideoMetadata(data));
+        setHasMore(data.length===20);
+        setLoading(false);
+        enrich(data,()=>active);
+      }).catch(e=>{
+        if(active)setError(e instanceof Error?e.message:'Could not load source videos.');
+      }).finally(()=>{if(active)setLoading(false);});
+    }else{
+      const snapshot=readPersisted<RelatedVideo[]>('video-feed',12*60*60*1000);
+      if(snapshot?.length){setVideos(applyCachedVideoMetadata(snapshot));setLoading(false);}
+      Promise.all([getRelatedVideos(1),getRelatedShortVideos(1).catch(error=>{
+        console.warn('Dedicated Shorts query failed; keeping the regular feed available.',error);
+        return [];
+      })]).then(([data,shorts])=>{
+        if(!active)return;
+        const combined=[...data,...shorts.filter(short=>!data.some(video=>video.id===short.id))];
+        setVideos(applyCachedVideoMetadata(combined));
+        setHasMore(data.length===20);
+        setShortPage(1);
+        setShortHasMore(shorts.length>=20);
+        setLoading(false);
+        writePersisted('video-feed',combined);
+        enrich(combined,()=>active);
+      }).catch(e=>{
+        if(active&&!snapshot?.length)setError(e instanceof Error?e.message:'Could not load videos.');
+      }).finally(()=>{if(active)setLoading(false);});
+    }
     return()=>{active=false;};
-  },[]);
+  },[selectedSource,sourceTypeFilter,sourceFilteredIds.join(','),sourceFilterActive]);
+
+  useEffect(()=>{
+    const query=term.trim();
+    if(query.length<2){setRemoteSearchVideos([]);return;}
+    let active=true;
+    const timer=window.setTimeout(()=>{
+      void searchRelatedVideos(query).then(results=>{if(active)setRemoteSearchVideos(results);})
+        .catch(error=>console.warn('RykoTube search failed; showing loaded matches.',error));
+    },220);
+    return()=>{active=false;window.clearTimeout(timer);};
+  },[term]);
+
+  useEffect(()=>{setVisibleCount(12);},[term,category,format,selectedSource,sourceTypeFilter]);
 
   const filtered=useMemo(()=>{
     const query=term.trim().toLowerCase();
-    return videos.filter(video=>{
+    const combined=new Map<string,RelatedVideo>();
+    [...videos,...remoteSearchVideos].forEach(video=>combined.set(video.id,video));
+    return [...combined.values()].filter(video=>{
       const matchesText=!query||[video.videoTitle,video.creatorName,video.titleName].join(' ').toLowerCase().includes(query);
       const matchesCategory=category==='All'||(video.titleFormat||'').toLowerCase()===category.toLowerCase();
-      return matchesText&&matchesCategory;
+      const sourceMeta=videoSources.find(source=>source.id===video.sourceId);
+      const matchesSourceType=sourceTypeFilter==='all'||sourceMeta?.source_type===sourceTypeFilter;
+      const matchesSource=!selectedSource||video.sourceId===selectedSource;
+      return matchesText&&matchesCategory&&matchesSourceType&&matchesSource;
     });
-  },[videos,term,category]);
+  },[videos,remoteSearchVideos,term,category,selectedSource,sourceTypeFilter,videoSources]);
 
   // Build a lightweight taste profile from the user's own saved titles and history.
   const {recommendedRegular,recommendedShorts}=useMemo(()=>{
@@ -833,32 +1074,42 @@ function VideoPage() {
     const blocks:{kind:'videos'|'shorts';items:RelatedVideo[]}[]=[];
     let videoIndex=0;
     let shortIndex=0;
-    while(videoIndex<recommendedRegular.length){
-      blocks.push({kind:'videos',items:recommendedRegular.slice(videoIndex,videoIndex+10)});
-      videoIndex+=10;
+
+    // Alternate 10 regular videos with 6–10 Shorts. Keep consuming both
+    // collections independently so a longer Shorts list is never truncated
+    // when regular videos run out (and Shorts-only feeds remain complete).
+    while(videoIndex<recommendedRegular.length || shortIndex<recommendedShorts.length){
+      if(videoIndex<recommendedRegular.length){
+        const batch=recommendedRegular.slice(videoIndex,videoIndex+10);
+        if(batch.length) blocks.push({kind:'videos',items:batch});
+        videoIndex+=batch.length;
+      }
       if(shortIndex<recommendedShorts.length){
         const batchSize=6+Math.floor(stableRandom('shorts-'+blocks.length)*5);
-        const count=Math.min(batchSize,recommendedShorts.length-shortIndex);
-        blocks.push({kind:'shorts',items:recommendedShorts.slice(shortIndex,shortIndex+count)});
-        shortIndex+=count;
+        const batch=recommendedShorts.slice(shortIndex,shortIndex+batchSize);
+        if(batch.length) blocks.push({kind:'shorts',items:batch});
+        shortIndex+=batch.length;
       }
-    }
-    if(!recommendedRegular.length&&recommendedShorts.length){
-      blocks.push({kind:'shorts',items:recommendedShorts.slice(0,10)});
     }
     return blocks;
   },[recommendedRegular,recommendedShorts]);
 
+  const displayableCount=format==='all'?filtered.length:format==='short'?recommendedShorts.length:recommendedRegular.length;
   const loadMore=async()=>{
-    if(loadingMore||!hasMore)return;
+    if(visibleCount<displayableCount){setVisibleCount(current=>Math.min(current+12,displayableCount));return;}
+    if(loadingMore||!(hasMore||(format!=='video'&&shortHasMore)))return;
     setLoadingMore(true);
     setError('');
     try{
-      const raw=await getRelatedVideos(page+1);
-      const data=applyCachedVideoMetadata(raw);
+      const wantsShorts=format==='short'||format==='all';
+      const [raw,shortRaw]=await Promise.all([
+        hasMore ? (sourceFilterActive ? getRelatedVideosBySourceIds(sourceFilteredIds,page+1) : getRelatedVideos(page+1)) : Promise.resolve([]),
+        wantsShorts&&shortHasMore ? getRelatedShortVideos(shortPage+1) : Promise.resolve([])
+      ]);
+      const data=applyCachedVideoMetadata([...raw,...shortRaw.filter(short=>!raw.some(video=>video.id===short.id))]);
       setVideos(old=>{const ids=new Set(old.map(video=>video.id));return [...old,...data.filter(video=>!ids.has(video.id))];});
-      setPage(current=>current+1);
-      setHasMore(data.length>0);
+      if(hasMore){if(raw.length)setPage(current=>current+1);setHasMore(raw.length===20);}
+      if(wantsShorts&&shortHasMore){if(shortRaw.length)setShortPage(current=>current+1);setShortHasMore(shortRaw.length>=20);}
       enrich(data,()=>true);
     }catch(e){
       setError(e instanceof Error?e.message:'Could not load more videos.');
@@ -867,7 +1118,8 @@ function VideoPage() {
     }
   };
 
-  const videoSentinel=useNearViewport(()=>{void loadMore();},!loading&&hasMore&&!loadingMore&&!error);
+  const canLoadMore=visibleCount<displayableCount||hasMore||(format!=='video'&&shortHasMore);
+  const videoSentinel=useNearViewport(()=>{void loadMore();},!loading&&canLoadMore&&!loadingMore&&!error);
 
   const filterBar=<>
     <nav className="yt-filter-bar" aria-label="Video format">
@@ -879,27 +1131,47 @@ function VideoPage() {
   </>;
 
   const searchBar=<header className="yt-topbar">
-    <div className="yt-brand"><img className="yt-brand-mark" src="/logo.svg" alt="" width="30" height="30"/><strong>Ryko<span>Tube</span></strong><small>Collection</small></div>
-    <label className="yt-search"><Search size={19}/><input value={term} onChange={event=>setTerm(event.target.value)} placeholder="Search videos, creators or titles" autoComplete="off"/>{term&&<button onClick={()=>setTerm('')} aria-label="Clear search"><X size={16}/></button>}</label>
+    <div className="yt-brand"><img className="yt-brand-mark" src="/logo.jpg" alt="" width="30" height="30"/><strong>Ryko<span>Tube</span></strong><small>Collection</small></div>
+    <div className="yt-search-wrap">
+      <label className="yt-search"><Search size={19}/><input value={term} onFocus={()=>setSuggestionsOpen(true)} onChange={event=>{setTerm(event.target.value);setSuggestionsOpen(true);}} placeholder="Search videos, creators or titles" autoComplete="off" aria-expanded={suggestionsOpen}/>{term&&<button type="button" onClick={()=>{setTerm('');setRemoteSearchVideos([]);setSuggestionsOpen(false);}} aria-label="Clear search"><X size={16}/></button>}</label>
+      {suggestionsOpen&&term.trim().length>=2&&remoteSearchVideos.length>0&&<div className="yt-search-suggestions" role="listbox">{remoteSearchVideos.slice(0,6).map(video=><button type="button" role="option" key={video.id} onClick={()=>{setTerm(video.videoTitle||video.creatorName||video.titleName||'');setSuggestionsOpen(false);}}><strong>{video.videoTitle||video.titleName||'Untitled video'}</strong><span>{video.creatorName||'Creator'} · {video.platform}</span></button>)}</div>}
+    </div>
   </header>;
 
-  const empty=<div className="yt-empty"><Play size={28}/><h3>{term||category!=='All'?'No matching videos':'No videos yet'}</h3><p>Try changing your search or filters.</p><button className="secondary-btn" onClick={()=>{setTerm('');setCategory('All');setFormat('all');}}>Clear filters</button></div>;
+  const sortedVideoSources=[...videoSources].sort((a,b)=>a.label.localeCompare(b.label,undefined,{numeric:true,sensitivity:'base'}));
+  const sourceDirectory=<section className="yt-source-directory" aria-label="Browse YouTube channels and playlists">
+    <div className="yt-source-directory-head"><strong>Browse sources</strong><button type="button" onClick={()=>{setSelectedSource('');setSourceTypeFilter('all');}}>All sources</button></div>
+    {([{type:'channel',label:'Channels',icon:<Youtube size={16}/>},{type:'playlist',label:'Playlists',icon:<ListVideo size={16}/>} ] as const).map(group=>{
+      const items=sortedVideoSources.filter(source=>source.source_type===group.type);
+      return <div className="yt-source-group" key={group.type}>
+        <div className="yt-source-group-head">{group.icon}<strong>{group.label}</strong><span>{items.length}</span></div>
+        <div className="yt-source-chips">
+          <button type="button" className={sourceTypeFilter===group.type&&!selectedSource?'active':''} onClick={()=>{setSelectedSource('');setSourceTypeFilter(group.type);}}>All {group.label.toLowerCase()}</button>
+          {items.map(source=><button type="button" key={source.id} className={selectedSource===source.id?'active':''} onClick={()=>{setSelectedSource(source.id);setSourceTypeFilter(group.type);}}>{source.label}</button>)}
+          {!items.length&&<span className="yt-source-empty">No {group.label.toLowerCase()} added yet</span>}
+        </div>
+      </div>;
+    })}
+  </section>;
+
+  const empty=<div className="yt-empty"><Play size={28}/><h3>{term||category!=='All'?'No matching videos':'No videos yet'}</h3><p>Try changing your search or filters.</p><button className="secondary-btn" onClick={()=>{setTerm('');setCategory('All');setFormat('all');setSelectedSource('');setSourceTypeFilter('all');}}>Clear filters</button></div>;
   const videoCard=(video:RelatedVideo,short:boolean)=><LazyVideoCard key={video.id} video={video} short={short} playing={playingId===video.id} onPlay={()=>setPlayingId(current=>current===video.id?null:video.id)} saved={savedVideoIds.has(video.id)} onToggleSave={()=>toggleVideo(video)}/>;
 
   return <main className="video-page yt-page">
     {searchBar}
+    {sourceDirectory}
     {filterBar}
     {error&&<div className="notice">{error}</div>}
     {loading?<div className="yt-loading-grid" aria-label="Loading videos">{Array.from({length:4},(_,index)=><div className="yt-skeleton-card" key={index}><div className="yt-skeleton-thumb"/><div className="yt-skeleton-meta"><div className="yt-skeleton-avatar"/><div className="yt-skeleton-copy"><span className="yt-skeleton-line"/><span className="yt-skeleton-line"/></div></div></div>)}</div>
-    :format==='all'?feedBlocks.length?feedBlocks.map((block,index)=><section className={block.kind==='shorts'?'yt-section yt-shorts-section':'yt-section'} key={block.kind+'-'+index}>
+    :format==='all'?feedBlocks.length?(()=>{let remaining=visibleCount;return feedBlocks.map(block=>{const items=block.items.slice(0,remaining);remaining-=items.length;return {...block,items};}).filter(block=>block.items.length>0).map((block,index)=><section className={block.kind==='shorts'?'yt-section yt-shorts-section':'yt-section'} key={block.kind+'-'+index}>
       <div className="yt-section-heading"><div><h2>{block.kind==='shorts'?<><span className="yt-shorts-symbol">▰</span> Shorts</>:'Recommended videos'}</h2><p>{block.kind==='shorts'?'A random mix of quick clips':'Community uploads and anime or manga trailers picked around your interests'}</p></div><span>{block.items.length} {block.kind}</span></div>
       <div className={block.kind==='shorts'?'yt-shorts-row':'yt-video-feed'}>{block.items.map(video=>videoCard(video,block.kind==='shorts'))}</div>
-    </section>):empty
-    :(()=>{const selected=format==='short'?recommendedShorts:recommendedRegular;return selected.length?<section className="yt-section">
+    </section>);})():empty
+    :(()=>{const selected=(format==='short'?recommendedShorts:recommendedRegular).slice(0,visibleCount);return selected.length?<section className="yt-section">
       <div className="yt-section-heading"><div><h2>{format==='short'?'Shorts':'Videos'}</h2><p>{format==='short'?'Quick vertical clips':'Trailers, edits and community videos'}</p></div><span>{selected.length} results</span></div>
       <div className={format==='short'?'yt-shorts-grid':'yt-video-feed'}>{selected.map(video=>videoCard(video,format==='short'))}</div>
     </section>:empty;})()}
-    {!loading&&hasMore&&<div className="load-more-wrap" ref={videoSentinel}><button className="secondary-btn load-more-btn" onClick={loadMore} disabled={loadingMore}>{loadingMore?'Loading…':'Load more'}</button></div>}
+    {!loading&&<div className="load-more-wrap" ref={videoSentinel}><button className="secondary-btn load-more-btn" onClick={loadMore} disabled={loadingMore||!canLoadMore}>{loadingMore?'Loading…':canLoadMore?'Load more videos':'No more videos'}</button></div>}
     <p className="yt-disclaimer">Playback availability depends on each original video provider and its embedding settings.</p>
   </main>;
 }
@@ -907,18 +1179,23 @@ function BottomNavigation() {
   const location = useLocation();
   const links = [
     { to: '/', label: 'Home', icon: <HomeIcon size={19}/> },
-    { to: '/search', label: 'Browse', icon: <Compass size={19}/> },
     { to: '/video', label: 'Video', icon: <Play size={19}/> },
+    { to: '/news', label: 'News', icon: <Newspaper size={19}/> },
     { to: '/watchlist', label: 'Library', icon: <Bookmark size={19}/> },
     { to: '/account', label: 'Account', icon: <UserRound size={19}/> }
   ];
-  return <nav className="bottom-navigation" aria-label="Main navigation">{links.map(item => {
-    const active = item.to === '/' ? location.pathname === '/' : location.pathname === item.to;
+  return <nav className="bottom-navigation" aria-label="Main navigation">{links.slice(0,1).map(item => {
+    const active = location.pathname === item.to;
     return <Link key={item.to} to={item.to} onClick={event => { if (active) { event.preventDefault(); window.scrollTo({ top: 0, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); } }} className={active?'bottom-nav-item active':'bottom-nav-item'} aria-current={active?'page':undefined}>{item.icon}<span>{item.label}</span></Link>;
-  })}</nav>;
+  })}
+    {links.slice(1).map(item => {
+      const active = location.pathname === item.to;
+      return <Link key={item.to} to={item.to} onClick={event => { if (active) { event.preventDefault(); window.scrollTo({ top: 0, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); } }} className={active?'bottom-nav-item active':'bottom-nav-item'} aria-current={active?'page':undefined}>{item.icon}<span>{item.label}</span></Link>;
+    })}
+  </nav>;
 }
 
-function AccountPage({ user }: { user: User | null }) {
+function AccountPage({ user, isAdmin }: { user: User | null; isAdmin: boolean }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
@@ -940,9 +1217,9 @@ function AccountPage({ user }: { user: User | null }) {
     } catch (error) { setMessage(error instanceof Error ? error.message : 'Could not complete sign in.'); }
     finally { setBusy(false); }
   };
-  return <main className="content-page account-page"><div className="page-heading"><span className="eyebrow">YOUR RYKOCOLLECTION PROFILE</span><h1>Your <em>Account.</em></h1><p>Sign in to join discussions and keep your profile connected.</p></div>
-    {user ? <section className="account-card"><div className="account-avatar">{String(user.user_metadata?.display_name || user.email || 'R').slice(0,1).toUpperCase()}</div><div><span className="eyebrow">SIGNED IN</span><h2>{String(user.user_metadata?.display_name || user.email?.split('@')[0] || 'Anime fan')}</h2><p>{user.email}</p><button className="secondary-btn" onClick={()=>void supabase.auth.signOut()}>Sign out</button></div></section> :
-    <form className="account-card account-form" onSubmit={submit}><div className="account-avatar"><UserRound/></div><h2>{mode==='signin'?'Welcome back':'Create your account'}</h2><p>{mode==='signin'?'Sign in to your RykoCollection account.':'Create a profile to participate in community features.'}</p>
+  return <main className="content-page account-page"><div className="page-heading"><span className="eyebrow">YOUR RYKOCOLLECTION PROFILE</span><h1>Your <em>Account.</em></h1><p>Sign in to keep your profile connected.</p></div>
+    {user ? <><section className="account-card"><div className="account-avatar">{String(user.user_metadata?.display_name || user.email || 'R').slice(0,1).toUpperCase()}</div><div><span className="eyebrow">SIGNED IN</span><h2>{String(user.user_metadata?.display_name || user.email?.split('@')[0] || 'Anime fan')}</h2><p>{user.email}</p><button className="secondary-btn" onClick={()=>void supabase.auth.signOut()}>Sign out</button></div></section>{isAdmin && <section className="account-admin-card"><div className="account-admin-icon"><ShieldCheck size={21}/></div><div className="account-admin-copy"><span className="eyebrow">OWNER ACCESS</span><h2>Admin workspace</h2><p>Manage the catalogue, videos, community moderation and app content.</p></div><Link className="primary-btn account-admin-link" to="/admin">Open workspace <ChevronRight size={16}/></Link></section>}</> :
+    <form className="account-card account-form" onSubmit={submit}><div className="account-avatar"><UserRound/></div><h2>{mode==='signin'?'Welcome back':'Create your account'}</h2><p>{mode==='signin'?'Sign in to your RykoCollection account.':'Create your RykoCollection profile.'}</p>
       {mode==='signup' && <input value={displayName} onChange={event=>setDisplayName(event.target.value)} placeholder="Display name" autoComplete="nickname"/>}
       <input type="email" value={email} onChange={event=>setEmail(event.target.value)} placeholder="Email address" autoComplete="email" required/>
       <input type="password" value={password} onChange={event=>setPassword(event.target.value)} placeholder="Password" autoComplete={mode==='signin'?'current-password':'new-password'} minLength={6} required/>
@@ -950,7 +1227,15 @@ function AccountPage({ user }: { user: User | null }) {
       <button type="button" className="account-switch" onClick={()=>{setMode(mode==='signin'?'signup':'signin');setMessage('');}}>{mode==='signin'?'New here? Create an account':'Already have an account? Sign in'}</button>
       {message && <p className="account-message">{message}</p>}
     </form>}
-    <AppSettings/>
+    <section className="account-links-card">
+      <h2><Settings size={18}/> App & information</h2>
+      <Link to="/settings" className="account-link-row"><span><Settings size={17}/><span><strong>Settings</strong><small>Playback, storage and app preferences</small></span></span><ChevronRight size={17}/></Link>
+      <Link to="/activity" className="account-link-row"><span><Clock3 size={17}/><span><strong>Activity dashboard</strong><small>Watch, reading progress and monthly activity</small></span></span><ChevronRight size={17}/></Link>
+      <Link to="/library-studio" className="account-link-row"><span><Bookmark size={17}/><span><strong>Library studio</strong><small>Custom collections, private ratings and notes</small></span></span><ChevronRight size={17}/></Link>
+      <Link to="/about" className="account-link-row"><span><Info size={17}/><span><strong>About RykoCollection</strong><small>Project details, credits and contact</small></span></span><ChevronRight size={17}/></Link>
+      <Link to="/privacy" className="account-link-row"><span><ShieldCheck size={17}/><span><strong>Privacy policy</strong><small>How app data and external services work</small></span></span><ChevronRight size={17}/></Link>
+      <Link to="/terms" className="account-link-row"><span><FileText size={17}/><span><strong>Terms of use</strong><small>Guidelines and third-party content</small></span></span><ChevronRight size={17}/></Link>
+    </section>
   </main>;
 }
 
@@ -967,24 +1252,85 @@ function AppSettings() {
   const clearCache = () => {
     const keys: string[] = [];
     for (let i = 0; i < localStorage.length; i++) { const key = localStorage.key(i) || ''; if (key.startsWith('rykoc-cache:')) keys.push(key); }
-    keys.forEach(key => localStorage.removeItem(key));
-    measure();
-    showToast('Cached catalogue cleared. Your library is kept.');
+    keys.forEach(key => localStorage.removeItem(key)); measure();
+    showToast('Catalogue cache cleared. Your library and progress are safe.');
   };
-  return <section className="settings-card" aria-labelledby="settings-title">
-    <h2 id="settings-title"><Settings size={18}/> App settings</h2>
-    <div className="settings-row"><div><strong>Ambient mode</strong><p>Soft light from the video glows behind the player.</p></div><button className={ambient?'toggle active':'toggle'} onClick={toggleAmbient} aria-label="Toggle ambient mode" aria-pressed={ambient}><span/></button></div>
-    <div className="settings-row"><div><strong>Cached catalogue</strong><p>{(cacheSize / 1024).toFixed(0)} KB saved for faster loading. Library, progress and Watch later are not affected.</p></div><button className="secondary-btn" onClick={clearCache}><Trash2 size={15}/> Clear</button></div>
-  </section>;
+  const clearSearches = () => { clearRecentSearches(); showToast('Recent searches cleared.'); };
+  const native = (window as Window & { RykoNative?: { openStrawhatBrowser?: () => void } }).RykoNative;
+  return <main className="content-page info-page">
+    <div className="page-heading"><span className="eyebrow">MAKE RYKO YOURS</span><h1>App <em>settings.</em></h1><p>Manage playback preferences, local data and app information.</p></div>
+    <section className="settings-card"><h2><Settings size={18}/> Experience</h2>
+      <div className="settings-row"><div><strong>Ambient video glow</strong><p>Show a soft colour glow while a supported video is playing.</p></div><button className={ambient?'toggle active':'toggle'} onClick={toggleAmbient} aria-label="Toggle ambient mode" aria-pressed={ambient}><span/></button></div>
+      <div className="settings-row"><div><strong>Strawhat browser</strong><p>Open the integrated native browser on Android.</p></div><button className="secondary-btn" onClick={() => { if (native?.openStrawhatBrowser) native.openStrawhatBrowser(); else showToast('Strawhat Browser is available in the Android app.'); }}>Open browser</button></div>
+    </section>
+    <section className="settings-card"><h2><Shield size={18}/> Storage & privacy</h2>
+      <div className="settings-row"><div><strong>Catalogue cache</strong><p>{(cacheSize / 1024).toFixed(0)} KB stored to make browsing faster. Clearing it does not remove your Library or progress.</p></div><button className="secondary-btn" onClick={clearCache}><Trash2 size={15}/> Clear cache</button></div>
+      <div className="settings-row"><div><strong>Recent searches</strong><p>Remove the saved search suggestions on this device.</p></div><button className="secondary-btn" onClick={clearSearches}>Clear history</button></div>
+      <div className="settings-row"><div><strong>Welcome tour</strong><p>Replay the introduction to the main RykoCollection features.</p></div><button className="secondary-btn" onClick={()=>{try{localStorage.removeItem("rykoc-onboarding-complete");}catch{}window.location.reload();}}>Replay tour</button></div>
+    </section>
+    <section className="settings-card"><h2><Info size={18}/> App information</h2>
+      <div className="settings-row"><div><strong>RykoCollection</strong><p>Installed app version</p></div><span className="version-pill">v1.0.0</span></div>
+      <div className="settings-row"><div><strong>Updates & release notes</strong><p>Check published builds and changes from the project repository.</p></div><a className="secondary-btn" href="https://github.com/akiraa14200/RykoCollection-/releases" target="_blank" rel="noreferrer">View releases <ExternalLink size={14}/></a></div>
+    </section>
+    <div className="info-link-grid"><Link to="/privacy"><ShieldCheck size={17}/> Privacy policy <ChevronRight size={16}/></Link><Link to="/terms"><FileText size={17}/> Terms of use <ChevronRight size={16}/></Link><Link to="/about"><Info size={17}/> About & credits <ChevronRight size={16}/></Link></div>
+  </main>;
+}
+
+function AboutPage() {
+  return <main className="content-page info-page">
+    <div className="page-heading"><span className="eyebrow">THE PROJECT</span><h1>About <em>RykoCollection.</em></h1><p>Discover stories. Find your next world.</p></div>
+    <section className="about-hero-card"><img src="/logo.jpg" alt="RykoCollection logo"/><div><span className="eyebrow">INDEPENDENT FAN DISCOVERY PROJECT</span><h2>One place to explore your next story.</h2><p>RykoCollection brings anime, manga discovery, personal tracking and related video discovery together in one experience.</p><span className="version-pill">Version 1.0.0</span></div></section>
+    <section className="settings-card"><h2><Sparkles size={18}/> What you can do</h2><div className="about-feature-grid"><div><Compass/><strong>Discover</strong><p>Explore anime, manga, manhwa and manhua catalogue entries.</p></div><div><Bookmark/><strong>Keep your Library</strong><p>Save titles, track progress and collect videos for later.</p></div><div><Play/><strong>Find videos</strong><p>Browse trailers and links from external video providers.</p></div><div><Globe/><strong>Browse with Strawhat</strong><p>Open the integrated browser in supported Android builds.</p></div></div></section>
+    <section className="settings-card"><h2><BookOpen size={18}/> Credits & acknowledgements</h2>
+      <div className="credit-row"><strong>AniList</strong><span>Public anime and manga catalogue metadata and artwork links.</span><a href="https://anilist.co" target="_blank" rel="noreferrer">Visit <ExternalLink size={13}/></a></div>
+      <div className="credit-row"><strong>YouTube and video providers</strong><span>Video playback, trailers and creator content remain hosted by their respective providers.</span></div>
+      <div className="credit-row"><strong>Supabase</strong><span>Backend services for supported account and community features.</span><a href="https://supabase.com" target="_blank" rel="noreferrer">Visit <ExternalLink size={13}/></a></div>
+      <p className="fine-print">RykoCollection is an independent fan discovery project. It is not affiliated with or endorsed by AniList, YouTube, animation studios, publishers or other rights holders. All third-party names, artwork and media belong to their respective owners.</p>
+    </section>
+    <section className="settings-card"><h2><Mail size={18}/> Contact</h2><p className="info-body-copy">For app feedback, corrections, privacy requests or support, contact the project team.</p><a className="primary-btn" href="mailto:rykocollection@gmail.com">Email RykoCollection <Mail size={15}/></a></section>
+  </main>;
+}
+
+function ActivityDashboard() {
+  const { saved, history, progress } = useLibrary();
+  const [calendarMonth, setCalendarMonth] = useState(() => new Date());
+  const watchedEpisodes = Object.values(progress).reduce((sum, value) => sum + value, 0);
+  const genres = new Map<string, number>();
+  saved.forEach(item => (item.genres || []).forEach(genre => genres.set(genre, (genres.get(genre) || 0) + 1)));
+  const topGenres = [...genres.entries()].sort((a,b)=>b[1]-a[1]).slice(0,6);
+  const days = Array.from({length: new Date(calendarMonth.getFullYear(),calendarMonth.getMonth()+1,0).getDate()},(_,i)=>i+1);
+  const firstDay = new Date(calendarMonth.getFullYear(),calendarMonth.getMonth(),1).getDay();
+  const monthLabel = calendarMonth.toLocaleDateString(undefined,{month:'long',year:'numeric'});
+  const activity = readStore<Record<string, number>>('rykoc-activity-days', {});
+  const monthKey = (day:number) => [calendarMonth.getFullYear(),String(calendarMonth.getMonth()+1).padStart(2,'0'),String(day).padStart(2,'0')].join('-');
+  const totalTitles = saved.length;
+  return <main className="content-page info-page activity-page">
+    <div className="page-heading"><span className="eyebrow">YOUR RYKO JOURNEY</span><h1>Anime <em>activity.</em></h1><p>Your personal watch and reading progress, stored on this device.</p></div>
+    <div className="activity-stats-grid">
+      <article className="activity-stat"><span>Saved titles</span><strong>{totalTitles}</strong><small>In your personal library</small></article>
+      <article className="activity-stat"><span>Episodes / chapters</span><strong>{watchedEpisodes}</strong><small>Progress recorded</small></article>
+      <article className="activity-stat"><span>Recently viewed</span><strong>{history.length}</strong><small>Recent title activity</small></article>
+      <article className="activity-stat"><span>Completed</span><strong>{Object.values(readStore<Record<string,string>>('rykoc-library-status',{})).filter(x=>x==='Completed').length}</strong><small>Titles marked complete</small></article>
+    </div>
+    <section className="settings-card activity-calendar"><div className="activity-calendar-head"><div><span className="eyebrow">CONSISTENCY</span><h2>Monthly activity</h2><p>Days with recorded activity appear highlighted.</p></div><div className="calendar-controls"><button className="icon-btn" onClick={()=>setCalendarMonth(new Date(calendarMonth.getFullYear(),calendarMonth.getMonth()-1,1))} aria-label="Previous month"><ChevronLeft size={17}/></button><strong>{monthLabel}</strong><button className="icon-btn" onClick={()=>setCalendarMonth(new Date(calendarMonth.getFullYear(),calendarMonth.getMonth()+1,1))} aria-label="Next month"><ChevronRight size={17}/></button></div></div>
+      <div className="activity-calendar-grid">{['S','M','T','W','T','F','S'].map((d,i)=><span className="calendar-weekday" key={i}>{d}</span>)}{Array.from({length:firstDay},(_,i)=><span key={'blank'+i}/>)}{days.map(day=><span key={day} className={activity[monthKey(day)]?'calendar-day active':'calendar-day'} title={activity[monthKey(day)]?activity[monthKey(day)]+' activity events':'No recorded activity'}>{day}</span>)}</div>
+    </section>
+    <section className="settings-card"><div className="section-head"><div><span className="eyebrow">YOUR TASTE</span><h2>Favourite genres</h2></div><Link to="/search" className="text-link">Explore titles <ChevronRight size={15}/></Link></div>{topGenres.length ? <div className="genre-interest-list">{topGenres.map(([genre,count])=><div className="genre-interest" key={genre}><span>{genre}</span><strong>{count} saved</strong><i style={{width:(count/topGenres[0][1]*100)+'%'}}/></div>)}</div> : <p className="fine-print">Save a few titles to see your favourite genres here.</p>}</section>
+    <section className="settings-card"><div className="section-head"><div><span className="eyebrow">RECENT ACTIVITY</span><h2>Recently viewed</h2></div><Link to="/watchlist" className="text-link">Open library <ChevronRight size={15}/></Link></div>{history.length ? <div className="history-row">{history.slice(0,8).map(item=><Link to={'/anime/'+item.id} className="history-item" key={item.id}><img src={item.image} alt=""/><span>{item.title}</span><small>Viewed {new Date(item.updated).toLocaleDateString()}</small></Link>)}</div> : <p className="fine-print">Your recently viewed titles will appear here.</p>}</section>
+  </main>;
+}
+
+function TermsPage() {
+  return <main className="content-page info-page legal-page">
+    <div className="page-heading"><span className="eyebrow">PLEASE READ</span><h1>Terms of <em>use.</em></h1><p>Last updated: 5 November 2026</p></div>
+    <section className="legal-card"><h2>1. About the service</h2><p>RykoCollection is an independent discovery and personal catalogue interface for anime, manga and related videos. Features and availability may change as the project is maintained.</p><h2>2. Third-party content</h2><p>Catalogue information is sourced from AniList and video links may open or embed content from YouTube, Instagram, TikTok and other providers. RykoCollection does not own or control that content, its availability, advertising, privacy practices or embedding restrictions. Each provider's terms apply when you use its service.</p><h2>3. Acceptable use</h2><p>Use the app lawfully. Do not attempt to disrupt the service, bypass access controls, misuse accounts, upload unlawful material or infringe another person's rights.</p><h2>4. Accounts and saved data</h2><p>You are responsible for keeping your sign-in credentials secure. Some preferences and saved items are stored locally on your device, while supported account and community features may use backend services. Local data can be lost when browser or app data is cleared.</p><h2>5. Availability and accuracy</h2><p>We aim to keep information useful and the app reliable, but do not guarantee uninterrupted access, error-free catalogue metadata, or that an external video can always be played or embedded.</p><h2>6. Intellectual property</h2><p>RykoCollection branding and original interface elements belong to the project. Third-party trademarks, artwork, titles and media remain the property of their respective owners. If you believe content is improperly linked or displayed, contact us with the relevant details.</p><h2>7. Changes and contact</h2><p>These terms may be updated as the app evolves. Continued use after an update means you accept the revised terms. Contact <a href="mailto:rykocollection@gmail.com">rykocollection@gmail.com</a> for questions or rights-related requests.</p></section>
+  </main>;
 }
 
 function PrivacyPage() {
-  const [protection, setProtection] = useState(()=>readStore('kairo-privacy', true));
-  useEffect(()=>localStorage.setItem('kairo-privacy', JSON.stringify(protection)),[protection]);
-  return <main className="content-page privacy-page"><div className="page-heading"><span className="eyebrow">YOUR DATA, YOUR CHOICE</span><h1>Privacy <em>center.</em></h1><p>Simple controls and clear information about what this app can protect.</p></div>
-    <div className="privacy-card"><div className="privacy-icon"><ShieldCheck/></div><div className="privacy-copy"><h2>Privacy-friendly mode</h2><p>Controls optional local preferences and keeps this app free of injected ad scripts and third-party analytics.</p></div><button className={protection?'toggle active':'toggle'} onClick={()=>setProtection(!protection)} aria-label="Toggle privacy mode"><span/></button></div>
-    <div className="privacy-grid"><div className="privacy-info"><h3><ShieldCheck size={17}/> First-party protection</h3><p>No advertising SDKs or analytics trackers are bundled by this application. External links open with safe browser isolation attributes.</p><span className="status-good">Enabled by design</span></div><div className="privacy-info"><h3><ExternalLink size={17}/> External video providers</h3><p>This is a regular website, not a network-level ad blocker. It cannot filter requests inside cross-origin video iframes or control ads served by an external player.</p><span className="status-neutral">Provider controlled</span></div><div className="privacy-info"><h3><Bookmark size={17}/> Local data</h3><p>Your watchlist and recently viewed titles are stored in this browser's local storage. They are not synced to a server.</p><span className="status-good">Stored on this device</span></div><div className="privacy-info"><h3><ShieldCheck size={17}/> Protection limits</h3><p>For stronger network-wide filtering, use a reputable browser content blocker or device-level DNS filtering. Do not disable provider security or access controls.</p><span className="status-neutral">Browser limitation</span></div></div>
-    <p className="fine-print">AniList is used for public anime metadata. Requests are sent directly from your browser to AniList's public GraphQL API. Privacy mode does not claim to block all advertisements on third-party websites.</p>
+  return <main className="content-page info-page legal-page">
+    <div className="page-heading"><span className="eyebrow">YOUR DATA, YOUR CHOICE</span><h1>Privacy <em>policy.</em></h1><p>Last updated: 5 November 2026</p></div>
+    <section className="legal-card"><h2>1. Information handled by the app</h2><p>If you create an account or sign in, authentication details such as your email address and account identifier are processed by Supabase. Features that use accounts or community data may send the information you submit to the RykoCollection backend.</p><p>Preferences, recent searches, saved titles, progress and saved videos may be stored in local app or browser storage on your device. The exact data available depends on the feature you use.</p><h2>2. Third-party services</h2><p>AniList provides public anime and manga catalogue data. Supabase provides backend and authentication services. When you play or open an external video, the relevant provider may receive technical information such as your IP address and browser or device details under its own privacy policy.</p><h2>3. How information is used</h2><p>Information is used to provide app features, keep your account working, remember local preferences, support community features, troubleshoot problems and protect the service.</p><h2>4. Storage and control</h2><p>You can clear catalogue cache and recent searches in Settings. Clearing app storage may remove locally saved items and progress. Signing out ends the current account session but does not itself delete an account or backend records. For account or data deletion requests, contact the project team.</p><h2>5. Children and sensitive information</h2><p>Do not submit sensitive personal information in public comments or profile fields. If you are under the age required to consent to online services in your location, use the service with a parent or guardian's guidance.</p><h2>6. Changes and contact</h2><p>This policy may be updated when features or service providers change. For privacy questions or deletion requests, email <a href="mailto:rykocollection@gmail.com">rykocollection@gmail.com</a>.</p><p className="fine-print">This policy describes the app's intended data flows in plain language. Third-party services operate under their own policies and controls.</p></section>
   </main>;
 }
 
@@ -998,12 +1344,12 @@ const isTabPath = (path: string): path is TabPath => (TAB_PATHS as readonly stri
  * open state, and each one is rendered with the last location it saw, so a hidden
  * tab never reacts to another tab's URL. Other routes (detail, admin, …) render normally.
  */
-function TabbedRoutes({ user }: { user: User | null }) {
+function TabbedRoutes({ user, isAdmin }: { user: User | null; isAdmin: boolean }) {
   const location = useLocation();
   const activeTab = isTabPath(location.pathname) ? location.pathname : null;
   const tabLocations = useRef<Partial<Record<TabPath, Location>>>({});
   if (activeTab) tabLocations.current[activeTab] = location;
-  const tabElement = (path: TabPath): ReactNode => path === '/' ? <Home/> : path === '/search' ? <SearchPage/> : path === '/video' ? <VideoPage/> : path === '/watchlist' ? <WatchlistPage/> : <AccountPage user={user}/>;
+  const tabElement = (path: TabPath): ReactNode => path === '/' ? <Home/> : path === '/search' ? <SearchPage/> : path === '/video' ? <VideoPage/> : path === '/watchlist' ? <WatchlistPage/> : <AccountPage user={user} isAdmin={isAdmin}/>;
   return <>
     <ScrollMemory scrollKey={activeTab ?? location.key}/>
     {TAB_PATHS.filter(path => tabLocations.current[path]).map(path => <div key={path} className="tab-keepalive" style={{display: path === activeTab ? 'contents' : 'none'}}>
@@ -1011,7 +1357,7 @@ function TabbedRoutes({ user }: { user: User | null }) {
         <Routes location={tabLocations.current[path]}><Route path={path} element={tabElement(path)}/></Routes>
       </TabActiveContext.Provider>
     </div>)}
-    {!activeTab && <Routes><Route path="/anime/:id" element={<DetailPage user={user}/>}/><Route path="/privacy" element={<PrivacyPage/>}/><Route path="/extensions" element={<Navigate to="/account" replace/>}/><Route path="/admin" element={<AdminWorkspace/>}/><Route path="*" element={<main className="content-page empty-state"><h1>Page not found</h1><Link to="/">Return home</Link></main>}/></Routes>}
+    {!activeTab && <Routes><Route path="/anime/:id" element={<DetailPage user={user}/>}/><Route path="/privacy" element={<PrivacyPage/>}/><Route path="/terms" element={<TermsPage/>}/><Route path="/settings" element={<AppSettings/>}/><Route path="/activity" element={<ActivityDashboard/>}/><Route path="/trending" element={<RykoTrendingPage/>}/><Route path="/news" element={<NewsPage/>}/><Route path="/library-studio" element={<LibraryStudio/>}/><Route path="/about" element={<AboutPage/>}/><Route path="/extensions" element={<Navigate to="/account" replace/>}/><Route path="/admin" element={<AdminWorkspace/>}/><Route path="*" element={<main className="content-page empty-state"><Search size={28}/><h1>Page not found</h1><p>This page may have moved. Start again from Home or explore the catalogue.</p><div className="empty-state-actions"><Link className="primary-btn" to="/">Go to Home</Link><Link className="secondary-btn" to="/search">Explore catalogue</Link></div></main>}/></Routes>}
   </>;
 }
 
@@ -1040,10 +1386,29 @@ function ScrollMemory({ scrollKey }: { scrollKey: string }) {
   return null;
 }
 
+function FirstRunOnboarding({ onFinish }: { onFinish: () => void }) {
+  const navigate = useNavigate();
+  const startExploring = () => { onFinish(); navigate('/search'); };
+  return <div className="onboarding-backdrop" role="presentation">
+    <section className="onboarding-card" role="dialog" aria-modal="true" aria-labelledby="onboarding-title">
+      <img src="/logo.jpg" alt="" className="onboarding-logo"/>
+      <span className="eyebrow">WELCOME TO RYKOCOLLECTION</span>
+      <h2 id="onboarding-title">Your next story starts here.</h2>
+      <p>Discover anime and manga, keep your favourites organised, and explore trailers and creator videos in one place.</p>
+      <div className="onboarding-points"><div><Compass/><span><strong>Explore</strong><small>Find anime, manga and new stories.</small></span></div><div><Bookmark/><span><strong>Build your Library</strong><small>Save titles and track your progress.</small></span></div><div><Play/><span><strong>Discover videos</strong><small>Find trailers, clips and related videos.</small></span></div></div>
+      <button className="primary-btn onboarding-primary" onClick={startExploring}>Start exploring <ChevronRight size={16}/></button>
+      <button className="onboarding-skip" onClick={onFinish}>I'll explore on my own</button>
+      <small className="onboarding-version">RykoCollection · v1.0.0</small>
+    </section>
+  </div>;
+}
+
 export default function App() {
   useAppBackNavigation();
   const [user, setUser] = useState<User | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(() => { try { return localStorage.getItem("rykoc-onboarding-complete") !== "yes"; } catch { return false; } });
+  const finishOnboarding = () => { try { localStorage.setItem("rykoc-onboarding-complete", "yes"); } catch { /* storage can be unavailable */ } setShowOnboarding(false); };
   useEffect(() => {
     let active = true;
     supabase.auth.getSession().then(({ data }) => {
@@ -1085,11 +1450,29 @@ export default function App() {
     } catch { /* storage unavailable */ }
   }, []);
   useEffect(() => {
+    let mounted = true;
+    const retry = () => {
+      if (navigator.onLine) void flushPendingReports();
+    };
     void flushPendingReports();
-    const retry = () => { void flushPendingReports(); };
     window.addEventListener('online', retry);
-    return () => window.removeEventListener('online', retry);
+    document.addEventListener('visibilitychange', retry);
+    let appStateListener: { remove: () => Promise<void> } | undefined;
+    if (Capacitor.isNativePlatform()) {
+      void CapApp.addListener('appStateChange', state => {
+        if (state.isActive) retry();
+      }).then(listener => {
+        if (mounted) appStateListener = listener;
+        else void listener.remove();
+      }).catch(error => console.warn('Could not attach native sync listener.', error));
+    }
+    return () => {
+      mounted = false;
+      window.removeEventListener('online', retry);
+      document.removeEventListener('visibilitychange', retry);
+      if (appStateListener) void appStateListener.remove();
+    };
   }, [user]);
   const signOut = () => { void supabase.auth.signOut(); };
-  return <><OfflineBanner/><Header user={user} isAdmin={isAdmin} onSignOut={signOut}/><TabbedRoutes user={user}/><BottomNavigation/><ToastHost/><footer className="footer"><Link to="/" className="brand"><img className="brand-mark brand-logo" src="/logo.svg" alt="" width="31" height="31" loading="lazy"/><span>RYKOCOLLECTION</span></Link><p>Discover stories. Find your next world.</p><span>Shared Ryko catalogue · Independent fan discovery project</span></footer></>;
+  return <><OfflineBanner/><Header user={user} isAdmin={isAdmin} onSignOut={signOut}/><TabbedRoutes user={user} isAdmin={isAdmin}/><BottomNavigation/><ToastHost/>{showOnboarding && <FirstRunOnboarding onFinish={finishOnboarding}/>}<footer className="footer"><Link to="/" className="brand"><img className="brand-mark brand-logo" src="/logo.jpg" alt="" width="31" height="31" loading="lazy"/><span>RYKOCOLLECTION</span></Link><p>Discover stories. Find your next world.</p><span>Shared Ryko catalogue · Independent fan discovery project</span></footer></>;
 }
