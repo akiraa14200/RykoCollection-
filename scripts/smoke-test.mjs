@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 
 const base = 'http://127.0.0.1:4173';
-const server = await import('node:child_process').then(({ spawn }) => spawn('npm', ['run', 'preview', '--', '--host', '127.0.0.1', '--port', '4173', '--strictPort'], { stdio: 'ignore' }));
+const server = await import('node:child_process').then(({ spawn }) => spawn(process.execPath, ['node_modules/vite/bin/vite.js', 'preview', '--host', '127.0.0.1', '--port', '4173', '--strictPort'], { stdio: 'ignore' }));
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 try {
