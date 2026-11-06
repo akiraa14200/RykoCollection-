@@ -238,47 +238,207 @@ class TubePlayerActivity : Activity() {
             })
         }
 
+        // Rebuilt watch page to follow the supplied reference: purple rounded header,
+        // title + metadata, creator row, engagement controls, comments preview and vertical feed.
         val details = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(18), dp(18), dp(18), dp(18))
-            setBackgroundColor(Color.rgb(18, 8, 28))
+            setPadding(0, 0, 0, dp(20))
+            background = android.graphics.drawable.GradientDrawable(
+                android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM,
+                intArrayOf(Color.rgb(48, 16, 68), Color.rgb(31, 15, 42), Color.rgb(8, 8, 8), Color.BLACK)
+            ).apply {
+                cornerRadii = floatArrayOf(dp(20).toFloat(), dp(20).toFloat(), dp(20).toFloat(), dp(20).toFloat(), 0f, 0f, 0f, 0f)
+            }
         }
-        applyVideoAmbient(details)
-        details.addView(TextView(this).apply { text = currentTitle.ifBlank { "YouTube video" }; setTextColor(Color.WHITE); setTextSize(21f); setTypeface(null, android.graphics.Typeface.BOLD); maxLines = 3 })
-        details.addView(TextView(this).apply { text = "@" + currentCreator.ifBlank { "RykoCollection" } + "   •   YouTube"; setTextColor(Color.rgb(208,190,220)); setTextSize(13f); setPadding(0,dp(8),0,dp(14)) })
+        val content = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(18), dp(18), dp(18), 0)
+        }
+        content.addView(TextView(this).apply {
+            text = currentTitle.ifBlank { "YouTube video" }
+            setTextColor(Color.WHITE)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 20f)
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            maxLines = 2
+            ellipsize = android.text.TextUtils.TruncateAt.END
+            setLineSpacing(dp(1).toFloat(), 1f)
+        })
+        content.addView(TextView(this).apply {
+            text = "@${currentCreator.ifBlank { "RykoCollection" }}   7.3k likes   •   YouTube   •   more"
+            setTextColor(Color.rgb(224, 211, 232))
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+            setPadding(0, dp(7), 0, dp(14))
+        })
         val channelRow = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL }
-        val avatarView = android.widget.ImageView(this).apply { scaleType = android.widget.ImageView.ScaleType.CENTER_CROP; background = android.graphics.drawable.GradientDrawable().apply { shape = android.graphics.drawable.GradientDrawable.OVAL; setColor(Color.DKGRAY) }; clipToOutline = true }
-        channelRow.addView(avatarView, LinearLayout.LayoutParams(dp(48), dp(48)))
+        val avatarView = ImageView(this).apply {
+            scaleType = ImageView.ScaleType.CENTER_CROP
+            background = android.graphics.drawable.GradientDrawable().apply {
+                shape = android.graphics.drawable.GradientDrawable.OVAL
+                setColor(Color.DKGRAY)
+            }
+            clipToOutline = true
+        }
+        channelRow.addView(avatarView, LinearLayout.LayoutParams(dp(32), dp(32)))
         if (currentAvatar.isNotBlank()) loadImage(currentAvatar, avatarView)
-        channelRow.addView(TextView(this).apply { text = currentCreator.ifBlank { "RykoCollection" }; setTextColor(Color.WHITE); textSize = 16f; setTypeface(null,android.graphics.Typeface.BOLD); setPadding(dp(10),0,dp(8),0) }, LinearLayout.LayoutParams(0,dp(48),1f))
-        subscribeAction = actionLabel("Subscribe",13f).apply { background = android.graphics.drawable.GradientDrawable().apply { cornerRadius=dp(24).toFloat(); setColor(Color.WHITE) }; setTextColor(Color.BLACK); setOnClickListener { val prefs=getSharedPreferences(PREFS,MODE_PRIVATE); val k="sub_"+currentCreator; val next=!prefs.getBoolean(k,false); prefs.edit().putBoolean(k,next).apply(); text=if(next) "Subscribed" else "Subscribe" } }
-        channelRow.addView(subscribeAction,LinearLayout.LayoutParams(dp(118),dp(42))); details.addView(channelRow)
-        val actions = LinearLayout(this).apply { gravity=Gravity.CENTER_VERTICAL; setPadding(0,dp(12),0,dp(10)) }
+        channelRow.addView(TextView(this).apply {
+            text = currentCreator.ifBlank { "RykoCollection" }
+            setTextColor(Color.WHITE)
+            textSize = 14f
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            setPadding(dp(8), 0, dp(8), 0)
+        }, LinearLayout.LayoutParams(0, dp(48), 1f))
+        subscribeAction = actionLabel("Subscribe", 13f).apply {
+            background = android.graphics.drawable.GradientDrawable().apply {
+                cornerRadius = dp(28).toFloat()
+                setColor(Color.WHITE)
+            }
+            setTextColor(Color.BLACK)
+            setPadding(dp(20), 0, dp(20), 0)
+            setOnClickListener {
+                val prefs = getSharedPreferences(PREFS, MODE_PRIVATE)
+                val key = "sub_" + currentCreator
+                val next = !prefs.getBoolean(key, false)
+                prefs.edit().putBoolean(key, next).apply()
+                text = if (next) "Subscribed" else "Subscribe"
+            }
+        }
+        channelRow.addView(subscribeAction, LinearLayout.LayoutParams(dp(112), dp(38)))
+        content.addView(channelRow)
+
+        val actions = LinearLayout(this).apply {
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(0, dp(12), 0, dp(16))
+        }
         likeAction = iconAction(R.drawable.ic_thumb_up, "Like").apply {
-            imageTintList = android.content.res.ColorStateList.valueOf(if (getSharedPreferences(PREFS, MODE_PRIVATE).getBoolean("like_"+currentVideoId,false)) Color.rgb(170,145,255) else Color.WHITE)
-            setOnClickListener { val prefs=getSharedPreferences(PREFS,MODE_PRIVATE); val next=!prefs.getBoolean("like_"+currentVideoId,false); prefs.edit().putBoolean("like_"+currentVideoId,next).putBoolean("dislike_"+currentVideoId,false).apply(); imageTintList=android.content.res.ColorStateList.valueOf(if(next) Color.rgb(170,145,255) else Color.WHITE); dislikeAction?.imageTintList=android.content.res.ColorStateList.valueOf(Color.WHITE) }
+            imageTintList = android.content.res.ColorStateList.valueOf(
+                if (getSharedPreferences(PREFS, MODE_PRIVATE).getBoolean("like_" + currentVideoId, false)) Color.rgb(205, 185, 255) else Color.WHITE
+            )
+            setOnClickListener {
+                val prefs = getSharedPreferences(PREFS, MODE_PRIVATE)
+                val next = !prefs.getBoolean("like_" + currentVideoId, false)
+                prefs.edit().putBoolean("like_" + currentVideoId, next).putBoolean("dislike_" + currentVideoId, false).apply()
+                imageTintList = android.content.res.ColorStateList.valueOf(if (next) Color.rgb(205, 185, 255) else Color.WHITE)
+                dislikeAction?.imageTintList = android.content.res.ColorStateList.valueOf(Color.WHITE)
+            }
         }
         dislikeAction = iconAction(R.drawable.ic_thumb_down, "Dislike").apply {
-            setOnClickListener { val prefs=getSharedPreferences(PREFS,MODE_PRIVATE); val next=!prefs.getBoolean("dislike_"+currentVideoId,false); prefs.edit().putBoolean("dislike_"+currentVideoId,next).putBoolean("like_"+currentVideoId,false).apply(); imageTintList=android.content.res.ColorStateList.valueOf(if(next) Color.rgb(170,145,255) else Color.WHITE); likeAction?.imageTintList=android.content.res.ColorStateList.valueOf(Color.WHITE) }
+            setOnClickListener {
+                val prefs = getSharedPreferences(PREFS, MODE_PRIVATE)
+                val next = !prefs.getBoolean("dislike_" + currentVideoId, false)
+                prefs.edit().putBoolean("dislike_" + currentVideoId, next).putBoolean("like_" + currentVideoId, false).apply()
+                imageTintList = android.content.res.ColorStateList.valueOf(if (next) Color.rgb(205, 185, 255) else Color.WHITE)
+                likeAction?.imageTintList = android.content.res.ColorStateList.valueOf(Color.WHITE)
+            }
         }
-        actions.addView(likeAction,LinearLayout.LayoutParams(0,dp(46),1f)); actions.addView(dislikeAction,LinearLayout.LayoutParams(0,dp(46),1f))
-        actions.addView(iconAction(R.drawable.ic_share, "Share").apply { setOnClickListener { shareVideo() } },LinearLayout.LayoutParams(dp(48),dp(46)))
-        saveAction=iconAction(if(isSaved()) R.drawable.ic_bookmark_filled else R.drawable.ic_bookmark, "Save video").apply { imageTintList=android.content.res.ColorStateList.valueOf(if(isSaved()) Color.rgb(170,145,255) else Color.WHITE); setOnClickListener { toggleSaved(); setImageResource(if(isSaved()) R.drawable.ic_bookmark_filled else R.drawable.ic_bookmark); imageTintList=android.content.res.ColorStateList.valueOf(if(isSaved()) Color.rgb(170,145,255) else Color.WHITE) } }
-        actions.addView(saveAction,LinearLayout.LayoutParams(dp(48),dp(46)))
-        actions.addView(iconAction(R.drawable.ic_more, "More options").apply { setOnClickListener { showMoreMenu(it) } },LinearLayout.LayoutParams(dp(42),dp(46)))
-        details.addView(actions)
-        details.addView(TextView(this).apply { text = "Up next"; setTextColor(Color.WHITE); textSize = 19f; setTypeface(null, android.graphics.Typeface.BOLD); setPadding(0, dp(22), 0, dp(8)) })
+        actions.addView(likeAction, LinearLayout.LayoutParams(0, dp(48), 1f))
+        actions.addView(dislikeAction, LinearLayout.LayoutParams(0, dp(48), 1f))
+        actions.addView(iconAction(R.drawable.ic_share, "Share").apply { setOnClickListener { shareVideo() } }, LinearLayout.LayoutParams(0, dp(48), 1f))
+        saveAction = iconAction(if (isSaved()) R.drawable.ic_bookmark_filled else R.drawable.ic_bookmark, "Save video").apply {
+            imageTintList = android.content.res.ColorStateList.valueOf(if (isSaved()) Color.rgb(205, 185, 255) else Color.WHITE)
+            setOnClickListener { toggleSaved() }
+        }
+        actions.addView(saveAction, LinearLayout.LayoutParams(0, dp(48), 1f))
+        actions.addView(iconAction(R.drawable.ic_more, "More options").apply { setOnClickListener { showMoreMenu(it) } }, LinearLayout.LayoutParams(0, dp(48), 0.8f))
+        content.addView(actions)
+
+        val commentsCard = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(12), dp(10), dp(12), dp(10))
+            background = android.graphics.drawable.GradientDrawable().apply {
+                cornerRadius = dp(15).toFloat()
+                setColor(Color.rgb(43, 34, 49))
+            }
+        }
+        val commentsHeading = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL }
+        commentsHeading.addView(TextView(this).apply {
+            text = "Comments"
+            setTextColor(Color.WHITE)
+            textSize = 14f
+            setTypeface(null, android.graphics.Typeface.BOLD)
+        })
+        commentsHeading.addView(TextView(this).apply {
+            text = "   •   Join the conversation"
+            setTextColor(Color.rgb(190, 178, 198))
+            textSize = 12f
+        })
+        commentsCard.addView(commentsHeading)
+        commentsCard.addView(TextView(this).apply {
+            text = "Share your thoughts about this video"
+            setTextColor(Color.rgb(225, 218, 231))
+            textSize = 13f
+            setPadding(0, dp(8), 0, dp(2))
+            maxLines = 1
+        })
+        content.addView(commentsCard)
+        details.addView(content)
+
+        // YouTube-style vertical recommendations: large thumbnail first, title and channel below.
         recommendIds.indices.forEach { index ->
-            val item = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL; setPadding(0, dp(7), 0, dp(7)) }
-            val thumb = android.widget.ImageView(this).apply { scaleType = android.widget.ImageView.ScaleType.CENTER_CROP; background = android.graphics.drawable.GradientDrawable().apply { cornerRadius = dp(9).toFloat(); setColor(Color.DKGRAY) }; clipToOutline = true }
-            item.addView(thumb, LinearLayout.LayoutParams(dp(144), dp(82)))
+            val recommendation = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(0, dp(18), 0, dp(4))
+            }
+            val thumb = ImageView(this).apply {
+                scaleType = ImageView.ScaleType.CENTER_CROP
+                setBackgroundColor(Color.rgb(28, 28, 28))
+            }
+            recommendation.addView(thumb, LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(screenWidthDp * 9 / 16)
+            ))
             recommendThumbs.getOrNull(index)?.takeIf { it.isNotBlank() }?.let { loadImage(it, thumb) }
-            val labels = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(12), 0, 0, 0) }
-            labels.addView(TextView(this).apply { text = recommendTitles.getOrNull(index).orEmpty().ifBlank { "Anime video" }; setTextColor(Color.WHITE); textSize = 14f; maxLines = 2; ellipsize = android.text.TextUtils.TruncateAt.END })
-            labels.addView(TextView(this).apply { text = recommendCreators.getOrNull(index).orEmpty(); setTextColor(Color.LTGRAY); textSize = 12f; setPadding(0, dp(5), 0, 0) })
-            item.addView(labels, LinearLayout.LayoutParams(0, dp(82), 1f))
-            item.setOnClickListener { val next = Intent(this, TubePlayerActivity::class.java).apply { putExtra(EXTRA_VIDEO_ID, recommendIds[index]); putExtra(EXTRA_TITLE, recommendTitles.getOrNull(index).orEmpty()); putExtra(EXTRA_CREATOR, recommendCreators.getOrNull(index).orEmpty()); putExtra(EXTRA_THUMB, recommendThumbs.getOrNull(index).orEmpty()); putStringArrayListExtra(EXTRA_RECOMMEND_IDS, ArrayList(recommendIds)); putStringArrayListExtra(EXTRA_RECOMMEND_TITLES, ArrayList(recommendTitles)); putStringArrayListExtra(EXTRA_RECOMMEND_CREATORS, ArrayList(recommendCreators)); putStringArrayListExtra(EXTRA_RECOMMEND_THUMBS, ArrayList(recommendThumbs)) }; startActivity(next); finish() }
-            details.addView(item)
+            val metadata = LinearLayout(this).apply {
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(dp(14), dp(9), dp(14), dp(10))
+            }
+            val smallAvatar = ImageView(this).apply {
+                scaleType = ImageView.ScaleType.CENTER_CROP
+                background = android.graphics.drawable.GradientDrawable().apply {
+                    shape = android.graphics.drawable.GradientDrawable.OVAL
+                    setColor(Color.DKGRAY)
+                }
+                clipToOutline = true
+            }
+            metadata.addView(smallAvatar, LinearLayout.LayoutParams(dp(34), dp(34)))
+            val creatorThumb = recommendThumbs.getOrNull(index).orEmpty()
+            // The creator avatar is not supplied by this feed payload; keep a neutral channel badge.
+            val labels = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(dp(10), 0, dp(8), 0)
+            }
+            labels.addView(TextView(this).apply {
+                text = recommendTitles.getOrNull(index).orEmpty().ifBlank { "Anime video" }
+                setTextColor(Color.WHITE)
+                textSize = 14f
+                setTypeface(null, android.graphics.Typeface.BOLD)
+                maxLines = 2
+                ellipsize = android.text.TextUtils.TruncateAt.END
+            })
+            labels.addView(TextView(this).apply {
+                text = recommendCreators.getOrNull(index).orEmpty() + "   •   YouTube"
+                setTextColor(Color.rgb(174, 174, 174))
+                textSize = 11f
+                setPadding(0, dp(4), 0, 0)
+            })
+            metadata.addView(labels, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+            metadata.addView(iconAction(R.drawable.ic_more, "More video options").apply {
+                setOnClickListener { showMoreMenu(it) }
+            }, LinearLayout.LayoutParams(dp(42), dp(42)))
+            recommendation.addView(metadata)
+            recommendation.setOnClickListener {
+                val next = Intent(this, TubePlayerActivity::class.java).apply {
+                    putExtra(EXTRA_VIDEO_ID, recommendIds[index])
+                    putExtra(EXTRA_TITLE, recommendTitles.getOrNull(index).orEmpty())
+                    putExtra(EXTRA_CREATOR, recommendCreators.getOrNull(index).orEmpty())
+                    putExtra(EXTRA_THUMB, recommendThumbs.getOrNull(index).orEmpty())
+                    putStringArrayListExtra(EXTRA_RECOMMEND_IDS, ArrayList(recommendIds))
+                    putStringArrayListExtra(EXTRA_RECOMMEND_TITLES, ArrayList(recommendTitles))
+                    putStringArrayListExtra(EXTRA_RECOMMEND_CREATORS, ArrayList(recommendCreators))
+                    putStringArrayListExtra(EXTRA_RECOMMEND_THUMBS, ArrayList(recommendThumbs))
+                }
+                startActivity(next)
+                finish()
+            }
+            details.addView(recommendation)
         }
         if (!isShort) page.addView(details)
         if (isShort) {
@@ -324,41 +484,46 @@ class TubePlayerActivity : Activity() {
      * This avoids a second YouTube iframe and keeps the glow tied to each video's imagery.
      */
     private fun applyVideoAmbient(target: View) {
-        val fallback = intArrayOf(Color.rgb(42, 15, 62), Color.rgb(17, 8, 25), Color.rgb(8, 8, 8))
-        fun apply(colors: IntArray) {
-            val drawable = android.graphics.drawable.GradientDrawable(
-                android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM,
-                colors
-            )
-            target.background = drawable
+        // Thumbnail palette is applied as a purple-to-black panel gradient.
+        val fallback = intArrayOf(Color.rgb(48, 16, 68), Color.rgb(31, 15, 42), Color.BLACK)
+        target.background = android.graphics.drawable.GradientDrawable(
+            android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM, fallback
+        ).apply {
+            cornerRadii = floatArrayOf(dp(20).toFloat(), dp(20).toFloat(), dp(20).toFloat(), dp(20).toFloat(), 0f, 0f, 0f, 0f)
         }
-        apply(fallback)
         if (currentThumb.isBlank()) return
         Thread {
             try {
                 val connection = java.net.URL(currentThumb).openConnection() as java.net.HttpURLConnection
                 connection.connectTimeout = 7000
                 connection.readTimeout = 7000
-                connection.setRequestProperty("User-Agent", "RykoCollection Android")
                 val bitmap = connection.inputStream.use { android.graphics.BitmapFactory.decodeStream(it) }
                 connection.disconnect()
                 if (bitmap != null) {
-                    val points = intArrayOf(
-                        bitmap.getPixel(bitmap.width / 4, bitmap.height / 3),
+                    val samples = intArrayOf(
+                        bitmap.getPixel(bitmap.width / 5, bitmap.height / 3),
                         bitmap.getPixel(bitmap.width / 2, bitmap.height / 2),
-                        bitmap.getPixel(bitmap.width * 3 / 4, bitmap.height * 2 / 3)
+                        bitmap.getPixel(bitmap.width * 4 / 5, bitmap.height * 2 / 3)
                     )
-                    val sampled = points.map { pixel ->
-                        val r = android.graphics.Color.red(pixel)
-                        val g = android.graphics.Color.green(pixel)
-                        val b = android.graphics.Color.blue(pixel)
-                        // Bias sampled frame colours gently toward the reference's purple ambience.
-                        val pr = (r * 0.58f + 92f * 0.42f).toInt().coerceIn(0, 255)
-                        val pg = (g * 0.48f + 38f * 0.52f).toInt().coerceIn(0, 255)
-                        val pb = (b * 0.62f + 132f * 0.38f).toInt().coerceIn(0, 255)
-                        android.graphics.Color.rgb(pr / 2, pg / 2, pb / 2)
+                    val colors = samples.map { c ->
+                        val r = android.graphics.Color.red(c)
+                        val g = android.graphics.Color.green(c)
+                        val b = android.graphics.Color.blue(c)
+                        Color.rgb(
+                            ((r * .32f + 68f) * .62f).toInt().coerceIn(0, 255),
+                            ((g * .18f + 24f) * .62f).toInt().coerceIn(0, 255),
+                            ((b * .42f + 104f) * .72f).toInt().coerceIn(0, 255)
+                        )
                     }.toIntArray()
-                    runOnUiThread { if (!isFinishing) apply(intArrayOf(sampled[0], sampled[1], sampled[2], Color.rgb(8, 8, 8))) }
+                    runOnUiThread {
+                        if (!isFinishing) target.background =
+                            android.graphics.drawable.GradientDrawable(
+                                android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM,
+                                intArrayOf(colors[0], colors[1], colors[2], Color.BLACK)
+                            ).apply {
+                                cornerRadii = floatArrayOf(dp(20).toFloat(), dp(20).toFloat(), dp(20).toFloat(), dp(20).toFloat(), 0f, 0f, 0f, 0f)
+                            }
+                    }
                     bitmap.recycle()
                 }
             } catch (error: Exception) {
