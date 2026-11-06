@@ -11,13 +11,6 @@ import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
-import android.webkit.ConsoleMessage
-import android.webkit.CookieManager
-import android.webkit.WebChromeClient
-import android.webkit.JavascriptInterface
-import android.webkit.WebSettings
-import android.webkit.WebView
-import android.webkit.WebViewClient
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -33,12 +26,17 @@ import android.graphics.Shader
 import android.animation.ValueAnimator
 import android.view.animation.LinearInterpolator
 import android.util.Log
+import androidx.activity.ComponentActivity
+import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.YouTubePlayer
+import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.PlayerConstants
+import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.AbstractYouTubePlayerListener
+import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.FullscreenListener
+import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.options.IFramePlayerOptions
+import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.views.YouTubePlayerView
 import android.util.TypedValue
-import android.view.animation.AccelerateInterpolator
-import android.view.animation.OvershootInterpolator
 
 /** Standalone YouTube iframe player with a fixed YouTube-standard 16:9 viewing area. */
-class TubePlayerActivity : Activity() {
+class TubePlayerActivity : ComponentActivity() {
     companion object {
         const val EXTRA_VIDEO_ID = "tube_video_id"
         const val EXTRA_TITLE = "tube_video_title"
@@ -59,9 +57,10 @@ class TubePlayerActivity : Activity() {
     }
 
     private lateinit var root: FrameLayout
-    private lateinit var webView: WebView
+    private lateinit var playerView: YouTubePlayerView
+    private var youTubePlayer: YouTubePlayer? = null
     private var fullscreenView: View? = null
-    private var fullscreenCallback: WebChromeClient.CustomViewCallback? = null
+    private var shortIsPlaying = false
     private var originalSystemUi = 0
     private var currentVideoId = ""
     private var currentTitle = ""
@@ -175,59 +174,40 @@ class TubePlayerActivity : Activity() {
         }, LinearLayout.LayoutParams(dp(48), dp(52)))
         // Match the reference player: video begins at the very top, without a separate toolbar.
 
-        webView = WebView(this).apply {
+        playerView = YouTubePlayerView(this).apply {
             setBackgroundColor(Color.BLACK)
-            settings.javaScriptEnabled = true
-            addJavascriptInterface(AmbientPlaybackBridge(), "ambientBridge")
-            settings.domStorageEnabled = true
-            settings.mediaPlaybackRequiresUserGesture = false
-            settings.mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
-            settings.loadsImagesAutomatically = true
-            settings.javaScriptCanOpenWindowsAutomatically = false
-            CookieManager.getInstance().setAcceptCookie(true)
-            CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
-            webViewClient = object : WebViewClient() {
-                override fun onPageFinished(view: WebView?, url: String?) {
-                    Log.d(TAG, "Page loaded: $url")
-                    if (isShort && view === webView && swipeHandled) {
-                        // The new iframe document is ready: bring the incoming Short into place.
-                        view?.animate()
-                            ?.translationY(0f)
-                            ?.alpha(1f)
-                            ?.scaleX(1f)
-                            ?.scaleY(1f)
-                            ?.setDuration(360)
-                            ?.setInterpolator(OvershootInterpolator(0.72f))
-                            ?.withEndAction {
-                                view.translationY = 0f
-                                view.alpha = 1f
-                                view.scaleX = 1f
-                                view.scaleY = 1f
-                                swipeHandled = false
-                            }
-                            ?.start()
-                    }
+            enableAutomaticInitialization = false
+            lifecycle.addObserver(this)
+            val options = IFramePlayerOptions.Builder(this@TubePlayerActivity)
+                .controls(if (isShort) 0 else 1)
+                .fullscreen(1)
+                .autoplay(1)
+                .rel(0)
+                .ivLoadPolicy(3)
+                .privacyEnhancedMode(true)
+                .build()
+            initialize(object : AbstractYouTubePlayerListener() {
+                override fun onReady(player: YouTubePlayer) {
+                    youTubePlayer = player
+                    player.loadVideo(currentVideoId, 0f)
                 }
-                override fun onReceivedError(view: WebView?, request: android.webkit.WebResourceRequest?, error: android.webkit.WebResourceError?) {
-                    if (request?.isForMainFrame == true) {
-                        Log.e(TAG, "WebView main-frame error: ${error?.description}")
-                        Toast.makeText(this@TubePlayerActivity, "Player page failed to load. Check your connection.", Toast.LENGTH_LONG).show()
-                    }
+
+                override fun onStateChange(player: YouTubePlayer, state: PlayerConstants.PlayerState) {
+                    shortIsPlaying = state == PlayerConstants.PlayerState.PLAYING
+                    ambientPlaybackActive = shortIsPlaying
+                    if (shortIsPlaying) ambientView?.resumeFlow() else ambientView?.pauseFlow()
                 }
-            }
-            webChromeClient = object : WebChromeClient() {
-                override fun onConsoleMessage(message: ConsoleMessage): Boolean {
-                    Log.d(TAG, "JS: ${message.message()} line ${message.lineNumber()}")
-                    return true
+
+                override fun onError(player: YouTubePlayer, error: PlayerConstants.PlayerError) {
+                    Log.e(TAG, "YouTube player error: $error")
+                    Toast.makeText(this@TubePlayerActivity, "Video unavailable or playback interrupted.", Toast.LENGTH_LONG).show()
                 }
-                override fun onShowCustomView(view: View, callback: CustomViewCallback) {
-                    if (fullscreenView != null) {
-                        callback.onCustomViewHidden()
-                        return
-                    }
-                    fullscreenView = view
-                    fullscreenCallback = callback
-                    root.addView(view, FrameLayout.LayoutParams(
+            }, options)
+            addFullscreenListener(object : FullscreenListener {
+                override fun onEnterFullscreen(fullscreenView: View, exitFullscreen: () -> Unit) {
+                    if (this@TubePlayerActivity.fullscreenView != null) return
+                    this@TubePlayerActivity.fullscreenView = fullscreenView
+                    root.addView(fullscreenView, FrameLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT, Gravity.CENTER
                     ))
                     window.decorView.systemUiVisibility = (
@@ -235,20 +215,20 @@ class TubePlayerActivity : Activity() {
                         View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
                     )
                 }
-                override fun onHideCustomView() {
-                    fullscreenView?.let { root.removeView(it) }
-                    fullscreenView = null
-                    fullscreenCallback = null
+
+                override fun onExitFullscreen() {
+                    this@TubePlayerActivity.fullscreenView?.let { root.removeView(it) }
+                    this@TubePlayerActivity.fullscreenView = null
                     window.decorView.systemUiVisibility = originalSystemUi
                 }
-            }
+            })
         }
 
         // The embedded video stays 16:9 instead of stretching to fill a tall phone screen.
         val screenWidthDp = (resources.displayMetrics.widthPixels / resources.displayMetrics.density).toInt()
         val playerHeightDp = (screenWidthDp * 9f / 16f).toInt()
         if (!isShort) {
-            page.addView(webView, LinearLayout.LayoutParams(
+            page.addView(playerView, LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, dp(playerHeightDp)
             ).apply {
                 leftMargin = -dp(1)
@@ -463,7 +443,7 @@ class TubePlayerActivity : Activity() {
         }
         if (!isShort) page.addView(details)
         if (isShort) {
-            root.addView(webView, FrameLayout.LayoutParams(
+            root.addView(playerView, FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT
             ))
         } else {
@@ -475,71 +455,9 @@ class TubePlayerActivity : Activity() {
         }
         setContentView(root)
 
-        val appOrigin = "https://rykocollection.vercel.app"
-        // Build Kotlin strings separately: HTML/JavaScript use single quotes, which
-        // must not be parsed as Kotlin character literals inside interpolation.
-        val playerElement = if (isShort) {
-            """<div id="main-player"></div><div id="short-playback-indicator">Ⅱ</div>"""
-        } else {
-            """<iframe id="main-player" src="https://www.youtube-nocookie.com/embed/$currentVideoId?autoplay=1&playsinline=1&rel=0&origin=$appOrigin" frameborder="0" title="YouTube video player" referrerpolicy="origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>"""
-        }
-        val playerCreation = if (isShort) {
-            """rykoPlayer = new YT.Player('main-player', { videoId: '$currentVideoId', playerVars: { autoplay: 1, controls: 0, playsinline: 1, rel: 0, fs: 1, disablekb: 1, origin: '$appOrigin' },"""
-        } else {
-            """new YT.Player('main-player', {"""
-        }
-        val playbackIndicatorUpdate = if (isShort) {
-            """var indicator = document.getElementById('short-playback-indicator'); if (indicator) indicator.textContent = event.data === YT.PlayerState.PLAYING ? 'Ⅱ' : '▶';"""
-        } else ""
-        val shortTapHandler = if (isShort) {
-            """document.addEventListener('click', function() { if (!rykoPlayer) return; var state = rykoPlayer.getPlayerState(); if (state === YT.PlayerState.PLAYING) rykoPlayer.pauseVideo(); else rykoPlayer.playVideo(); var indicator = document.getElementById('short-playback-indicator'); if (indicator) { indicator.style.opacity = '1'; clearTimeout(indicatorTimer); indicatorTimer = setTimeout(function(){ indicator.style.opacity = '0'; }, 650); } });"""
-        } else ""
-        val html = """
-            <!doctype html><html><head>
-              <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-              <meta name="referrer" content="origin">
-              <style>
-                *{box-sizing:border-box}
-                html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#000}
-                .player-wrapper{position:relative;width:100%;height:100%;background:#000;overflow:hidden}
-                #main-player{display:block;position:absolute;inset:0;width:100%;height:100%;border:0;background:#000}#short-playback-indicator{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:72px;height:72px;border-radius:50%;background:#0008;color:#fff;display:flex;align-items:center;justify-content:center;font:700 32px Arial;opacity:0;transition:opacity .18s;pointer-events:none}
-              </style>
-            </head><body>
-              <div class="player-wrapper">
-                                $playerElement
-              </div>
-              <script>
-                var rykoPlayer = null;
-                var indicatorTimer = null;
-                var ambientApiScript = document.createElement('script');
-                ambientApiScript.src = 'https://www.youtube.com/iframe_api';
-                document.head.appendChild(ambientApiScript);
-                function onYouTubeIframeAPIReady() {
-                                    $playerCreation
-                    events: { onStateChange: function(event) {
-                      if (window.ambientBridge) window.ambientBridge.onPlaybackState(event.data === YT.PlayerState.PLAYING);
-                                            $playbackIndicatorUpdate
-                    }}
-                  });
-                }
-                                $shortTapHandler
-                window.loadRykoShort = function(id) { if (rykoPlayer && id) rykoPlayer.loadVideoById({videoId:id, startSeconds:0}); };
-              </script>
-            </body></html>
-        """.trimIndent()
-        webView.loadDataWithBaseURL("$appOrigin/", html, "text/html", "UTF-8", null)
+
     }
 
-
-    private inner class AmbientPlaybackBridge {
-        @JavascriptInterface
-        fun onPlaybackState(playing: Boolean) {
-            runOnUiThread {
-                ambientPlaybackActive = playing
-                if (playing) ambientView?.resumeFlow() else ambientView?.pauseFlow()
-            }
-        }
-    }
 
     /** Preview stills are sampled for colour only; no source image is ever displayed. */
     private fun startAmbientPreviewCycle(layer: FrameLayout) {
@@ -718,61 +636,26 @@ class TubePlayerActivity : Activity() {
             } catch (error: Exception) { Log.w(TAG, "Image load failed", error) }
         }.start()
     }
-    private fun loadShortDocument() {
-        val html = """
-            <!doctype html><html><head>
-              <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-              <meta name="referrer" content="origin">
-              <style>*{box-sizing:border-box}html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#000}iframe{display:block;border:0;width:100%;height:100%}</style>
-            </head><body>
-              <iframe src="https://www.youtube.com/embed/$currentVideoId?autoplay=1&playsinline=0&rel=0&origin=$playerOrigin&enablejsapi=1"
-                title="YouTube Shorts player" referrerpolicy="origin"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                allowfullscreen></iframe>
-            </body></html>
-        """.trimIndent()
-        webView.loadDataWithBaseURL("$playerOrigin/", html, "text/html", "UTF-8", null)
-    }
-
     private fun moveShort(direction: Int) {
         if (shortQueue.isEmpty() || swipeHandled) return
         val next = shortIndex + direction
-        if (next !in shortQueue.indices) {
-            // Give the end of the current Shorts queue a small elastic boundary response.
-            webView.animate().cancel()
-            webView.animate()
-                .translationY(if (direction > 0) -dp(28).toFloat() else dp(28).toFloat())
-                .setDuration(110)
-                .withEndAction {
-                    webView.animate().translationY(0f).setDuration(190)
-                        .setInterpolator(OvershootInterpolator(1.4f)).start()
-                }
-                .start()
+        if (next !in shortQueue.indices) return
+        val player = youTubePlayer ?: run {
+            Toast.makeText(this, "Player is still preparing. Try again in a moment.", Toast.LENGTH_SHORT).show()
             return
         }
-
         swipeHandled = true
-        val generation = ++shortTransitionGeneration
         shortIndex = next
         currentVideoId = shortQueue[next]
-        if (next < shortTitles.size) currentTitle = shortTitles[next]
-        if (next < shortCreators.size) currentCreator = shortCreators[next]
-
-        // Reuse the initialized iframe player; switching clips does not reload the WebView.
-        webView.animate().cancel()
-        webView.animate()
-            .translationY(if (direction > 0) -dp(42).toFloat() else dp(42).toFloat())
-            .alpha(0.82f)
-            .setDuration(90)
-            .withEndAction {
-                if (generation != shortTransitionGeneration || isFinishing) return@withEndAction
-                webView.translationY = if (direction > 0) dp(42).toFloat() else -dp(42).toFloat()
-                webView.evaluateJavascript("window.loadRykoShort && window.loadRykoShort('$currentVideoId')", null)
-                webView.animate().translationY(0f).alpha(1f)
-                    .setDuration(110)
-                    .withEndAction { swipeHandled = false }
-                    .start()
-            }
+        currentTitle = shortTitles.getOrNull(next).orEmpty().ifBlank { "Short video" }
+        currentCreator = shortCreators.getOrNull(next).orEmpty()
+        // Reuse the same native player instance; loadVideo switches clips without WebView reload.
+        player.loadVideo(currentVideoId, 0f)
+        playerView.animate().cancel()
+        playerView.translationY = if (direction > 0) dp(18).toFloat() else -dp(18).toFloat()
+        playerView.alpha = 0.92f
+        playerView.animate().translationY(0f).alpha(1f).setDuration(120L)
+            .withEndAction { swipeHandled = false }
             .start()
     }
 
@@ -796,6 +679,9 @@ class TubePlayerActivity : Activity() {
                     ) {
                         moveShort(if (dy < 0) 1 else -1)
                         return true
+                    }
+                    if (kotlin.math.abs(dy) < dp(18) && kotlin.math.abs(dx) < dp(18) && elapsed < 350L) {
+                        youTubePlayer?.let { if (shortIsPlaying) it.pause() else it.play() }
                     }
                 }
             }
@@ -857,7 +743,9 @@ class TubePlayerActivity : Activity() {
     @Deprecated("Deprecated in Android")
     override fun onBackPressed() {
         if (fullscreenView != null) {
-            fullscreenCallback?.onCustomViewHidden()
+            fullscreenView?.let { root.removeView(it) }
+            fullscreenView = null
+            window.decorView.systemUiVisibility = originalSystemUi
             return
         }
         super.onBackPressed()
@@ -867,14 +755,12 @@ class TubePlayerActivity : Activity() {
         ambientPlaybackActive = false
         ambientView?.pauseFlow()
         ambientView = null
-        if (::webView.isInitialized) {
-            webView.stopLoading()
-            webView.loadUrl("about:blank")
-            webView.webChromeClient = null
-            webView.webViewClient = WebViewClient()
-            (webView.parent as? ViewGroup)?.removeView(webView)
-            webView.destroy()
+        if (::playerView.isInitialized) {
+            lifecycle.removeObserver(playerView)
+            playerView.release()
+            (playerView.parent as? ViewGroup)?.removeView(playerView)
         }
+        youTubePlayer = null
         window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         super.onDestroy()
     }
