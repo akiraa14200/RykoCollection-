@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -73,6 +74,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalContext
+import android.app.Activity
+import androidx.activity.compose.BackHandler
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.zIndex
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
 import android.content.Intent
 import android.content.Context
 import android.net.Uri
@@ -87,11 +94,23 @@ private enum class ExtraPage(val label: String) { TRENDING("Ryko Top Trending"),
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RykoApp() {
+    val context = LocalContext.current
+    val visitedTabs = remember { androidx.compose.runtime.mutableStateListOf(MainTab.HOME) }
     var tab by remember { mutableStateOf(MainTab.HOME) }
     var extraPage by remember { mutableStateOf<ExtraPage?>(null) }
     var menuOpen by remember { mutableStateOf(false) }
     var mangaMode by remember { mutableStateOf(false) }
     var selectedEntry by remember { mutableStateOf<Int?>(null) }
+    var showExitDialog by remember { mutableStateOf(false) }
+
+    BackHandler {
+        when {
+            selectedEntry != null -> selectedEntry = null
+            extraPage != null -> extraPage = null
+            tab != MainTab.HOME -> tab = MainTab.HOME
+            else -> showExitDialog = true
+        }
+    }
 
     Scaffold(
         contentWindowInsets = WindowInsets(0),
@@ -136,24 +155,56 @@ fun RykoApp() {
                         MainTab.LIBRARY -> Icons.Default.BookmarkBorder
                         MainTab.ACCOUNT -> Icons.Default.Person
                     }
-                    NavigationBarItem(selected = tab == item && extraPage == null && selectedEntry == null, onClick = { tab = item; extraPage = null; selectedEntry = null }, icon = { Icon(icon, contentDescription = item.label) }, label = { Text(item.label, fontSize = 10.sp, fontWeight = if (tab == item) FontWeight.SemiBold else FontWeight.Normal) })
+                    NavigationBarItem(selected = tab == item && extraPage == null && selectedEntry == null, onClick = { tab = item; if (!visitedTabs.contains(item)) visitedTabs.add(item); extraPage = null; selectedEntry = null }, icon = { Icon(icon, contentDescription = item.label) }, label = { Text(item.label, fontSize = 10.sp, fontWeight = if (tab == item) FontWeight.SemiBold else FontWeight.Normal) })
                 }
             }
         },
         containerColor = Color.Black
     ) { inner ->
         Box(Modifier.padding(inner).fillMaxSize()) {
-            when {
-                selectedEntry != null -> EntryDetails(selectedEntry!!, mangaMode)
-                extraPage == ExtraPage.TRENDING -> NativePlaceholder("Ryko Top Trending", "Entry ranking will use real community likes once account services are configured.")
-                extraPage == ExtraPage.NEWS -> NativeNewsroomPage()
-                extraPage == ExtraPage.SETTINGS -> NativePlaceholder("Settings", "Appearance, language, notifications and app preferences.")
-                tab == MainTab.HOME -> NativeHome(mangaMode, onEntry = { selectedEntry = it })
-                tab == MainTab.BROWSE -> BrowsePage(mangaMode, onEntry = { selectedEntry = it })
-                tab == MainTab.VIDEO -> NativeRykoTube()
-                tab == MainTab.LIBRARY -> NativePlaceholder("My Library", "Watching, plan-to-watch, completed and saved entries.")
-                else -> NativePlaceholder("Account", "Sign in, profile, avatar, banner and account settings.")
+            // Keep visited tabs composed while hidden so their data and scroll state survive tab changes.
+            if (visitedTabs.contains(MainTab.HOME)) {
+                Box(Modifier.fillMaxSize().graphicsLayer { alpha = if (tab == MainTab.HOME && selectedEntry == null && extraPage == null) 1f else 0f }.zIndex(if (tab == MainTab.HOME && selectedEntry == null && extraPage == null) 1f else -1f).then(if (tab == MainTab.HOME && selectedEntry == null && extraPage == null) Modifier else Modifier.offset(x = 10000.dp))) {
+                    NativeHome(mangaMode, onEntry = { selectedEntry = it })
+                }
             }
+            if (visitedTabs.contains(MainTab.BROWSE)) {
+                Box(Modifier.fillMaxSize().graphicsLayer { alpha = if (tab == MainTab.BROWSE && selectedEntry == null && extraPage == null) 1f else 0f }.zIndex(if (tab == MainTab.BROWSE && selectedEntry == null && extraPage == null) 1f else -1f).then(if (tab == MainTab.BROWSE && selectedEntry == null && extraPage == null) Modifier else Modifier.offset(x = 10000.dp))) {
+                    BrowsePage(mangaMode, onEntry = { selectedEntry = it })
+                }
+            }
+            if (visitedTabs.contains(MainTab.VIDEO)) {
+                Box(Modifier.fillMaxSize().graphicsLayer { alpha = if (tab == MainTab.VIDEO && selectedEntry == null && extraPage == null) 1f else 0f }.zIndex(if (tab == MainTab.VIDEO && selectedEntry == null && extraPage == null) 1f else -1f).then(if (tab == MainTab.VIDEO && selectedEntry == null && extraPage == null) Modifier else Modifier.offset(x = 10000.dp))) {
+                    NativeRykoTube()
+                }
+            }
+            if (visitedTabs.contains(MainTab.LIBRARY)) {
+                Box(Modifier.fillMaxSize().graphicsLayer { alpha = if (tab == MainTab.LIBRARY && selectedEntry == null && extraPage == null) 1f else 0f }.zIndex(if (tab == MainTab.LIBRARY && selectedEntry == null && extraPage == null) 1f else -1f).then(if (tab == MainTab.LIBRARY && selectedEntry == null && extraPage == null) Modifier else Modifier.offset(x = 10000.dp))) {
+                    NativePlaceholder("My Library", "Watching, plan-to-watch, completed and saved entries.")
+                }
+            }
+            if (visitedTabs.contains(MainTab.ACCOUNT)) {
+                Box(Modifier.fillMaxSize().graphicsLayer { alpha = if (tab == MainTab.ACCOUNT && selectedEntry == null && extraPage == null) 1f else 0f }.zIndex(if (tab == MainTab.ACCOUNT && selectedEntry == null && extraPage == null) 1f else -1f).then(if (tab == MainTab.ACCOUNT && selectedEntry == null && extraPage == null) Modifier else Modifier.offset(x = 10000.dp))) {
+                    NativePlaceholder("Account", "Sign in, profile, avatar, banner and account settings.")
+                }
+            }
+
+            if (selectedEntry != null) EntryDetails(selectedEntry!!, mangaMode)
+            else when (extraPage) {
+                ExtraPage.TRENDING -> NativePlaceholder("Ryko Top Trending", "Entry ranking will use real community likes once account services are configured.")
+                ExtraPage.NEWS -> NativeNewsroomPage()
+                ExtraPage.SETTINGS -> NativePlaceholder("Settings", "Appearance, language, notifications and app preferences.")
+                null -> Unit
+            }
+        }
+        if (showExitDialog) {
+            AlertDialog(
+                onDismissRequest = { showExitDialog = false },
+                title = { Text("Exit RykoCollection?") },
+                text = { Text("Are you sure you want to close the app?") },
+                confirmButton = { TextButton(onClick = { showExitDialog = false; (context as? Activity)?.finish() }) { Text("Exit") } },
+                dismissButton = { TextButton(onClick = { showExitDialog = false }) { Text("Stay") } }
+            )
         }
     }
 }
