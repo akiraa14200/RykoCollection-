@@ -864,6 +864,7 @@ function VideoPage() {
   const [playingId,setPlayingId]=useState<string|null>(null);
   const [loading,setLoading]=useState(true);
   const [loadingMore,setLoadingMore]=useState(false);
+  const [visibleCount,setVisibleCount]=useState(12);
   const [error,setError]=useState('');
   const [term,setTerm]=useState('');
   const [remoteSearchVideos,setRemoteSearchVideos]=useState<RelatedVideo[]>([]);
@@ -995,6 +996,8 @@ function VideoPage() {
     return()=>{active=false;window.clearTimeout(timer);};
   },[term]);
 
+  useEffect(()=>{setVisibleCount(12);},[term,category,format,selectedSource,sourceTypeFilter]);
+
   const filtered=useMemo(()=>{
     const query=term.trim().toLowerCase();
     const combined=new Map<string,RelatedVideo>();
@@ -1060,6 +1063,7 @@ function VideoPage() {
   },[recommendedRegular,recommendedShorts]);
 
   const loadMore=async()=>{
+    if(visibleCount<filtered.length){setVisibleCount(current=>Math.min(current+12,filtered.length));return;}
     if(loadingMore||!(hasMore||(format!=='video'&&shortHasMore)))return;
     setLoadingMore(true);
     setError('');
@@ -1081,7 +1085,7 @@ function VideoPage() {
     }
   };
 
-  const canLoadMore=hasMore||(format!=='video'&&shortHasMore);
+  const canLoadMore=visibleCount<filtered.length||hasMore||(format!=='video'&&shortHasMore);
   const videoSentinel=useNearViewport(()=>{void loadMore();},!loading&&canLoadMore&&!loadingMore&&!error);
 
   const filterBar=<>
@@ -1126,11 +1130,11 @@ function VideoPage() {
     {filterBar}
     {error&&<div className="notice">{error}</div>}
     {loading?<div className="yt-loading-grid" aria-label="Loading videos">{Array.from({length:4},(_,index)=><div className="yt-skeleton-card" key={index}><div className="yt-skeleton-thumb"/><div className="yt-skeleton-meta"><div className="yt-skeleton-avatar"/><div className="yt-skeleton-copy"><span className="yt-skeleton-line"/><span className="yt-skeleton-line"/></div></div></div>)}</div>
-    :format==='all'?feedBlocks.length?feedBlocks.map((block,index)=><section className={block.kind==='shorts'?'yt-section yt-shorts-section':'yt-section'} key={block.kind+'-'+index}>
+    :format==='all'?feedBlocks.length?(()=>{let remaining=visibleCount;return feedBlocks.map((block,index)=>{const items=block.items.slice(0,remaining);remaining-=items.length;return {...block,items};}).filter(block=>block.items.length>0).map((block,index)=><section className={block.kind==='shorts'?'yt-section yt-shorts-section':'yt-section'} key={block.kind+'-'+index}>
       <div className="yt-section-heading"><div><h2>{block.kind==='shorts'?<><span className="yt-shorts-symbol">▰</span> Shorts</>:'Recommended videos'}</h2><p>{block.kind==='shorts'?'A random mix of quick clips':'Community uploads and anime or manga trailers picked around your interests'}</p></div><span>{block.items.length} {block.kind}</span></div>
       <div className={block.kind==='shorts'?'yt-shorts-row':'yt-video-feed'}>{block.items.map(video=>videoCard(video,block.kind==='shorts'))}</div>
-    </section>):empty
-    :(()=>{const selected=format==='short'?recommendedShorts:recommendedRegular;return selected.length?<section className="yt-section">
+    </section>);})():empty
+    :(()=>{const selected=(format==='short'?recommendedShorts:recommendedRegular).slice(0,visibleCount);return selected.length?<section className="yt-section">
       <div className="yt-section-heading"><div><h2>{format==='short'?'Shorts':'Videos'}</h2><p>{format==='short'?'Quick vertical clips':'Trailers, edits and community videos'}</p></div><span>{selected.length} results</span></div>
       <div className={format==='short'?'yt-shorts-grid':'yt-video-feed'}>{selected.map(video=>videoCard(video,format==='short'))}</div>
     </section>:empty;})()}
