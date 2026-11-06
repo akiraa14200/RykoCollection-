@@ -54,6 +54,10 @@ class TubePlayerActivity : Activity() {
     private var shortCreators = arrayListOf<String>()
     private var shortIndex = 0
     private var touchStartY = 0f
+    private var touchStartX = 0f
+    private var touchStartAt = 0L
+    private var swipeHandled = false
+    private val playerOrigin = "https://rykocollection.vercel.app"
     private var saveAction: TextView? = null
 
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
@@ -117,20 +121,6 @@ class TubePlayerActivity : Activity() {
 
         webView = WebView(this).apply {
             setBackgroundColor(Color.BLACK)
-            setOnTouchListener { _, event ->
-                if (isShort && shortQueue.size > 1) {
-                    when (event.actionMasked) {
-                        android.view.MotionEvent.ACTION_DOWN -> touchStartY = event.y
-                        android.view.MotionEvent.ACTION_UP -> {
-                            val delta = event.y - touchStartY
-                            if (kotlin.math.abs(delta) > dp(80)) {
-                                if (delta < 0) moveShort(1) else moveShort(-1)
-                            }
-                        }
-                    }
-                }
-                false
-            }
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
             settings.mediaPlaybackRequiresUserGesture = false
@@ -142,6 +132,9 @@ class TubePlayerActivity : Activity() {
             webViewClient = object : WebViewClient() {
                 override fun onPageFinished(view: WebView?, url: String?) {
                     Log.d(TAG, "Page loaded: $url")
+                    if (isShort && view === webView) {
+                        view?.animate()?.translationY(0f)?.alpha(1f)?.setDuration(220)?.start()
+                    }
                 }
                 override fun onReceivedError(view: WebView?, request: android.webkit.WebResourceRequest?, error: android.webkit.WebResourceError?) {
                     if (request?.isForMainFrame == true) {
@@ -240,15 +233,15 @@ class TubePlayerActivity : Activity() {
         val html = """
             <!doctype html><html><head>
               <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-              <meta name="referrer" content="strict-origin-when-cross-origin">
+              <meta name="referrer" content="origin">
               <style>
                 *{box-sizing:border-box}
                 html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#000}
                 iframe{display:block;border:0;width:100%;height:100%;${if (isShort) "aspect-ratio:auto" else "aspect-ratio:16/9"}}
               </style>
             </head><body>
-              <iframe src="https://www.youtube.com/embed/$currentVideoId?autoplay=1&playsinline=${if (isShort) 0 else 1}&rel=0&origin=$appOrigin"
-                title="YouTube video player" referrerpolicy="strict-origin-when-cross-origin"
+              <iframe src="https://www.youtube.com/embed/$currentVideoId?autoplay=1&playsinline=${if (isShort) 0 else 1}&rel=0&origin=$appOrigin&enablejsapi=1"
+                title="YouTube video player" referrerpolicy="origin"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                 allowfullscreen></iframe>
             </body></html>
@@ -256,15 +249,65 @@ class TubePlayerActivity : Activity() {
         webView.loadDataWithBaseURL("$appOrigin/", html, "text/html", "UTF-8", null)
     }
 
+    private fun loadShortDocument() {
+        val html = """
+            <!doctype html><html><head>
+              <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+              <meta name="referrer" content="origin">
+              <style>*{box-sizing:border-box}html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#000}iframe{display:block;border:0;width:100%;height:100%}</style>
+            </head><body>
+              <iframe src="https://www.youtube.com/embed/$currentVideoId?autoplay=1&playsinline=0&rel=0&origin=$playerOrigin&enablejsapi=1"
+                title="YouTube Shorts player" referrerpolicy="origin"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowfullscreen></iframe>
+            </body></html>
+        """.trimIndent()
+        webView.loadDataWithBaseURL("$playerOrigin/", html, "text/html", "UTF-8", null)
+    }
+
     private fun moveShort(direction: Int) {
         if (shortQueue.isEmpty()) return
         val next = shortIndex + direction
-        if (next !in shortQueue.indices) return
+        if (next !in shortQueue.indices || swipeHandled) return
+        swipeHandled = true
         shortIndex = next
         currentVideoId = shortQueue[next]
         if (next < shortTitles.size) currentTitle = shortTitles[next]
         if (next < shortCreators.size) currentCreator = shortCreators[next]
-        webView.loadUrl("https://www.youtube.com/embed/$currentVideoId?autoplay=1&playsinline=0&rel=0")
+        val exitY = if (direction > 0) -heightPx().toFloat() else heightPx().toFloat()
+        webView.animate().translationY(exitY).alpha(0f).setDuration(150).withEndAction {
+            webView.translationY = -exitY
+            webView.alpha = 0f
+            loadShortDocument()
+            webView.postDelayed({ swipeHandled = false }, 650)
+        }.start()
+    }
+
+    private fun heightPx(): Int = resources.displayMetrics.heightPixels
+
+    override fun dispatchTouchEvent(event: android.view.MotionEvent): Boolean {
+        if (isShort && shortQueue.size > 1) {
+            when (event.actionMasked) {
+                android.view.MotionEvent.ACTION_DOWN -> {
+                    touchStartY = event.rawY
+                    touchStartX = event.rawX
+                    touchStartAt = android.os.SystemClock.elapsedRealtime()
+                }
+                android.view.MotionEvent.ACTION_UP -> {
+                    val dy = event.rawY - touchStartY
+                    val dx = event.rawX - touchStartX
+                    val elapsed = (android.os.SystemClock.elapsedRealtime() - touchStartAt).coerceAtLeast(1L)
+                    if (kotlin.math.abs(dy) > dp(110) &&
+                        kotlin.math.abs(dy) > kotlin.math.abs(dx) * 1.25f &&
+                        elapsed < 900L
+                    ) {
+                        moveShort(if (dy < 0) 1 else -1)
+                        return true
+                    }
+                }
+            }
+        }
+        return super.dispatchTouchEvent(event)
     }
 
     private fun isSaved(): Boolean =
