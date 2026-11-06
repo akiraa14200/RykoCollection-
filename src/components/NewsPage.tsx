@@ -14,6 +14,10 @@ type NewsItem = {
 };
 type FeedResponse = { items?: NewsItem[]; failedSources?: string[] };
 
+// The Android app bundles its frontend locally, so relative /api URLs cannot
+// reach Vercel. The APK workflow supplies this deployed API origin at build time.
+const NEWS_API_ORIGIN = (import.meta.env.VITE_NEWS_API_ORIGIN || '').replace(/\\/$/, '');
+
 const cleanText = (value = '') => value.replace(/<[^>]*>/g, ' ').replace(/&nbsp;|&#160;/g, ' ').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;|&apos;/g, "'").replace(/\s+/g, ' ').trim();
 const isRecent = (date: string) => {
   const time = Date.parse(date);
@@ -50,7 +54,7 @@ export function NewsPage() {
     let unique: NewsItem[] = [];
     let failedSources: string[] = [];
     try {
-      const response = await fetch('/api/news-feed', { headers: { Accept: 'application/json' } });
+      const response = await fetch(`${NEWS_API_ORIGIN}/api/news-feed`, { headers: { Accept: 'application/json' } });
       if (!response.ok) throw new Error('News feed service returned HTTP ' + response.status);
       const payload = await response.json() as FeedResponse;
       failedSources = payload.failedSources || [];
@@ -88,7 +92,7 @@ export function NewsPage() {
       while (nextIndex < missingImages.length) {
         const item = missingImages[nextIndex++];
         try {
-          const response = await fetch('/api/news-image?url=' + encodeURIComponent(item.link), {
+          const response = await fetch(`${NEWS_API_ORIGIN}/api/news-image?url=${encodeURIComponent(item.link)}`, {
             headers: { Accept: 'application/json' }
           });
           if (!response.ok) continue;
