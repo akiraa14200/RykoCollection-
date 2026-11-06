@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.platform.LocalContext
 import coil.compose.AsyncImage
+import androidx.compose.ui.layout.ContentScale
 import com.rykocollection.app.BuildConfig
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.android.Android
@@ -317,9 +318,19 @@ private fun TubeVideoCard(video: TubeVideo, onClick: () -> Unit) {
     Column(
         Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Color(0xFF111111)).clickable(onClick = onClick)
     ) {
-        Box(Modifier.fillMaxWidth().height(if (video.short) 250.dp else 190.dp).background(Color(0xFF202020)), contentAlignment = Alignment.Center) {
+        Box(
+            Modifier.fillMaxWidth()
+                .then(if (video.short) Modifier.height(300.dp) else Modifier.aspectRatio(16f / 9f))
+                .background(Color(0xFF202020)),
+            contentAlignment = Alignment.Center
+        ) {
             if (video.thumb.isNotBlank()) {
-                AsyncImage(video.thumb, video.title, Modifier.fillMaxSize())
+                AsyncImage(
+                    model = video.thumb,
+                    contentDescription = video.title,
+                    modifier = if (video.short) Modifier.width(169.dp).fillMaxHeight() else Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
             }
             Icon(Icons.Default.PlayArrow, "Play", Modifier.size(48.dp), tint = Color.White)
             if (video.short) Text("SHORT", Modifier.align(Alignment.BottomEnd).padding(8.dp).background(Color.Black).padding(5.dp), color = Color.White, fontSize = 10.sp)
