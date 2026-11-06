@@ -91,7 +91,8 @@ data class AniListDetail(
     val countryOfOrigin: String? = null,
     val source: String? = null,
     val studios: AniListStudios? = null,
-    val characters: AniListCharacters? = null
+    val characters: AniListCharacters? = null,
+    val trailer: AniListTrailer? = null
 )
 
 @Serializable
@@ -267,7 +268,8 @@ class AniListRepository {
                 media(search: ${'$'}search, type: ${'$'}type, sort: SEARCH_MATCH, isAdult: false) {
                   id title { english romaji native }
                   coverImage { large extraLarge }
-                  averageScore format seasonYear
+                  averageScore format seasonYear status genres
+                  trailer { id site thumbnail }
                 }
               }
             }
@@ -289,6 +291,7 @@ class AniListRepository {
                 bannerImage
                 averageScore format seasonYear description(asHtml: false)
                 episodes chapters status genres countryOfOrigin source
+                trailer { id site thumbnail }
                 studios(isMain: true) { nodes { name } }
                 characters(page: 1, perPage: 20, sort: ROLE) {
                   edges { role node { name { full } image { large medium } } }
