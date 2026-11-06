@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { Link, Navigate, Route, Routes, useNavigate, useParams, useLocation, type Location } from 'react-router-dom';
 import { Search, Compass, Bookmark, ShieldCheck, Play, Star, ChevronRight, ArrowLeft, Heart, Clock3, Menu, X, ExternalLink, Sparkles, Tv, Info, Users, FileText, Globe, Youtube, ListVideo, ChevronDown, RotateCw, Home as HomeIcon, UserRound, ChevronLeft, Shuffle, Minus, Plus, Settings, Trash2, Clock, BookOpen, Mail, Shield, Newspaper } from 'lucide-react';
 // The application UI and page components are defined below.
@@ -314,6 +314,7 @@ function Home() {
     </> : <>
       <Section title="Trending manga & manhwa" subtitle="Popular manga, manhwa and manhua" items={trendingManga} saved={saved.map(a => a.id)} onSave={toggle} to="/search?format=MANGA"/>
       {recommendations.length > 0 && <Section title="Recommended for you" subtitle={saved.length ? 'Picked from your saved genres, themes and reading activity' : 'Popular, highly rated picks to help shape your taste profile'} items={recommendations} saved={saved.map(a=>a.id)} onSave={toggle} to="/search?format=MANGA"/>}
+      {!popularManga.length && <div className="load-more-wrap" ref={mangaPopularSentinel}><span className="muted">Loading popular manga as you scroll…</span></div>}
       <Section title="Popular manga" subtitle="Reader favorites across the AniList catalogue" items={popularManga} saved={saved.map(a => a.id)} onSave={toggle} to="/search?format=MANGA"/>
     </>}
     {!seasonal.length && <div className="load-more-wrap" ref={seasonalSentinel}><span className="muted">Loading release schedule when needed…</span></div>}
@@ -1160,7 +1161,7 @@ function VideoPage() {
     {filterBar}
     {error&&<div className="notice">{error}</div>}
     {loading?<div className="yt-loading-grid" aria-label="Loading videos">{Array.from({length:4},(_,index)=><div className="yt-skeleton-card" key={index}><div className="yt-skeleton-thumb"/><div className="yt-skeleton-meta"><div className="yt-skeleton-avatar"/><div className="yt-skeleton-copy"><span className="yt-skeleton-line"/><span className="yt-skeleton-line"/></div></div></div>)}</div>
-    :format==='all'?feedBlocks.length?(()=>{let remaining=visibleCount;return feedBlocks.map((block,index)=>{const items=block.items.slice(0,remaining);remaining-=items.length;return {...block,items};}).filter(block=>block.items.length>0).map((block,index)=><section className={block.kind==='shorts'?'yt-section yt-shorts-section':'yt-section'} key={block.kind+'-'+index}>
+    :format==='all'?feedBlocks.length?(()=>{let remaining=visibleCount;return feedBlocks.map(block=>{const items=block.items.slice(0,remaining);remaining-=items.length;return {...block,items};}).filter(block=>block.items.length>0).map((block,index)=><section className={block.kind==='shorts'?'yt-section yt-shorts-section':'yt-section'} key={block.kind+'-'+index}>
       <div className="yt-section-heading"><div><h2>{block.kind==='shorts'?<><span className="yt-shorts-symbol">▰</span> Shorts</>:'Recommended videos'}</h2><p>{block.kind==='shorts'?'A random mix of quick clips':'Community uploads and anime or manga trailers picked around your interests'}</p></div><span>{block.items.length} {block.kind}</span></div>
       <div className={block.kind==='shorts'?'yt-shorts-row':'yt-video-feed'}>{block.items.map(video=>videoCard(video,block.kind==='shorts'))}</div>
     </section>);})():empty
