@@ -1,5 +1,7 @@
 package com.rykocollection.app.ui
 
+import com.rykocollection.app.R
+
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Intent
