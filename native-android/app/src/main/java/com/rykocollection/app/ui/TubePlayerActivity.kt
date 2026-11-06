@@ -32,6 +32,10 @@ class TubePlayerActivity : Activity() {
         const val EXTRA_TITLE = "tube_video_title"
         const val EXTRA_CREATOR = "tube_video_creator"
         const val EXTRA_IS_SHORT = "tube_video_is_short"
+        const val EXTRA_SHORT_QUEUE = "tube_short_queue"
+        const val EXTRA_SHORT_TITLES = "tube_short_titles"
+        const val EXTRA_SHORT_CREATORS = "tube_short_creators"
+        const val EXTRA_SHORT_INDEX = "tube_short_index"
         private const val TAG = "RykoTubePlayer"
         private const val PREFS = "ryko_tube_saved"
     }
@@ -45,6 +49,11 @@ class TubePlayerActivity : Activity() {
     private var currentTitle = ""
     private var currentCreator = ""
     private var isShort = false
+    private var shortQueue = arrayListOf<String>()
+    private var shortTitles = arrayListOf<String>()
+    private var shortCreators = arrayListOf<String>()
+    private var shortIndex = 0
+    private var touchStartY = 0f
     private var saveAction: TextView? = null
 
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
@@ -67,6 +76,10 @@ class TubePlayerActivity : Activity() {
         currentTitle = intent.getStringExtra(EXTRA_TITLE).orEmpty()
         currentCreator = intent.getStringExtra(EXTRA_CREATOR).orEmpty()
         isShort = intent.getBooleanExtra(EXTRA_IS_SHORT, false)
+        shortQueue = intent.getStringArrayListExtra(EXTRA_SHORT_QUEUE) ?: arrayListOf()
+        shortTitles = intent.getStringArrayListExtra(EXTRA_SHORT_TITLES) ?: arrayListOf()
+        shortCreators = intent.getStringArrayListExtra(EXTRA_SHORT_CREATORS) ?: arrayListOf()
+        shortIndex = intent.getIntExtra(EXTRA_SHORT_INDEX, 0).coerceIn(0, (shortQueue.size - 1).coerceAtLeast(0))
         if (currentVideoId.isBlank()) {
             Toast.makeText(this, "This video link is not a supported YouTube URL.", Toast.LENGTH_LONG).show()
             finish()
@@ -104,6 +117,20 @@ class TubePlayerActivity : Activity() {
 
         webView = WebView(this).apply {
             setBackgroundColor(Color.BLACK)
+            setOnTouchListener { _, event ->
+                if (isShort && shortQueue.size > 1) {
+                    when (event.actionMasked) {
+                        android.view.MotionEvent.ACTION_DOWN -> touchStartY = event.y
+                        android.view.MotionEvent.ACTION_UP -> {
+                            val delta = event.y - touchStartY
+                            if (kotlin.math.abs(delta) > dp(80)) {
+                                if (delta < 0) moveShort(1) else moveShort(-1)
+                            }
+                        }
+                    }
+                }
+                false
+            }
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
             settings.mediaPlaybackRequiresUserGesture = false
@@ -227,6 +254,17 @@ class TubePlayerActivity : Activity() {
             </body></html>
         """.trimIndent()
         webView.loadDataWithBaseURL("$appOrigin/", html, "text/html", "UTF-8", null)
+    }
+
+    private fun moveShort(direction: Int) {
+        if (shortQueue.isEmpty()) return
+        val next = shortIndex + direction
+        if (next !in shortQueue.indices) return
+        shortIndex = next
+        currentVideoId = shortQueue[next]
+        if (next < shortTitles.size) currentTitle = shortTitles[next]
+        if (next < shortCreators.size) currentCreator = shortCreators[next]
+        webView.loadUrl("https://www.youtube.com/embed/$currentVideoId?autoplay=1&playsinline=0&rel=0")
     }
 
     private fun isSaved(): Boolean =
