@@ -1,10 +1,12 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
 import type { User } from '@supabase/supabase-js';
 import {
-  MessageCircle, Send, CornerDownRight, ChevronDown, ChevronUp,
-  Clock3, Flame, Search, Copy, RefreshCw, Eye, EyeOff
+  MessageCircle, Send, ChevronDown, ChevronUp, Clock3, Flame, Search,
+  Copy, RefreshCw, Eye, EyeOff, Heart, Trophy
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
+import { getAnime, imageOf, titleOf, type Anime } from '../lib/catalogue';
 
 type CommentRow = {
   id: string;
@@ -80,7 +82,7 @@ export function EntryLikeButton({ animeId, user }: { animeId: string; user: User
     }
     setBusy(false);
   };
-  return <button type="button" className={liked ? 'secondary-btn entry-like-button liked' : 'secondary-btn entry-like-button'} onClick={() => void toggle()} disabled={!user || busy || !Number.isSafeInteger(id) || id <= 0} title={!user ? 'Sign in to like this entry' : liked ? 'Unlike this entry' : 'Like this entry'}><MessageCircle size={15}/>{liked ? 'Liked' : 'Like'} <span>{count.toLocaleString()}</span></button>;
+  return <button type="button" className={liked ? 'secondary-btn entry-like-button liked' : 'secondary-btn entry-like-button'} onClick={() => void toggle()} disabled={!user || busy || !Number.isSafeInteger(id) || id <= 0} title={!user ? 'Sign in to like this entry' : liked ? 'Unlike this entry' : 'Like this entry'}><Heart size={15} fill={liked ? 'currentColor' : 'none'}/>{liked ? 'Liked' : 'Like'} <span>{count.toLocaleString()}</span></button>;
 }
 
 export function EntryComments({ animeId, animeTitle, user }: { animeId: string; animeTitle: string; user: User | null }) {
@@ -170,7 +172,7 @@ export function EntryComments({ animeId, animeTitle, user }: { animeId: string; 
     catch { setError('Could not copy the link on this device.'); }
   };
 
-  const renderThread = (node: CommentNode, depth = 0): React.ReactNode => {
+  const renderThread = (node: CommentNode, depth = 0): ReactNode => {
     const name = node.author?.display_name || node.author?.username || 'Ryko reader';
     const initials = name.trim().slice(0, 1).toUpperCase() || 'R';
     const isRevealed = revealed.includes(node.id);
