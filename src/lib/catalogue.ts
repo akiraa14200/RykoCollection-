@@ -104,7 +104,7 @@ export async function getRelatedShortVideos(page = 1): Promise<RelatedVideo[]> {
   const columns = 'id,title_id,legacy_title_id,source_id,video_url,platform,video_title,creator_name,creator_avatar_url,action_type,action_url,sort_order,created_at';
   const requests = await Promise.all([
     supabase.from('related_videos').select(columns).ilike('video_url', '%youtube.com/shorts/%').order('created_at', { ascending: false }).range(from, from + VIDEO_PAGE_SIZE - 1),
-    supabase.from('related_videos').select(columns).or('video_url.ilike.%instagram.com/reel/%,video_url.ilike.%instagram.com/reels/%,video_url.ilike.%instagr.am/reel/%').order('created_at', { ascending: false }).range(from, from + 39),
+    supabase.from('related_videos').select(columns).or('video_url.ilike.%instagram.com/reel/%,video_url.ilike.%instagram.com/reels/%,video_url.ilike.%instagr.am/reel/%').order('created_at', { ascending: false }).range(from, from + VIDEO_PAGE_SIZE - 1),
     supabase.from('related_videos').select(columns).ilike('video_url', '%tiktok.com/%').order('created_at', { ascending: false }).range(from, from + 39)
   ]);
   requests.forEach(({ error }) => { if (error) throwIf(error); });
