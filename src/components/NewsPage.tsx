@@ -132,6 +132,17 @@ export function NewsPage() {
 
   useEffect(() => { setVisibleCount(12); }, [category, query]);
 
+  useEffect(() => {
+    void loadNews();
+    return () => { requestId.current += 1; };
+  }, [loadNews]);
+
+  const filtered = useMemo(() => items.filter(item => {
+    const matchesCategory = category === 'All' || (category === 'Events' ? /event|convention|expo|festival|animejapan|comic.?con/i.test(item.title + ' ' + item.description) : category === 'Releases' ? /release|premiere|airing|debut|date|season|episode|stream/i.test(item.title + ' ' + item.description) : category === 'Industry' ? /industry|studio|production|box office|award|business|staff|director/i.test(item.title + ' ' + item.description) : category === 'Manga' ? /manga|manhwa|manhua|webtoon|comic/i.test(item.title + ' ' + item.description + ' ' + item.source) : /anime/i.test(item.title + ' ' + item.description + ' ' + item.source));
+    const matchesQuery = !query.trim() || (item.title + ' ' + item.description + ' ' + item.source).toLowerCase().includes(query.trim().toLowerCase());
+    return matchesCategory && matchesQuery;
+  }), [items, category, query]);
+
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     const node = loadMoreRef.current;
@@ -144,17 +155,6 @@ export function NewsPage() {
     observer.observe(node);
     return () => observer.disconnect();
   }, [filtered.length, visibleCount]);
-
-  useEffect(() => {
-    void loadNews();
-    return () => { requestId.current += 1; };
-  }, [loadNews]);
-
-  const filtered = useMemo(() => items.filter(item => {
-    const matchesCategory = category === 'All' || (category === 'Events' ? /event|convention|expo|festival|animejapan|comic.?con/i.test(item.title + ' ' + item.description) : category === 'Releases' ? /release|premiere|airing|debut|date|season|episode|stream/i.test(item.title + ' ' + item.description) : category === 'Industry' ? /industry|studio|production|box office|award|business|staff|director/i.test(item.title + ' ' + item.description) : category === 'Manga' ? /manga|manhwa|manhua|webtoon|comic/i.test(item.title + ' ' + item.description + ' ' + item.source) : /anime/i.test(item.title + ' ' + item.description + ' ' + item.source));
-    const matchesQuery = !query.trim() || (item.title + ' ' + item.description + ' ' + item.source).toLowerCase().includes(query.trim().toLowerCase());
-    return matchesCategory && matchesQuery;
-  }), [items, category, query]);
 
   const visibleItems = filtered.slice(0, visibleCount);
 
