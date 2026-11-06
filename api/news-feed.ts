@@ -6,11 +6,12 @@ type VercelResponse = {
 };
 
 const FEEDS = [
-  { name: 'Anime News Network', category: 'Industry', url: 'https://www.animenewsnetwork.com/all/rss.xml?ann-edition=us' },
-  { name: 'Crunchyroll News', category: 'Releases', url: 'https://www.crunchyroll.com/news/feed' },
+  { name: 'Anime News Network', category: 'Industry', url: 'https://www.animenewsnetwork.com/news/rss.xml?ann-edition=us' },
+  { name: 'Crunchyroll News', category: 'Releases', url: 'https://cr-news-api-service.prd.crunchyrollsvc.com/v1/en-US/rss' },
   { name: 'Anime Corner', category: 'Anime', url: 'https://animecorner.me/feed/' },
+  { name: 'MyAnimeList News', category: 'Anime', url: 'https://myanimelist.net/rss/news.xml' },
   { name: 'Manga Mogura', category: 'Manga', url: 'https://mangamogura.com/feed/' },
-  { name: 'The Anime Daily', category: 'Anime', url: 'https://www.theanimedaily.com/feed/' }
+  { name: 'Anime Herald', category: 'Anime', url: 'https://animeherald.com/feed/' }
 ];
 
 const decode = (value: string) => value
@@ -87,7 +88,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const results = await Promise.allSettled(FEEDS.map(async feed => {
     const response = await fetch(feed.url, {
-      signal: AbortSignal.timeout(7500),
+      signal: AbortSignal.timeout(12000),
       headers: {
         Accept: 'application/rss+xml, application/atom+xml, application/xml, text/xml;q=0.9, */*;q=0.5',
         'User-Agent': 'Mozilla/5.0 (compatible; RykoNewsroom/1.0)'
