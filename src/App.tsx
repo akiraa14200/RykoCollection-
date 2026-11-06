@@ -72,7 +72,7 @@ function Header({ user, isAdmin, onSignOut }: { user: User | null; isAdmin: bool
   const openExplore = (query = term.trim()) => navigate(query ? `/search?q=${encodeURIComponent(query)}` : '/search', { state: { focusBrowseSearch: true } });
   const submit = (event: FormEvent) => { event.preventDefault(); openExplore(); setOpen(false); };
   return <header className="topbar"><div className="nav-wrap">
-    <Link to="/" className="brand"><img className="brand-mark brand-logo" src="/logo.svg" alt="" width="31" height="31"/><span>RYKOCOLLECTION</span></Link>
+    <Link to="/" className="brand"><img className="brand-mark brand-logo" src="/logo.jpg" alt="" width="31" height="31"/><span>RYKOCOLLECTION</span></Link>
     <div className="topbar-catalogue-tools">
       <form className="nav-search topbar-explore-search" onSubmit={submit} onClick={() => { if (location.pathname !== '/search') openExplore(); }} role="search" aria-label="Open Browse and Explore">
         <Search size={16}/>
@@ -1131,7 +1131,7 @@ function VideoPage() {
   </>;
 
   const searchBar=<header className="yt-topbar">
-    <div className="yt-brand"><img className="yt-brand-mark" src="/logo.svg" alt="" width="30" height="30"/><strong>Ryko<span>Tube</span></strong><small>Collection</small></div>
+    <div className="yt-brand"><img className="yt-brand-mark" src="/logo.jpg" alt="" width="30" height="30"/><strong>Ryko<span>Tube</span></strong><small>Collection</small></div>
     <div className="yt-search-wrap">
       <label className="yt-search"><Search size={19}/><input value={term} onFocus={()=>setSuggestionsOpen(true)} onChange={event=>{setTerm(event.target.value);setSuggestionsOpen(true);}} placeholder="Search videos, creators or titles" autoComplete="off" aria-expanded={suggestionsOpen}/>{term&&<button type="button" onClick={()=>{setTerm('');setRemoteSearchVideos([]);setSuggestionsOpen(false);}} aria-label="Clear search"><X size={16}/></button>}</label>
       {suggestionsOpen&&term.trim().length>=2&&remoteSearchVideos.length>0&&<div className="yt-search-suggestions" role="listbox">{remoteSearchVideos.slice(0,6).map(video=><button type="button" role="option" key={video.id} onClick={()=>{setTerm(video.videoTitle||video.creatorName||video.titleName||'');setSuggestionsOpen(false);}}><strong>{video.videoTitle||video.titleName||'Untitled video'}</strong><span>{video.creatorName||'Creator'} · {video.platform}</span></button>)}</div>}
@@ -1279,7 +1279,7 @@ function AppSettings() {
 function AboutPage() {
   return <main className="content-page info-page">
     <div className="page-heading"><span className="eyebrow">THE PROJECT</span><h1>About <em>RykoCollection.</em></h1><p>Discover stories. Find your next world.</p></div>
-    <section className="about-hero-card"><img src="/logo.svg" alt="RykoCollection logo"/><div><span className="eyebrow">INDEPENDENT FAN DISCOVERY PROJECT</span><h2>One place to explore your next story.</h2><p>RykoCollection brings anime, manga discovery, personal tracking and related video discovery together in one experience.</p><span className="version-pill">Version 1.0.0</span></div></section>
+    <section className="about-hero-card"><img src="/logo.jpg" alt="RykoCollection logo"/><div><span className="eyebrow">INDEPENDENT FAN DISCOVERY PROJECT</span><h2>One place to explore your next story.</h2><p>RykoCollection brings anime, manga discovery, personal tracking and related video discovery together in one experience.</p><span className="version-pill">Version 1.0.0</span></div></section>
     <section className="settings-card"><h2><Sparkles size={18}/> What you can do</h2><div className="about-feature-grid"><div><Compass/><strong>Discover</strong><p>Explore anime, manga, manhwa and manhua catalogue entries.</p></div><div><Bookmark/><strong>Keep your Library</strong><p>Save titles, track progress and collect videos for later.</p></div><div><Play/><strong>Find videos</strong><p>Browse trailers and links from external video providers.</p></div><div><Globe/><strong>Browse with Strawhat</strong><p>Open the integrated browser in supported Android builds.</p></div></div></section>
     <section className="settings-card"><h2><BookOpen size={18}/> Credits & acknowledgements</h2>
       <div className="credit-row"><strong>AniList</strong><span>Public anime and manga catalogue metadata and artwork links.</span><a href="https://anilist.co" target="_blank" rel="noreferrer">Visit <ExternalLink size={13}/></a></div>
@@ -1391,7 +1391,7 @@ function FirstRunOnboarding({ onFinish }: { onFinish: () => void }) {
   const startExploring = () => { onFinish(); navigate('/search'); };
   return <div className="onboarding-backdrop" role="presentation">
     <section className="onboarding-card" role="dialog" aria-modal="true" aria-labelledby="onboarding-title">
-      <img src="/logo.svg" alt="" className="onboarding-logo"/>
+      <img src="/logo.jpg" alt="" className="onboarding-logo"/>
       <span className="eyebrow">WELCOME TO RYKOCOLLECTION</span>
       <h2 id="onboarding-title">Your next story starts here.</h2>
       <p>Discover anime and manga, keep your favourites organised, and explore trailers and creator videos in one place.</p>
@@ -1474,5 +1474,5 @@ export default function App() {
     };
   }, [user]);
   const signOut = () => { void supabase.auth.signOut(); };
-  return <><OfflineBanner/><Header user={user} isAdmin={isAdmin} onSignOut={signOut}/><TabbedRoutes user={user} isAdmin={isAdmin}/><BottomNavigation/><ToastHost/>{showOnboarding && <FirstRunOnboarding onFinish={finishOnboarding}/>}<footer className="footer"><Link to="/" className="brand"><img className="brand-mark brand-logo" src="/logo.svg" alt="" width="31" height="31" loading="lazy"/><span>RYKOCOLLECTION</span></Link><p>Discover stories. Find your next world.</p><span>Shared Ryko catalogue · Independent fan discovery project</span></footer></>;
+  return <><OfflineBanner/><Header user={user} isAdmin={isAdmin} onSignOut={signOut}/><TabbedRoutes user={user} isAdmin={isAdmin}/><BottomNavigation/><ToastHost/>{showOnboarding && <FirstRunOnboarding onFinish={finishOnboarding}/>}<footer className="footer"><Link to="/" className="brand"><img className="brand-mark brand-logo" src="/logo.jpg" alt="" width="31" height="31" loading="lazy"/><span>RYKOCOLLECTION</span></Link><p>Discover stories. Find your next world.</p><span>Shared Ryko catalogue · Independent fan discovery project</span></footer></>;
 }
