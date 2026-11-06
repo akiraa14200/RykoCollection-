@@ -64,15 +64,15 @@ const extractImage = (html: string, pageUrl: string) => {
   for (const match of html.matchAll(/<script\b[^>]*type\s*=\s*["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)) {
     try { candidates.push(...jsonLdImages(JSON.parse(match[1]))); } catch { /* Ignore malformed publisher JSON-LD. */ }
   }
-  for (const match of html.matchAll(/<img\\b[^>]*>/gi)) {
+  for (const match of html.matchAll(/<img\b[^>]*>/gi)) {
     const attrs = attributes(match[0]);
     const src = attrs.src ?? attrs['data-src'] ?? attrs['data-lazy-src'] ?? attrs['data-original'];
     if (src && !/logo|avatar|icon|sprite|tracking|pixel/i.test(src)) candidates.push(src);
-    if (attrs.srcset) candidates.push(attrs.srcset.split(',')[0].trim().split(/\\s+/)[0]);
+    if (attrs.srcset) candidates.push(attrs.srcset.split(',')[0].trim().split(/\s+/)[0]);
   }
   for (const candidate of candidates) {
     const image = safeHttpUrl(candidate, pageUrl);
-    if (image && !/\\.svg(?:$|\\?)/i.test(image.pathname)) return image.toString();
+    if (image && !/\.svg(?:$|\?)/i.test(image.pathname)) return image.toString();
   }
   return null;
 };
