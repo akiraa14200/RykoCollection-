@@ -60,6 +60,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalContext
+import android.content.Intent
+import android.net.Uri
 import coil.compose.AsyncImage
 import com.rykocollection.app.data.AniListMedia
 import com.rykocollection.app.data.AniListDetail
@@ -144,30 +147,198 @@ fun RykoApp() {
 
 @Composable
 private fun NativeHome(mangaMode: Boolean, onEntry: (Int) -> Unit) {
-    var items by remember(mangaMode) { mutableStateOf<List<AniListMedia>>(emptyList()) }
+    var trending by remember(mangaMode) { mutableStateOf<List<AniListMedia>>(emptyList()) }
+    var featured by remember(mangaMode) { mutableStateOf<List<AniListMedia>>(emptyList()) }
+    var recommendations by remember(mangaMode) { mutableStateOf<List<AniListMedia>>(emptyList()) }
+    var episodes by remember(mangaMode) { mutableStateOf<List<com.rykocollection.app.data.AniListAiring>>(emptyList()) }
+    var updatedManga by remember(mangaMode) { mutableStateOf<List<AniListMedia>>(emptyList()) }
+    var videos by remember(mangaMode) { mutableStateOf<List<AniListMedia>>(emptyList()) }
     var loading by remember(mangaMode) { mutableStateOf(true) }
     var error by remember(mangaMode) { mutableStateOf<String?>(null) }
+    val context = LocalContext.current
+
     LaunchedEffect(mangaMode) {
-        loading = true; error = null
+        loading = true
+        error = null
         val repository = AniListRepository()
-        try { items = repository.trendingMedia(mangaMode) }
-        catch (t: Throwable) { error = t.message ?: "Could not load the catalogue." }
-        finally { repository.close(); loading = false }
+        try {
+            featured = repository.featuredMedia(mangaMode)
+            trending = repository.trendingMedia(mangaMode)
+            recommendations = repository.popularRecommendations(mangaMode)
+            if (mangaMode) {
+                updatedManga = repository.recentlyUpdatedManga()
+                episodes = emptyList()
+                videos = emptyList()
+            } else {
+                episodes = repository.latestAiringEpisodes()
+                videos = repository.popularVideoTrailers()
+                updatedManga = emptyList()
+            }
+        } catch (t: Throwable) {
+            error = t.message ?: "Some home sections could not be loaded."
+        } finally {
+            repository.close()
+            loading = false
+        }
     }
-    LazyColumn(Modifier.fillMaxSize().background(Color.Black), contentPadding = PaddingValues(18.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
+
+    LazyColumn(
+        Modifier.fillMaxSize().background(Color.Black),
+        contentPadding = PaddingValues(top = 14.dp, bottom = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(22.dp)
+    ) {
         item {
-            Column {
+            Column(Modifier.padding(horizontal = 18.dp)) {
                 Text(if (mangaMode) "DISCOVER MANGA" else "DISCOVER ANIME", color = Violet, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
-                Spacer(Modifier.height(10.dp))
-                Text("Find your next favourite.", color = Color.White, fontSize = 29.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = (-1).sp)
                 Spacer(Modifier.height(7.dp))
-                Text("Explore trending stories from across the Ryko catalogue.", color = Muted, fontSize = 12.sp)
+                Text("Find your next favourite.", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = (-1).sp)
+                Text("Fresh stories, popular picks and new releases.", color = Muted, fontSize = 12.sp, modifier = Modifier.padding(top = 5.dp))
             }
         }
-        item { Row(verticalAlignment = Alignment.CenterVertically) { Text("Trending now", color = Color.White, fontSize = 19.sp, fontWeight = FontWeight.Bold); Spacer(Modifier.weight(1f)); Icon(Icons.Default.EmojiEvents, null, tint = Violet) } }
-        if (loading) item { CircularProgressIndicator(color = Violet, modifier = Modifier.size(24.dp)) }
-        error?.let { item { Text(it, color = Color(0xFFFF9C9C), fontSize = 12.sp) } }
-        item { LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) { items(items, key = { it.id }) { NativeMediaCard(it) { onEntry(it.id) } } } }
+
+        if (featured.isNotEmpty()) {
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    HomeSectionTitle("Featured", "EDITOR'S PICKS")
+                    LazyRow(contentPadding = PaddingValues(horizontal = 18.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        items(featured, key = { it.id }) { media ->
+                            Card(
+                                Modifier.width(300.dp).clickable { onEntry(media.id) },
+                                shape = RoundedCornerShape(18.dp),
+                                colors = CardDefaults.cardColors(containerColor = Surface)
+                            ) {
+                                Box {
+                                    AsyncImage(
+                                        media.bannerImage ?: media.coverImage?.imageUrl,
+                                        media.title.display,
+                                        Modifier.fillMaxWidth().height(172.dp)
+                                    )
+                                    Column(
+                                        Modifier.align(Alignment.BottomStart).fillMaxWidth()
+                                            .background(Color(0xCC09090F)).padding(12.dp)
+                                    ) {
+                                        Text("FEATURED", color = Violet, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp)
+                                        Text(media.title.display, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                        Text(listOfNotNull(media.format, media.seasonYear?.toString()).joinToString(" · "), color = Color.LightGray, fontSize = 10.sp)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                HomeSectionTitle("Trending now", "RIGHT NOW")
+                if (trending.isEmpty() && loading) HomeLoading()
+                else LazyRow(contentPadding = PaddingValues(horizontal = 18.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    items(trending, key = { it.id }) { media -> NativeMediaCard(media) { onEntry(media.id) } }
+                }
+            }
+        }
+
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                HomeSectionTitle("Popular picks", "DISCOVER")
+                if (recommendations.isEmpty() && loading) HomeLoading()
+                else LazyRow(contentPadding = PaddingValues(horizontal = 18.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    items(recommendations, key = { it.id }) { media -> NativeMediaCard(media) { onEntry(media.id) } }
+                }
+            }
+        }
+
+        if (mangaMode) {
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    HomeSectionTitle("Recently updated manga", "LATEST CHAPTER ACTIVITY")
+                    if (updatedManga.isEmpty() && loading) HomeLoading()
+                    else LazyRow(contentPadding = PaddingValues(horizontal = 18.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        items(updatedManga, key = { it.id }) { media ->
+                            Row(
+                                Modifier.width(260.dp).clip(RoundedCornerShape(14.dp)).background(Surface)
+                                    .clickable { onEntry(media.id) }.padding(9.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                AsyncImage(media.coverImage?.imageUrl, media.title.display, Modifier.size(58.dp, 78.dp).clip(RoundedCornerShape(8.dp)))
+                                Column(Modifier.padding(start = 10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    Text(media.title.display, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                                    Text("Latest catalogue update", color = Muted, fontSize = 10.sp)
+                                    Text(media.chapters?.let { "$it chapters listed" } ?: "Chapter details unavailable", color = Violet, fontSize = 10.sp)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        } else {
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    HomeSectionTitle("Latest episodes", "RECENT AIRINGS")
+                    if (episodes.isEmpty() && loading) HomeLoading()
+                    else LazyRow(contentPadding = PaddingValues(horizontal = 18.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        items(episodes, key = { "${it.media.id}-${it.episode}" }) { airing ->
+                            Row(
+                                Modifier.width(260.dp).clip(RoundedCornerShape(14.dp)).background(Surface)
+                                    .clickable { onEntry(airing.media.id) }.padding(9.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                AsyncImage(airing.media.coverImage?.imageUrl, airing.media.title.display, Modifier.size(58.dp, 78.dp).clip(RoundedCornerShape(8.dp)))
+                                Column(Modifier.padding(start = 10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    Text(airing.media.title.display, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                                    Text("Episode ${airing.episode}", color = Violet, fontSize = 11.sp)
+                                    Text("Recently aired", color = Muted, fontSize = 10.sp)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if (!mangaMode) {
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    HomeSectionTitle("Popular trailers", "WATCH")
+                    if (videos.isEmpty() && loading) HomeLoading()
+                    else LazyRow(contentPadding = PaddingValues(horizontal = 18.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        items(videos, key = { it.id }) { media ->
+                            Column(Modifier.width(190.dp).clickable {
+                                val trailerId = media.trailer?.id ?: return@clickable
+                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.youtube.com/watch?v=$trailerId"))
+                                context.startActivity(intent)
+                            }) {
+                                Box {
+                                    AsyncImage(media.trailer?.thumbnail ?: media.coverImage?.imageUrl, media.title.display, Modifier.fillMaxWidth().height(108.dp).clip(RoundedCornerShape(12.dp)))
+                                    Icon(Icons.Default.PlayCircle, contentDescription = "Play trailer", tint = Color.White, modifier = Modifier.align(Alignment.Center).size(38.dp))
+                                }
+                                Text(media.title.display, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.dp))
+                                Text("Official trailer", color = Muted, fontSize = 10.sp)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        error?.let { message -> item { Text(message, color = Color(0xFFFF9C9C), fontSize = 11.sp, modifier = Modifier.padding(horizontal = 18.dp)) } }
+        if (loading && featured.isEmpty() && trending.isEmpty()) item { HomeLoading() }
+    }
+}
+
+@Composable
+private fun HomeSectionTitle(title: String, eyebrow: String) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = 18.dp)) {
+        Text(eyebrow, color = Violet, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.4.sp)
+        Text(title, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+    }
+}
+
+@Composable
+private fun HomeLoading() {
+    Box(Modifier.fillMaxWidth().height(74.dp), contentAlignment = Alignment.Center) {
+        CircularProgressIndicator(color = Violet, modifier = Modifier.size(22.dp), strokeWidth = 2.dp)
     }
 }
 
