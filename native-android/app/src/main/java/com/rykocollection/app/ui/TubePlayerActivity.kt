@@ -25,6 +25,8 @@ import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import android.graphics.Color
+import android.graphics.RenderEffect
+import android.graphics.Shader
 import android.util.Log
 import android.util.TypedValue
 import android.view.animation.AccelerateInterpolator
@@ -80,6 +82,9 @@ class TubePlayerActivity : Activity() {
     private var shortTransitionGeneration = 0
     private val playerOrigin = "https://rykocollection.vercel.app"
     private var saveAction: ImageView? = null
+    private var ambientCycleIndex = 0
+    private var ambientCycleRunnable: Runnable? = null
+    private var ambientImages = mutableListOf<ImageView>()
 
     private fun iconAction(resource: Int, description: String): ImageView =
         ImageView(this).apply {
@@ -129,7 +134,15 @@ class TubePlayerActivity : Activity() {
             return
         }
 
-        root = FrameLayout(this).apply { setBackgroundColor(Color.BLACK) }
+        root = FrameLayout(this).apply {
+            setBackgroundColor(Color.BLACK)
+            if (!isShort) {
+                val resourceId = resources.getIdentifier("status_bar_height", "dimen", "android")
+                val statusInset = if (resourceId > 0) resources.getDimensionPixelSize(resourceId) else dp(24)
+                setPadding(0, statusInset, 0, 0)
+                clipToPadding = false
+            }
+        }
         if (isShort) {
             window.decorView.systemUiVisibility = (
                 View.SYSTEM_UI_FLAG_FULLSCREEN or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
@@ -240,16 +253,21 @@ class TubePlayerActivity : Activity() {
 
         // Rebuilt watch page to follow the supplied reference: purple rounded header,
         // title + metadata, creator row, engagement controls, comments preview and vertical feed.
-        val details = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(0, 0, 0, dp(20))
+        val details = FrameLayout(this).apply {
+            setBackgroundColor(Color.BLACK)
+            clipChildren = false
+        }
+        val ambientLayer = FrameLayout(this).apply {
+            clipChildren = true
             background = android.graphics.drawable.GradientDrawable(
                 android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM,
-                intArrayOf(Color.rgb(48, 16, 68), Color.rgb(31, 15, 42), Color.rgb(8, 8, 8), Color.BLACK)
-            ).apply {
-                cornerRadii = floatArrayOf(dp(20).toFloat(), dp(20).toFloat(), dp(20).toFloat(), dp(20).toFloat(), 0f, 0f, 0f, 0f)
-            }
+                intArrayOf(Color.rgb(20, 8, 30), Color.rgb(8, 8, 8), Color.BLACK)
+            )
         }
+        details.addView(ambientLayer, FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, dp(300), Gravity.TOP
+        ))
+        startAmbientPreviewCycle(ambientLayer)
         val content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(18), dp(18), dp(18), 0)
@@ -370,7 +388,9 @@ class TubePlayerActivity : Activity() {
             maxLines = 1
         })
         content.addView(commentsCard)
-        details.addView(content)
+        details.addView(content, FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP
+        ))
 
         // YouTube-style vertical recommendations: large thumbnail first, title and channel below.
         recommendIds.indices.forEach { index ->
@@ -437,7 +457,7 @@ class TubePlayerActivity : Activity() {
                 startActivity(next)
                 finish()
             }
-            details.addView(recommendation)
+            content.addView(recommendation)
         }
         if (!isShort) page.addView(details)
         if (isShort) {
@@ -479,56 +499,76 @@ class TubePlayerActivity : Activity() {
 
 
     /**
-     * Build the ambient wash from the video's own thumbnail (a representative video frame).
-     * This avoids a second YouTube iframe and keeps the glow tied to each video's imagery.
+     * Cycles the four YouTube preview stills as a blurred light source.
+     * These are representative snapshots, not live decoded playback frames.
      */
-    private fun applyVideoAmbient(target: View) {
-        // Thumbnail palette is applied as a purple-to-black panel gradient.
-        val fallback = intArrayOf(Color.rgb(48, 16, 68), Color.rgb(31, 15, 42), Color.BLACK)
-        target.background = android.graphics.drawable.GradientDrawable(
-            android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM, fallback
-        ).apply {
-            cornerRadii = floatArrayOf(dp(20).toFloat(), dp(20).toFloat(), dp(20).toFloat(), dp(20).toFloat(), 0f, 0f, 0f, 0f)
-        }
-        if (currentThumb.isBlank()) return
-        Thread {
-            try {
-                val connection = java.net.URL(currentThumb).openConnection() as java.net.HttpURLConnection
-                connection.connectTimeout = 7000
-                connection.readTimeout = 7000
-                val bitmap = connection.inputStream.use { android.graphics.BitmapFactory.decodeStream(it) }
-                connection.disconnect()
-                if (bitmap != null) {
-                    val samples = intArrayOf(
-                        bitmap.getPixel(bitmap.width / 5, bitmap.height / 3),
-                        bitmap.getPixel(bitmap.width / 2, bitmap.height / 2),
-                        bitmap.getPixel(bitmap.width * 4 / 5, bitmap.height * 2 / 3)
-                    )
-                    val colors = samples.map { c ->
-                        val r = android.graphics.Color.red(c)
-                        val g = android.graphics.Color.green(c)
-                        val b = android.graphics.Color.blue(c)
-                        Color.rgb(
-                            ((r * .32f + 68f) * .62f).toInt().coerceIn(0, 255),
-                            ((g * .18f + 24f) * .62f).toInt().coerceIn(0, 255),
-                            ((b * .42f + 104f) * .72f).toInt().coerceIn(0, 255)
-                        )
-                    }.toIntArray()
-                    runOnUiThread {
-                        if (!isFinishing) target.background =
-                            android.graphics.drawable.GradientDrawable(
-                                android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM,
-                                intArrayOf(colors[0], colors[1], colors[2], Color.BLACK)
-                            ).apply {
-                                cornerRadii = floatArrayOf(dp(20).toFloat(), dp(20).toFloat(), dp(20).toFloat(), dp(20).toFloat(), 0f, 0f, 0f, 0f)
-                            }
-                    }
-                    bitmap.recycle()
+    private fun startAmbientPreviewCycle(layer: FrameLayout) {
+        val previewUrls = listOf(
+            "https://i.ytimg.com/vi/\$currentVideoId/mqdefault.jpg",
+            "https://i.ytimg.com/vi/\$currentVideoId/mq1.jpg",
+            "https://i.ytimg.com/vi/\$currentVideoId/mq2.jpg",
+            "https://i.ytimg.com/vi/\$currentVideoId/mq3.jpg"
+        )
+        ambientImages.clear()
+        previewUrls.forEachIndexed { index, url ->
+            val image = ImageView(this).apply {
+                scaleType = ImageView.ScaleType.CENTER_CROP
+                alpha = if (index == 0) 0.42f else 0f
+                if (android.os.Build.VERSION.SDK_INT >= 31) {
+                    setRenderEffect(RenderEffect.createBlurEffect(dp(42).toFloat(), dp(42).toFloat(), Shader.TileMode.CLAMP))
                 }
-            } catch (error: Exception) {
-                Log.w(TAG, "Ambient thumbnail sampling failed", error)
+                setBackgroundColor(Color.rgb(20, 8, 30))
             }
-        }.start()
+            ambientImages.add(image)
+            layer.addView(image, FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT
+            ))
+            Thread {
+                try {
+                    val connection = java.net.URL(url).openConnection() as java.net.HttpURLConnection
+                    connection.connectTimeout = 7000
+                    connection.readTimeout = 7000
+                    connection.setRequestProperty("User-Agent", "RykoCollection Android")
+                    val source = connection.inputStream.use { android.graphics.BitmapFactory.decodeStream(it) }
+                    connection.disconnect()
+                    if (source != null) {
+                        val tiny = android.graphics.Bitmap.createScaledBitmap(source, 32, 18, true)
+                        if (tiny !== source) source.recycle()
+                        runOnUiThread {
+                            if (!isFinishing && index < ambientImages.size) ambientImages[index].setImageBitmap(tiny)
+                        }
+                    }
+                } catch (error: Exception) {
+                    Log.w(TAG, "Ambient preview \$index unavailable: \$url", error)
+                }
+            }.start()
+        }
+        val fade = View(this).apply {
+            background = android.graphics.drawable.GradientDrawable(
+                android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM,
+                intArrayOf(Color.TRANSPARENT, Color.argb(80, 0, 0, 0), Color.BLACK)
+            )
+            isClickable = false
+        }
+        layer.addView(fade, FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT
+        ))
+        ambientCycleIndex = 0
+        val cycle = object : Runnable {
+            override fun run() {
+                if (isFinishing || ambientImages.isEmpty()) return
+                val next = (ambientCycleIndex + 1) % ambientImages.size
+                ambientImages.forEachIndexed { index, image ->
+                    image.animate().cancel()
+                    image.animate().alpha(if (index == next) 0.42f else 0f)
+                        .setDuration(1800L).start()
+                }
+                ambientCycleIndex = next
+                layer.postDelayed(this, 3500L)
+            }
+        }
+        ambientCycleRunnable = cycle
+        layer.postDelayed(cycle, 3500L)
     }
 
     private fun loadImage(url: String, target: android.widget.ImageView) {
@@ -707,6 +747,9 @@ class TubePlayerActivity : Activity() {
     }
 
     override fun onDestroy() {
+        ambientCycleRunnable?.let { root.removeCallbacks(it) }
+        ambientCycleRunnable = null
+        ambientImages.clear()
         if (::webView.isInitialized) {
             webView.stopLoading()
             webView.loadUrl("about:blank")
