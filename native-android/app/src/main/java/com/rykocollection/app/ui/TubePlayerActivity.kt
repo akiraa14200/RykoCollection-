@@ -26,8 +26,12 @@ import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import android.graphics.Color
-import android.graphics.RenderEffect
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.RadialGradient
 import android.graphics.Shader
+import android.animation.ValueAnimator
+import android.view.animation.LinearInterpolator
 import android.util.Log
 import android.util.TypedValue
 import android.view.animation.AccelerateInterpolator
@@ -83,10 +87,7 @@ class TubePlayerActivity : Activity() {
     private var shortTransitionGeneration = 0
     private val playerOrigin = "https://rykocollection.vercel.app"
     private var saveAction: ImageView? = null
-    private var ambientCycleIndex = 0
-    private var ambientCycleRunnable: Runnable? = null
-    private var ambientImages = mutableListOf<ImageView>()
-    private var ambientLayerRef: FrameLayout? = null
+    private var ambientView: LiquidAmbientView? = null
     @Volatile private var ambientPlaybackActive = false
 
     private fun iconAction(resource: Int, description: String): ImageView =
@@ -514,87 +515,166 @@ class TubePlayerActivity : Activity() {
         fun onPlaybackState(playing: Boolean) {
             runOnUiThread {
                 ambientPlaybackActive = playing
-                val layer = ambientLayerRef ?: return@runOnUiThread
-                val cycle = ambientCycleRunnable ?: return@runOnUiThread
-                layer.removeCallbacks(cycle)
-                if (playing) layer.postDelayed(cycle, 3500L)
+                if (playing) ambientView?.resumeFlow() else ambientView?.pauseFlow()
             }
         }
     }
 
-    /** Four blurred preview stills form a changing glow; cycling follows actual playback state. */
+    /** Preview stills are sampled for colour only; no source image is ever displayed. */
     private fun startAmbientPreviewCycle(layer: FrameLayout) {
-        ambientLayerRef = layer
-        val previewUrls = listOf(
-            "https://i.ytimg.com/vi/$currentVideoId/mqdefault.jpg",
-            "https://i.ytimg.com/vi/$currentVideoId/mq1.jpg",
-            "https://i.ytimg.com/vi/$currentVideoId/mq2.jpg",
-            "https://i.ytimg.com/vi/$currentVideoId/mq3.jpg"
-        )
-        ambientImages.clear()
-        previewUrls.forEachIndexed { index, url ->
-            val image = ImageView(this).apply {
-                scaleType = ImageView.ScaleType.CENTER_CROP
-                alpha = if (index == 0) 0.58f else 0f
-                if (android.os.Build.VERSION.SDK_INT >= 31) {
-                    setRenderEffect(RenderEffect.createBlurEffect(dp(76).toFloat(), dp(76).toFloat(), Shader.TileMode.CLAMP))
-                }
-                setBackgroundColor(Color.BLACK)
-            }
-            ambientImages.add(image)
-            layer.addView(image, FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT
-            ))
-            Thread {
-                try {
-                    val connection = java.net.URL(url).openConnection() as java.net.HttpURLConnection
-                    connection.connectTimeout = 7000
-                    connection.readTimeout = 7000
-                    connection.setRequestProperty("User-Agent", "RykoCollection Android")
-                    val source = connection.inputStream.use { android.graphics.BitmapFactory.decodeStream(it) }
-                    connection.disconnect()
-                    if (source != null) {
-                        val tiny = android.graphics.Bitmap.createScaledBitmap(source, 24, 14, true)
-                        if (tiny !== source) source.recycle()
-                        runOnUiThread {
-                            if (!isFinishing && index < ambientImages.size) {
-                                ambientImages[index].setImageBitmap(tiny)
-                                ambientImages[index].setColorFilter(android.graphics.ColorMatrixColorFilter(
-                                    android.graphics.ColorMatrix().apply { setSaturation(1.65f) }
-                                ))
-                            }
-                        }
-                    }
-                } catch (error: Exception) {
-                    Log.w(TAG, "Ambient preview $index unavailable: $url", error)
-                }
-            }.start()
-        }
+        val glow = LiquidAmbientView()
+        ambientView = glow
+        layer.addView(glow, FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT
+        ))
         val fade = View(this).apply {
             background = android.graphics.drawable.GradientDrawable(
                 android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM,
-                intArrayOf(Color.TRANSPARENT, Color.argb(90, 0, 0, 0), Color.BLACK)
+                intArrayOf(Color.argb(8, 0, 0, 0), Color.argb(74, 0, 0, 0), Color.BLACK)
             )
             isClickable = false
         }
         layer.addView(fade, FrameLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT
         ))
-        ambientCycleIndex = 0
-        val cycle = object : Runnable {
-            override fun run() {
-                if (isFinishing || !ambientPlaybackActive || ambientImages.isEmpty()) return
-                val next = (ambientCycleIndex + 1) % ambientImages.size
-                ambientImages.forEachIndexed { index, image ->
-                    image.animate().cancel()
-                    image.animate().alpha(if (index == next) 0.58f else 0f)
-                        .setDuration(1800L).start()
+        val previewUrls = listOf(
+            "https://i.ytimg.com/vi/$currentVideoId/mqdefault.jpg",
+            "https://i.ytimg.com/vi/$currentVideoId/mq1.jpg",
+            "https://i.ytimg.com/vi/$currentVideoId/mq2.jpg",
+            "https://i.ytimg.com/vi/$currentVideoId/mq3.jpg"
+        )
+        Thread {
+            val palette = previewUrls.mapNotNull { url -> extractPrimaryColour(url) }
+            if (palette.isNotEmpty()) {
+                runOnUiThread {
+                    if (!isFinishing && ambientView === glow) glow.setPalette(palette)
                 }
-                ambientCycleIndex = next
-                if (ambientPlaybackActive) layer.postDelayed(this, 3500L)
+            } else {
+                Log.w(TAG, "No preview palette could be extracted for $currentVideoId")
+            }
+        }.start()
+    }
+
+    private fun extractPrimaryColour(url: String): Int? {
+        var connection: java.net.HttpURLConnection? = null
+        var bitmap: android.graphics.Bitmap? = null
+        return try {
+            connection = (java.net.URL(url).openConnection() as java.net.HttpURLConnection).apply {
+                connectTimeout = 6500
+                readTimeout = 6500
+                setRequestProperty("User-Agent", "RykoCollection Android")
+                doInput = true
+            }
+            bitmap = connection.inputStream.use { android.graphics.BitmapFactory.decodeStream(it) }
+            val image = bitmap ?: return null
+            val counts = HashMap<Int, Int>()
+            val stepX = (image.width / 36).coerceAtLeast(1)
+            val stepY = (image.height / 24).coerceAtLeast(1)
+            for (y in 0 until image.height step stepY) {
+                for (x in 0 until image.width step stepX) {
+                    val pixel = image.getPixel(x, y)
+                    val r = Color.red(pixel); val g = Color.green(pixel); val b = Color.blue(pixel)
+                    val max = maxOf(r, g, b); val min = minOf(r, g, b)
+                    if (max < 28 || max - min < 15) continue
+                    val key = Color.rgb((r / 24) * 24, (g / 24) * 24, (b / 24) * 24)
+                    counts[key] = (counts[key] ?: 0) + 1
+                }
+            }
+            counts.maxByOrNull { it.value }?.key ?: run {
+                val pixel = image.getPixel(image.width / 2, image.height / 2)
+                Color.rgb(Color.red(pixel), Color.green(pixel), Color.blue(pixel))
+            }
+        } catch (error: Exception) {
+            Log.w(TAG, "Could not sample preview colour: $url", error)
+            null
+        } finally {
+            bitmap?.recycle()
+            connection?.disconnect()
+        }
+    }
+
+    /** Soft radial colour fields create a blurred, glowing liquid blend without showing images. */
+    private inner class LiquidAmbientView : View(this@TubePlayerActivity) {
+        private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+        private var palette = intArrayOf(Color.rgb(20, 20, 24), Color.rgb(20, 20, 24), Color.rgb(20, 20, 24), Color.rgb(20, 20, 24))
+        private var phase = 0f
+        private var animator: ValueAnimator? = null
+        private var paletteAnimator: ValueAnimator? = null
+        private var paletteFrom = palette.copyOf()
+        private var paletteTarget = palette.copyOf()
+
+        init {
+            setLayerType(View.LAYER_TYPE_SOFTWARE, null)
+        }
+
+        fun setPalette(colours: List<Int>) {
+            val target = IntArray(4) { index -> colours[index % colours.size] }
+            paletteFrom = palette.copyOf()
+            paletteTarget = target
+            paletteAnimator?.cancel()
+            paletteAnimator = ValueAnimator.ofFloat(0f, 1f).apply {
+                duration = 1500L
+                addUpdateListener {
+                    val t = it.animatedValue as Float
+                    palette = IntArray(4) { i -> blendColour(paletteFrom[i], paletteTarget[i], t) }
+                    invalidate()
+                }
+                start()
             }
         }
-        ambientCycleRunnable = cycle
+
+        fun resumeFlow() {
+            if (animator?.isStarted == true) {
+                animator?.resume()
+                return
+            }
+            animator = ValueAnimator.ofFloat(phase, phase + 1f).apply {
+                duration = 18000L
+                repeatCount = ValueAnimator.INFINITE
+                interpolator = LinearInterpolator()
+                addUpdateListener {
+                    phase = (it.animatedValue as Float) % 1f
+                    invalidate()
+                }
+                start()
+            }
+        }
+
+        fun pauseFlow() { animator?.pause() }
+
+        override fun onDraw(canvas: Canvas) {
+            super.onDraw(canvas)
+            val w = width.toFloat()
+            val h = height.toFloat()
+            if (w <= 0f || h <= 0f) return
+            canvas.drawColor(Color.rgb(5, 5, 8))
+            val p = phase * (Math.PI.toFloat() * 2f)
+            val centers = arrayOf(
+                floatArrayOf(w * (0.22f + 0.10f * kotlin.math.sin(p)), h * (0.28f + 0.10f * kotlin.math.cos(p * 0.8f))),
+                floatArrayOf(w * (0.76f + 0.11f * kotlin.math.cos(p * 0.7f)), h * (0.34f + 0.12f * kotlin.math.sin(p))),
+                floatArrayOf(w * (0.42f + 0.13f * kotlin.math.sin(p * 0.55f + 1f)), h * (0.72f + 0.08f * kotlin.math.cos(p))),
+                floatArrayOf(w * (0.88f + 0.06f * kotlin.math.sin(p + 2f)), h * (0.76f + 0.08f * kotlin.math.cos(p * 0.65f)))
+            )
+            val radius = maxOf(w * 0.62f, h * 1.25f)
+            centers.forEachIndexed { index, center ->
+                val colour = palette[index]
+                val glowColour = Color.argb(188, Color.red(colour), Color.green(colour), Color.blue(colour))
+                paint.shader = RadialGradient(
+                    center[0], center[1], radius,
+                    intArrayOf(glowColour, Color.argb(76, Color.red(colour), Color.green(colour), Color.blue(colour)), Color.TRANSPARENT),
+                    floatArrayOf(0f, 0.48f, 1f), Shader.TileMode.CLAMP
+                )
+                paint.alpha = 255
+                canvas.drawCircle(center[0], center[1], radius, paint)
+            }
+            paint.shader = null
+        }
+
+        private fun blendColour(a: Int, b: Int, t: Float): Int = Color.rgb(
+            (Color.red(a) + (Color.red(b) - Color.red(a)) * t).toInt().coerceIn(0, 255),
+            (Color.green(a) + (Color.green(b) - Color.green(a)) * t).toInt().coerceIn(0, 255),
+            (Color.blue(a) + (Color.blue(b) - Color.blue(a)) * t).toInt().coerceIn(0, 255)
+        )
     }
 
     private fun loadImage(url: String, target: android.widget.ImageView) {
@@ -773,11 +853,9 @@ class TubePlayerActivity : Activity() {
     }
 
     override fun onDestroy() {
-        ambientCycleRunnable?.let { ambientLayerRef?.removeCallbacks(it) }
-        ambientCycleRunnable = null
         ambientPlaybackActive = false
-        ambientLayerRef = null
-        ambientImages.clear()
+        ambientView?.pauseFlow()
+        ambientView = null
         if (::webView.isInitialized) {
             webView.stopLoading()
             webView.loadUrl("about:blank")
