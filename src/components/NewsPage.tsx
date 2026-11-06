@@ -14,6 +14,30 @@ type NewsItem = {
 };
 type FeedResponse = { items?: NewsItem[]; failedSources?: string[] };
 
+function NewsCard({ item, onVisible }: { item: NewsItem; onVisible: (item: NewsItem) => void }) {
+  const cardRef = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    const node = cardRef.current;
+    if (!node) return;
+    if (!('IntersectionObserver' in window)) { onVisible(item); return; }
+    const observer = new IntersectionObserver(entries => {
+      if (entries.some(entry => entry.isIntersecting)) {
+        onVisible(item);
+        observer.disconnect();
+      }
+    }, { rootMargin: '500px 0px' });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [item.link, item.thumbnail, onVisible]);
+  return <article ref={cardRef} className="news-card" key={item.link}>
+    <a href={item.link} target="_blank" rel="noreferrer" className="news-image" aria-label={'Open article: ' + item.title}>
+      <div className="news-image-placeholder"><ImageIcon size={25}/><span>Image unavailable</span></div>
+      {item.thumbnail && <img src={item.thumbnail} alt="" loading="lazy" decoding="async" fetchPriority="low" referrerPolicy="strict-origin-when-cross-origin" onError={event => event.currentTarget.remove()}/>}
+    </a>
+    <div className="news-card-content"><div className="news-meta"><span>{item.source}</span><span><Clock3 size={12}/>{new Date(item.pubDate).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}</span></div><h3><a href={item.link} target="_blank" rel="noreferrer">{item.title}</a></h3>{item.description && <p>{item.description}</p>}<a className="news-read-link" href={item.link} target="_blank" rel="noreferrer">Read full story <ExternalLink size={13}/></a></div>
+  </article>;
+}
+
 // The Android app bundles its frontend locally, so relative /api URLs cannot
 // reach Vercel. The APK workflow supplies this deployed API origin at build time.
 const NEWS_API_ORIGIN = (import.meta.env.VITE_NEWS_API_ORIGIN || '').replace(/\/$/, '');
@@ -43,7 +67,9 @@ export function NewsPage() {
   const [error, setError] = useState('');
   const [category, setCategory] = useState('All');
   const [query, setQuery] = useState('');
+  const [visibleCount, setVisibleCount] = useState(12);
   const requestId = useRef(0);
+  const requestedImages = useRef(new Set<string>());
   const categories = ['All', 'Anime', 'Manga', 'Releases', 'Industry', 'Events'];
 
   const loadNews = useCallback(async (manual = false) => {
@@ -84,31 +110,40 @@ export function NewsPage() {
     setLoading(false);
     setRefreshing(false);
 
-    // RSS thumbnails are preferred. Only articles still missing an image are sent
-    // to the same-origin Vercel metadata endpoint, with a small concurrency limit.
-    const missingImages = unique.filter(item => !item.thumbnail).slice(0, 48);
-    let nextIndex = 0;
-    await Promise.all(Array.from({ length: 4 }, async () => {
-      while (nextIndex < missingImages.length) {
-        const item = missingImages[nextIndex++];
-        try {
-          const response = await fetch(`${NEWS_API_ORIGIN}/api/news-image?url=${encodeURIComponent(item.link)}`, {
-            headers: { Accept: 'application/json' }
-          });
-          if (!response.ok) continue;
-          const payload = await response.json() as { image?: string | null };
-          const image = safeImageUrl(payload.image);
-          if (image && currentRequest === requestId.current) {
-            setItems(current => current.map(existing =>
-              existing.link === item.link ? { ...existing, thumbnail: image } : existing
-            ));
-          }
-        } catch {
-          // A publisher may block metadata requests; keep the article and placeholder.
-        }
-      }
-    }));
   }, []);
+
+  const loadArticleImage = useCallback(async (item: NewsItem) => {
+    if (item.thumbnail || requestedImages.current.has(item.link)) return;
+    requestedImages.current.add(item.link);
+    try {
+      const response = await fetch(`${NEWS_API_ORIGIN}/api/news-image?url=${encodeURIComponent(item.link)}`, {
+        headers: { Accept: 'application/json' }
+      });
+      if (!response.ok) return;
+      const payload = await response.json() as { image?: string | null };
+      const image = safeImageUrl(payload.image);
+      if (image) setItems(current => current.map(existing =>
+        existing.link === item.link ? { ...existing, thumbnail: image } : existing
+      ));
+    } catch {
+      // Keep the placeholder when a publisher blocks metadata requests.
+    }
+  }, []);
+
+  useEffect(() => { setVisibleCount(12); }, [category, query]);
+
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const node = loadMoreRef.current;
+    if (!node || !('IntersectionObserver' in window)) return;
+    const observer = new IntersectionObserver(entries => {
+      if (entries.some(entry => entry.isIntersecting)) {
+        setVisibleCount(current => Math.min(current + 12, filtered.length));
+      }
+    }, { rootMargin: '700px 0px' });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [filtered.length, visibleCount]);
 
   useEffect(() => {
     void loadNews();
@@ -121,7 +156,7 @@ export function NewsPage() {
     return matchesCategory && matchesQuery;
   }), [items, category, query]);
 
-  return <main className="content-page ryko-news-page">
+  const visibleItems = filtered.slice(0, visibleCount);\n\n  return <main className="content-page ryko-news-page">
     <header className="news-hero">
       <span className="eyebrow"><Newspaper size={14}/> THE ANIME WORLD, IN ONE PLACE</span>
       <h1>Ryko <em>Newsroom.</em></h1>
@@ -133,13 +168,7 @@ export function NewsPage() {
     </header>
     <div className="news-categories" role="tablist" aria-label="News categories">{categories.map(value => <button key={value} type="button" role="tab" aria-selected={category === value} className={category === value ? 'active' : ''} onClick={() => setCategory(value)}>{value}</button>)}</div>
     <div className="news-feed-heading"><div><h2>Latest updates</h2><p>Collected from anime and manga publishers and news outlets</p></div><span>{filtered.length} stories</span></div>
-    {loading ? <div className="news-state">Collecting the latest headlines…</div> : error && !items.length ? <div className="news-state">{error}<button className="secondary-btn" onClick={() => void loadNews(true)}>Try again</button></div> : filtered.length ? <section className="news-grid">{filtered.map(item => <article className="news-card" key={item.link}>
-      <a href={item.link} target="_blank" rel="noreferrer" className="news-image" aria-label={'Open article: ' + item.title}>
-        <div className="news-image-placeholder"><ImageIcon size={25}/><span>Image unavailable</span></div>
-        {item.thumbnail && <img src={item.thumbnail} alt="" loading="lazy" decoding="async" referrerPolicy="strict-origin-when-cross-origin" onError={event => event.currentTarget.remove()}/>}
-      </a>
-      <div className="news-card-content"><div className="news-meta"><span>{item.source}</span><span><Clock3 size={12}/>{new Date(item.pubDate).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}</span></div><h3><a href={item.link} target="_blank" rel="noreferrer">{item.title}</a></h3>{item.description && <p>{item.description}</p>}<a className="news-read-link" href={item.link} target="_blank" rel="noreferrer">Read full story <ExternalLink size={13}/></a></div>
-    </article>)}</section> : <div className="news-state">No stories match this filter. Try another category or search term.</div>}
+    {loading ? <div className="news-state">Collecting the latest headlines…</div> : error && !items.length ? <div className="news-state">{error}<button className="secondary-btn" onClick={() => void loadNews(true)}>Try again</button></div> : filtered.length ? <><section className="news-grid">{visibleItems.map(item => <NewsCard key={item.link} item={item} onVisible={loadArticleImage}/>)}</section>{visibleCount < filtered.length && <div className="load-more-wrap" ref={loadMoreRef}><button className="secondary-btn load-more-btn" type="button" onClick={() => setVisibleCount(current => Math.min(current + 12, filtered.length))}>Load more stories</button></div>}</> : <div className="news-state">No stories match this filter. Try another category or search term.</div>}
     <footer className="news-sources"><Tag size={14}/> Headlines link to their original publishers. Images are loaded from RSS media metadata or article image metadata.</footer>
   </main>;
 }
