@@ -73,7 +73,7 @@ private suspend fun resolveNewsImages(initial:List<NewsStory>,update:(String,Str
                 runCatching {
                     val url=NEWS_API+"/api/news-image?url="+URLEncoder.encode(story.link,Charsets.UTF_8.name())
                     Json.parseToJsonElement(httpText(url)).jsonObject.field("image").takeIf{it.startsWith("http")}
-                }.getOrNull()?.let{update(story.link,it)}
+                }.getOrNull()?.let{ image -> withContext(Dispatchers.Main) { update(story.link,image) } }
             }
         } }.forEach{it.join()}
     }
@@ -82,6 +82,7 @@ private suspend fun resolveNewsImages(initial:List<NewsStory>,update:(String,Str
 @Composable
 fun NativeNewsroomPage() {
     val context= LocalContext.current
+    val scope=rememberCoroutineScope()
     var stories by remember { mutableStateOf(NewsCache.stories) }
     var failed by remember { mutableStateOf(NewsCache.failed) }
     var loading by remember { mutableStateOf(stories.isEmpty()) }
@@ -126,7 +127,7 @@ fun NativeNewsroomPage() {
                         Text("THE ANIME WORLD, IN ONE PLACE",color=NewsAccent,fontSize=9.sp,fontWeight=FontWeight.Bold,letterSpacing=1.4.sp)
                         Text("Ryko Newsroom",color=Color.White,fontSize=25.sp,fontWeight=FontWeight.ExtraBold)
                     }
-                    IconButton(onClick={kotlinx.coroutines.MainScope().launch{refresh(true)}}){Icon(Icons.Default.Refresh,"Refresh",tint=if(refreshing)NewsAccent else Color.White)}
+                    IconButton(onClick={scope.launch{refresh(true)}}){Icon(Icons.Default.Refresh,"Refresh",tint=if(refreshing)NewsAccent else Color.White)}
                 }
                 Text("Anime and manga headlines, releases, studio announcements and events.",color=NewsMuted,fontSize=12.sp,modifier=Modifier.padding(top=6.dp))
             }
