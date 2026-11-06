@@ -223,15 +223,36 @@ fun NativeRykoTube() {
     }
 
     val query = search.trim().lowercase(Locale.ROOT)
+    fun relevance(video: TubeVideo): Int {
+        if (query.isBlank()) return 0
+        val title = video.title.lowercase(Locale.ROOT)
+        val linkedTitle = video.titleName.lowercase(Locale.ROOT)
+        val creator = video.creator.lowercase(Locale.ROOT)
+        val format = video.titleFormat.lowercase(Locale.ROOT)
+        val platform = video.platform.lowercase(Locale.ROOT)
+        return when {
+            title == query -> 1000
+            title.startsWith(query) -> 850
+            title.contains(query) -> 700
+            linkedTitle == query -> 650
+            linkedTitle.startsWith(query) -> 550
+            linkedTitle.contains(query) -> 450
+            creator.startsWith(query) -> 350
+            creator.contains(query) -> 250
+            format.contains(query) || platform.contains(query) -> 150
+            else -> 0
+        }
+    }
     val filtered = videos.filter { video ->
         val formatMatches = when (selectedFormat) {
             "Videos" -> !video.short
             "Shorts" -> video.short
             else -> true
         }
-        val textMatches = query.isBlank() || listOf(video.title, video.creator, video.titleName, video.titleFormat)
-            .any { it.lowercase(Locale.ROOT).contains(query) }
+        val textMatches = query.isBlank() || relevance(video) > 0
         formatMatches && textMatches && (selectedSource.isBlank() || video.sourceId == selectedSource)
+    }.let { matches ->
+        if (query.isBlank()) matches else matches.sortedByDescending(::relevance)
     }
 
     Column(Modifier.fillMaxSize().background(Color.Black)) {
