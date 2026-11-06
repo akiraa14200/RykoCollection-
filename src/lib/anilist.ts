@@ -265,6 +265,15 @@ export async function searchMedia(
   return data.Page?.media || [];
 }
 
+/** Fetch several AniList entries in one GraphQL request for ranked lists. */
+export async function getAniListMediaByIds(ids: number[], mediaType: 'ANIME' | 'MANGA' = 'ANIME'): Promise<Anime[]> {
+  const uniqueIds = [...new Set(ids.filter(id => Number.isSafeInteger(id) && id > 0))].slice(0, 30);
+  if (!uniqueIds.length) return [];
+  const aliases = uniqueIds.map((id, index) => `media${index}: Media(id: ${id}, type: ${mediaType}) { ${fields} }`).join('\n');
+  const data = await query<Record<string, Anime | null>>(`query { ${aliases} }`);
+  return uniqueIds.map((_, index) => data[`media${index}`]).filter((item): item is Anime => !!item);
+}
+
 export async function getAniListMediaById(id: number, mediaType: 'ANIME' | 'MANGA' = 'ANIME'): Promise<Anime | null> {
   if (!Number.isInteger(id) || id <= 0) return null;
   const data = await query<{ Media: Anime | null }>(
