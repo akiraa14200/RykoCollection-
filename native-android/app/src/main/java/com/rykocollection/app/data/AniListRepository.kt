@@ -152,8 +152,8 @@ class AniListRepository {
 
     suspend fun getMedia(id: Int): AniListDetail? {
         val query = """
-            query(${'$'}id: Int!) {
-              Media(id: ${'$'}id) {
+            query {
+              Media(id: $id) {
                 id title { english romaji native }
                 coverImage { large extraLarge } bannerImage
                 averageScore format seasonYear description(asHtml: false)
@@ -165,8 +165,7 @@ class AniListRepository {
               }
             }
         """.trimIndent()
-        val variables = buildJsonObject { put("id", id) }
-        return request(query, variables).data?.Media
+        return request(query, buildJsonObject {}).data?.Media
     }
 
     private suspend fun request(query: String, variables: JsonObject): AniListEnvelope {
