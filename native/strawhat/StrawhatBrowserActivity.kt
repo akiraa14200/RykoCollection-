@@ -678,16 +678,25 @@ class StrawhatBrowserActivity : Activity() {
                 mediaPlaybackRequiresUserGesture = false
                 javaScriptCanOpenWindowsAutomatically = false
                 setSupportMultipleWindows(false)
-                allowContentAccess = true
-                allowFileAccess = true
-                mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
+                allowContentAccess = false
+                allowFileAccess = false
+                allowFileAccessFromFileURLs = false
+                allowUniversalAccessFromFileURLs = false
+                mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
                 loadsImagesAutomatically = true
-                databaseEnabled = true
+                databaseEnabled = false
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                    safeBrowsingEnabled = true
+                }
             }
             CookieManager.getInstance().setAcceptCookie(true)
-            CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
+            CookieManager.getInstance().setAcceptThirdPartyCookies(this, false)
             webChromeClient = WebChromeClient()
-            webViewClient = WebViewClient()
+            webViewClient = object : WebViewClient() {
+                override fun onReceivedSslError(view: WebView?, handler: SslErrorHandler?, error: SslError?) {
+                    handler?.cancel()
+                }
+            }
         }
         musicEmbedView = playerWeb
         val panel = FrameLayout(this).apply {
@@ -817,11 +826,20 @@ class StrawhatBrowserActivity : Activity() {
     @SuppressLint("SetJavaScriptEnabled")
     private fun configureWeb() {
         web.settings.apply {
-            javaScriptEnabled = true; domStorageEnabled = true
+            javaScriptEnabled = true
+            domStorageEnabled = true
             mediaPlaybackRequiresUserGesture = false
             javaScriptCanOpenWindowsAutomatically = false
             setSupportMultipleWindows(false)
+            // A normal browser page never needs access to local files or content providers.
+            allowFileAccess = false
+            allowContentAccess = false
+            allowFileAccessFromFileURLs = false
+            allowUniversalAccessFromFileURLs = false
             mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                safeBrowsingEnabled = true
+            }
             userAgentString = userAgentString.replace("; wv","")
         }
         CookieManager.getInstance().setAcceptCookie(true)
@@ -831,6 +849,11 @@ class StrawhatBrowserActivity : Activity() {
             false
         }
         web.webViewClient = object : WebViewClient() {
+            override fun onReceivedSslError(view: WebView?, handler: SslErrorHandler?, error: SslError?) {
+                // Never let a page continue through an invalid or intercepted TLS certificate.
+                handler?.cancel()
+                runOnUiThread { status.text = "SECURE CONNECTION BLOCKED" }
+            }
             override fun shouldInterceptRequest(view: WebView?, request: WebResourceRequest?): WebResourceResponse? {
                 val uri = request?.url ?: return null
                 val h = uri.host?.lowercase(Locale.ROOT) ?: return null
@@ -879,6 +902,13 @@ class StrawhatBrowserActivity : Activity() {
             }
         }
         web.webChromeClient = object : WebChromeClient() {
+            override fun onPermissionRequest(request: PermissionRequest?) {
+                // Browser pages cannot silently obtain camera, microphone or other WebView permissions.
+                request?.deny()
+            }
+            override fun onGeolocationPermissionsShowPrompt(origin: String?, callback: GeolocationPermissions.Callback?) {
+                callback?.invoke(origin, false, false)
+            }
             override fun onCreateWindow(view: WebView?, isDialog: Boolean, isUserGesture: Boolean, resultMsg: android.os.Message?) = false
             override fun onShowCustomView(view: View?, callback: CustomViewCallback?) {
                 if(fullView != null) { callback?.onCustomViewHidden(); return }
