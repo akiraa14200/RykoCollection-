@@ -14,6 +14,7 @@ import android.view.WindowManager
 import android.webkit.ConsoleMessage
 import android.webkit.CookieManager
 import android.webkit.WebChromeClient
+import android.webkit.JavascriptInterface
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -85,6 +86,8 @@ class TubePlayerActivity : Activity() {
     private var ambientCycleIndex = 0
     private var ambientCycleRunnable: Runnable? = null
     private var ambientImages = mutableListOf<ImageView>()
+    private var ambientLayerRef: FrameLayout? = null
+    @Volatile private var ambientPlaybackActive = false
 
     private fun iconAction(resource: Int, description: String): ImageView =
         ImageView(this).apply {
@@ -174,6 +177,7 @@ class TubePlayerActivity : Activity() {
         webView = WebView(this).apply {
             setBackgroundColor(Color.BLACK)
             settings.javaScriptEnabled = true
+            addJavascriptInterface(AmbientPlaybackBridge(), "ambientBridge")
             settings.domStorageEnabled = true
             settings.mediaPlaybackRequiresUserGesture = false
             settings.mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
@@ -262,7 +266,7 @@ class TubePlayerActivity : Activity() {
             background = android.graphics.drawable.ColorDrawable(Color.BLACK)
         }
         details.addView(ambientLayer, FrameLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, dp(300), Gravity.TOP
+            ViewGroup.LayoutParams.MATCH_PARENT, dp(220), Gravity.TOP
         ))
         startAmbientPreviewCycle(ambientLayer)
         val content = LinearLayout(this).apply {
@@ -486,8 +490,18 @@ class TubePlayerActivity : Activity() {
                 <iframe id="main-player" src="https://www.youtube-nocookie.com/embed/$currentVideoId?autoplay=1&playsinline=${if (isShort) 0 else 1}&rel=0&origin=$appOrigin" frameborder="0" title="YouTube video player" referrerpolicy="origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
               </div>
               <script>
-                // A single foreground YouTube iframe only. Ambient light is rendered natively
-                // from colours sampled from the video's thumbnail; no hidden/background player.
+                var ambientApiScript = document.createElement('script');
+                ambientApiScript.src = 'https://www.youtube.com/iframe_api';
+                document.head.appendChild(ambientApiScript);
+                function onYouTubeIframeAPIReady() {
+                  new YT.Player('main-player', {
+                    events: { onStateChange: function(event) {
+                      if (window.ambientBridge) {
+                        window.ambientBridge.onPlaybackState(event.data === YT.PlayerState.PLAYING);
+                      }
+                    }}
+                  });
+                }
               </script>
             </body></html>
         """.trimIndent()
@@ -495,11 +509,22 @@ class TubePlayerActivity : Activity() {
     }
 
 
-    /**
-     * Cycles the four YouTube preview stills as a blurred light source.
-     * These are representative snapshots, not live decoded playback frames.
-     */
+    private inner class AmbientPlaybackBridge {
+        @JavascriptInterface
+        fun onPlaybackState(playing: Boolean) {
+            runOnUiThread {
+                ambientPlaybackActive = playing
+                val layer = ambientLayerRef ?: return@runOnUiThread
+                val cycle = ambientCycleRunnable ?: return@runOnUiThread
+                layer.removeCallbacks(cycle)
+                if (playing) layer.postDelayed(cycle, 3500L)
+            }
+        }
+    }
+
+    /** Four blurred preview stills form a changing glow; cycling follows actual playback state. */
     private fun startAmbientPreviewCycle(layer: FrameLayout) {
+        ambientLayerRef = layer
         val previewUrls = listOf(
             "https://i.ytimg.com/vi/$currentVideoId/mqdefault.jpg",
             "https://i.ytimg.com/vi/$currentVideoId/mq1.jpg",
@@ -510,11 +535,11 @@ class TubePlayerActivity : Activity() {
         previewUrls.forEachIndexed { index, url ->
             val image = ImageView(this).apply {
                 scaleType = ImageView.ScaleType.CENTER_CROP
-                alpha = if (index == 0) 0.72f else 0f
+                alpha = if (index == 0) 0.58f else 0f
                 if (android.os.Build.VERSION.SDK_INT >= 31) {
-                    setRenderEffect(RenderEffect.createBlurEffect(dp(42).toFloat(), dp(42).toFloat(), Shader.TileMode.CLAMP))
+                    setRenderEffect(RenderEffect.createBlurEffect(dp(76).toFloat(), dp(76).toFloat(), Shader.TileMode.CLAMP))
                 }
-                setBackgroundColor(Color.rgb(20, 8, 30))
+                setBackgroundColor(Color.BLACK)
             }
             ambientImages.add(image)
             layer.addView(image, FrameLayout.LayoutParams(
@@ -529,10 +554,15 @@ class TubePlayerActivity : Activity() {
                     val source = connection.inputStream.use { android.graphics.BitmapFactory.decodeStream(it) }
                     connection.disconnect()
                     if (source != null) {
-                        val tiny = android.graphics.Bitmap.createScaledBitmap(source, 32, 18, true)
+                        val tiny = android.graphics.Bitmap.createScaledBitmap(source, 24, 14, true)
                         if (tiny !== source) source.recycle()
                         runOnUiThread {
-                            if (!isFinishing && index < ambientImages.size) ambientImages[index].setImageBitmap(tiny)
+                            if (!isFinishing && index < ambientImages.size) {
+                                ambientImages[index].setImageBitmap(tiny)
+                                ambientImages[index].setColorFilter(android.graphics.ColorMatrixColorFilter(
+                                    android.graphics.ColorMatrix().apply { setSaturation(1.65f) }
+                                ))
+                            }
                         }
                     }
                 } catch (error: Exception) {
@@ -543,7 +573,7 @@ class TubePlayerActivity : Activity() {
         val fade = View(this).apply {
             background = android.graphics.drawable.GradientDrawable(
                 android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM,
-                intArrayOf(Color.TRANSPARENT, Color.argb(80, 0, 0, 0), Color.BLACK)
+                intArrayOf(Color.TRANSPARENT, Color.argb(90, 0, 0, 0), Color.BLACK)
             )
             isClickable = false
         }
@@ -553,19 +583,18 @@ class TubePlayerActivity : Activity() {
         ambientCycleIndex = 0
         val cycle = object : Runnable {
             override fun run() {
-                if (isFinishing || ambientImages.isEmpty()) return
+                if (isFinishing || !ambientPlaybackActive || ambientImages.isEmpty()) return
                 val next = (ambientCycleIndex + 1) % ambientImages.size
                 ambientImages.forEachIndexed { index, image ->
                     image.animate().cancel()
-                    image.animate().alpha(if (index == next) 0.72f else 0f)
+                    image.animate().alpha(if (index == next) 0.58f else 0f)
                         .setDuration(1800L).start()
                 }
                 ambientCycleIndex = next
-                layer.postDelayed(this, 3500L)
+                if (ambientPlaybackActive) layer.postDelayed(this, 3500L)
             }
         }
         ambientCycleRunnable = cycle
-        layer.postDelayed(cycle, 3500L)
     }
 
     private fun loadImage(url: String, target: android.widget.ImageView) {
@@ -744,8 +773,10 @@ class TubePlayerActivity : Activity() {
     }
 
     override fun onDestroy() {
-        ambientCycleRunnable?.let { root.removeCallbacks(it) }
+        ambientCycleRunnable?.let { ambientLayerRef?.removeCallbacks(it) }
         ambientCycleRunnable = null
+        ambientPlaybackActive = false
+        ambientLayerRef = null
         ambientImages.clear()
         if (::webView.isInitialized) {
             webView.stopLoading()
