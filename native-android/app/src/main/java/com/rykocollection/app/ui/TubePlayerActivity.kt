@@ -440,7 +440,7 @@ class TubePlayerActivity : Activity() {
         val ids = prefs.getStringSet("ids", emptySet())?.toMutableSet() ?: mutableSetOf()
         if (!ids.add(currentVideoId)) ids.remove(currentVideoId)
         prefs.edit().putStringSet("ids", ids).apply()
-        saveAction?.text = if (ids.contains(currentVideoId)) "✓ Saved" else "＋ Save"
+        saveAction?.apply { setImageResource(if (ids.contains(currentVideoId)) R.drawable.ic_bookmark_filled else R.drawable.ic_bookmark); imageTintList = android.content.res.ColorStateList.valueOf(if (ids.contains(currentVideoId)) Color.rgb(170,145,255) else Color.WHITE) }
         Toast.makeText(this, if (ids.contains(currentVideoId)) "Saved to your RykoTube list" else "Removed from saved videos", Toast.LENGTH_SHORT).show()
     }
 
