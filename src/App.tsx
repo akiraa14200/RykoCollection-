@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { Link, Navigate, Route, Routes, useNavigate, useParams, useLocation, type Location } from 'react-router-dom';
-import { Search, Compass, Bookmark, ShieldCheck, Play, Star, ChevronRight, ArrowLeft, Heart, Clock3, Menu, X, ExternalLink, Sparkles, Tv, Info, Users, FileText, Globe, Youtube, ListVideo, ChevronDown, RotateCw, Home as HomeIcon, UserRound, ChevronLeft, Shuffle, MessageCircle, Minus, Plus, Settings, Trash2, Clock, BookOpen, Mail, Shield, Newspaper } from 'lucide-react';
+import { Search, Compass, Bookmark, ShieldCheck, Play, Star, ChevronRight, ArrowLeft, Heart, Clock3, Menu, X, ExternalLink, Sparkles, Tv, Info, Users, FileText, Globe, Youtube, ListVideo, ChevronDown, RotateCw, Home as HomeIcon, UserRound, ChevronLeft, Shuffle, Minus, Plus, Settings, Trash2, Clock, BookOpen, Mail, Shield, Newspaper } from 'lucide-react';
 // The application UI and page components are defined below.
 // Home recommendations replace the seasonal shelf; release countdowns remain in their own schedule.
 import { Anime, AnimeCharacter, getAnime, peekAnime, rememberPreviews, applyCachedVideoMetadata, enrichVideoMetadataProgressive, getAnimeCharacters, getPopular, getPopularManga, getSeasonal, getTrending, getTrendingManga, getRelatedVideos, getRelatedShortVideos, searchRelatedVideos, getRelatedVideosBySourceIds, RelatedVideo, imageOf, searchAnime, titleOf } from './lib/catalogue';
@@ -21,7 +21,7 @@ import { ToastHost, OfflineBanner, ShareButton, formatCountdown, useNow, showToa
 import './components/extras.css';
 import { LibraryStudio } from './components/LibraryStudio';
 import './components/community-library.css';
-import { EntryComments, EntryLikeButton, RykoTrendingPage } from './components/EntryEngagement';
+import { EntryLikeButton, RykoTrendingPage } from './components/EntryEngagement';
 import { NewsPage } from './components/NewsPage';
 
 /** Calls onReach when the returned element scrolls near the viewport (infinite loading). */
@@ -93,7 +93,7 @@ function Header({ user, isAdmin, onSignOut }: { user: User | null; isAdmin: bool
           <Link role="menuitem" to="/watchlist"><Bookmark size={16}/> My list</Link>
           <Link role="menuitem" to="/video"><Tv size={16}/> RykoTube</Link>
           <Link role="menuitem" to="/trending"><Star size={16}/> Ryko Top Trending</Link>
-          <Link role="menuitem" to="/news"><Newspaper size={16}/> Anime & Manga News</Link>
+          <button type="button" role="menuitem" onClick={() => { const native = (window as Window & { RykoNative?: { openStrawhatBrowser?: () => void } }).RykoNative; setOpen(false); if (native?.openStrawhatBrowser) native.openStrawhatBrowser(); else showToast('Strawhat Browser is available in the Android app.'); }}><Globe size={16}/> Strawhat Browser</button>
           <Link role="menuitem" to="/library-studio"><BookOpen size={16}/> Library studio</Link>
           <Link role="menuitem" to="/settings"><Settings size={16}/> Settings</Link>
           <Link role="menuitem" to="/about"><Info size={16}/> About Ryko</Link>
@@ -405,7 +405,7 @@ function DetailPage({ user }: { user: User | null }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [attempt, setAttempt] = useState(0);
-  const [activeTab, setActiveTab] = useState<'overview' | 'characters' | 'details' | 'comments'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'characters' | 'details'>('overview');
   const [selectedCharacter, setSelectedCharacter] = useState<AnimeCharacter | null>(null);
   const [characterPage, setCharacterPage] = useState(1);
   const [loadingCharacters, setLoadingCharacters] = useState(false);
@@ -464,7 +464,6 @@ function DetailPage({ user }: { user: User | null }) {
     { id: 'overview' as const, label: 'Overview', icon: <Info size={16}/> },
     { id: 'characters' as const, label: 'Characters', icon: <Users size={16}/>, count: anime.characters?.edges.length },
     { id: 'details' as const, label: 'Details', icon: <FileText size={16}/> },
-    { id: 'comments' as const, label: 'Comments', icon: <MessageCircle size={16}/> },
   ];
 
   return <main className="detail-page">
@@ -552,8 +551,6 @@ function DetailPage({ user }: { user: User | null }) {
           </section>
         </div>}
       </section>}
-
-      {activeTab === 'comments' && <section className="entry-panel"><EntryComments animeId={anime.id} animeTitle={titleOf(anime)} user={user}/></section>}
 
       {activeTab === 'details' && <section className="entry-panel details-panel">
         <div className="entry-section-heading"><span className="eyebrow">ENTRY INFORMATION</span><h2>Details</h2></div>
@@ -1143,14 +1140,10 @@ function VideoPage() {
 }
 function BottomNavigation() {
   const location = useLocation();
-  const openStrawhat = () => {
-    const native = (window as Window & { RykoNative?: { openStrawhatBrowser?: () => void } }).RykoNative;
-    if (native?.openStrawhatBrowser) native.openStrawhatBrowser();
-    else showToast('Strawhat Pirate browser is available in the Android app.');
-  };
   const links = [
     { to: '/', label: 'Home', icon: <HomeIcon size={19}/> },
     { to: '/video', label: 'Video', icon: <Play size={19}/> },
+    { to: '/news', label: 'News', icon: <Newspaper size={19}/> },
     { to: '/watchlist', label: 'Library', icon: <Bookmark size={19}/> },
     { to: '/account', label: 'Account', icon: <UserRound size={19}/> }
   ];
@@ -1158,7 +1151,6 @@ function BottomNavigation() {
     const active = location.pathname === item.to;
     return <Link key={item.to} to={item.to} onClick={event => { if (active) { event.preventDefault(); window.scrollTo({ top: 0, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); } }} className={active?'bottom-nav-item active':'bottom-nav-item'} aria-current={active?'page':undefined}>{item.icon}<span>{item.label}</span></Link>;
   })}
-    <button type="button" className="bottom-nav-item bottom-nav-browser" onClick={openStrawhat} aria-label="Open Strawhat Pirate browser"><Globe size={19}/><span>Strawhat</span></button>
     {links.slice(1).map(item => {
       const active = location.pathname === item.to;
       return <Link key={item.to} to={item.to} onClick={event => { if (active) { event.preventDefault(); window.scrollTo({ top: 0, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); } }} className={active?'bottom-nav-item active':'bottom-nav-item'} aria-current={active?'page':undefined}>{item.icon}<span>{item.label}</span></Link>;
@@ -1188,9 +1180,9 @@ function AccountPage({ user, isAdmin }: { user: User | null; isAdmin: boolean })
     } catch (error) { setMessage(error instanceof Error ? error.message : 'Could not complete sign in.'); }
     finally { setBusy(false); }
   };
-  return <main className="content-page account-page"><div className="page-heading"><span className="eyebrow">YOUR RYKOCOLLECTION PROFILE</span><h1>Your <em>Account.</em></h1><p>Sign in to join discussions and keep your profile connected.</p></div>
+  return <main className="content-page account-page"><div className="page-heading"><span className="eyebrow">YOUR RYKOCOLLECTION PROFILE</span><h1>Your <em>Account.</em></h1><p>Sign in to keep your profile connected.</p></div>
     {user ? <><section className="account-card"><div className="account-avatar">{String(user.user_metadata?.display_name || user.email || 'R').slice(0,1).toUpperCase()}</div><div><span className="eyebrow">SIGNED IN</span><h2>{String(user.user_metadata?.display_name || user.email?.split('@')[0] || 'Anime fan')}</h2><p>{user.email}</p><button className="secondary-btn" onClick={()=>void supabase.auth.signOut()}>Sign out</button></div></section>{isAdmin && <section className="account-admin-card"><div className="account-admin-icon"><ShieldCheck size={21}/></div><div className="account-admin-copy"><span className="eyebrow">OWNER ACCESS</span><h2>Admin workspace</h2><p>Manage the catalogue, videos, community moderation and app content.</p></div><Link className="primary-btn account-admin-link" to="/admin">Open workspace <ChevronRight size={16}/></Link></section>}</> :
-    <form className="account-card account-form" onSubmit={submit}><div className="account-avatar"><UserRound/></div><h2>{mode==='signin'?'Welcome back':'Create your account'}</h2><p>{mode==='signin'?'Sign in to your RykoCollection account.':'Create a profile to participate in community features.'}</p>
+    <form className="account-card account-form" onSubmit={submit}><div className="account-avatar"><UserRound/></div><h2>{mode==='signin'?'Welcome back':'Create your account'}</h2><p>{mode==='signin'?'Sign in to your RykoCollection account.':'Create your RykoCollection profile.'}</p>
       {mode==='signup' && <input value={displayName} onChange={event=>setDisplayName(event.target.value)} placeholder="Display name" autoComplete="nickname"/>}
       <input type="email" value={email} onChange={event=>setEmail(event.target.value)} placeholder="Email address" autoComplete="email" required/>
       <input type="password" value={password} onChange={event=>setPassword(event.target.value)} placeholder="Password" autoComplete={mode==='signin'?'current-password':'new-password'} minLength={6} required/>
