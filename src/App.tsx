@@ -986,7 +986,7 @@ function VideoPage() {
       getRelatedVideosBySourceIds(sourceFilteredIds,1).then(data=>{
         if(!active)return;
         setVideos(applyCachedVideoMetadata(data));
-        setHasMore(data.length===40);
+        setHasMore(data.length===20);
         setLoading(false);
         enrich(data,()=>active);
       }).catch(e=>{
@@ -1002,9 +1002,9 @@ function VideoPage() {
         if(!active)return;
         const combined=[...data,...shorts.filter(short=>!data.some(video=>video.id===short.id))];
         setVideos(applyCachedVideoMetadata(combined));
-        setHasMore(data.length===40);
+        setHasMore(data.length===20);
         setShortPage(1);
-        setShortHasMore(shorts.length===40);
+        setShortHasMore(shorts.length===20);
         setLoading(false);
         writePersisted('video-feed',combined);
         enrich(combined,()=>active);
@@ -1106,8 +1106,8 @@ function VideoPage() {
       ]);
       const data=applyCachedVideoMetadata([...raw,...shortRaw.filter(short=>!raw.some(video=>video.id===short.id))]);
       setVideos(old=>{const ids=new Set(old.map(video=>video.id));return [...old,...data.filter(video=>!ids.has(video.id))];});
-      if(hasMore){if(raw.length)setPage(current=>current+1);setHasMore(raw.length===40);}
-      if(wantsShorts&&shortHasMore){if(shortRaw.length)setShortPage(current=>current+1);setShortHasMore(shortRaw.length===40);}
+      if(hasMore){if(raw.length)setPage(current=>current+1);setHasMore(raw.length===20);}
+      if(wantsShorts&&shortHasMore){if(shortRaw.length)setShortPage(current=>current+1);setShortHasMore(shortRaw.length===20);}
       enrich(data,()=>true);
     }catch(e){
       setError(e instanceof Error?e.message:'Could not load more videos.');
