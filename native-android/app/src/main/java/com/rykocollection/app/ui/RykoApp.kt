@@ -18,6 +18,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BookmarkBorder
@@ -56,6 +58,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -184,49 +187,70 @@ private fun NativeHome(mangaMode: Boolean, onEntry: (Int) -> Unit) {
 
     LazyColumn(
         Modifier.fillMaxSize().background(Color.Black),
-        contentPadding = PaddingValues(top = 14.dp, bottom = 24.dp),
+        contentPadding = PaddingValues(top = 6.dp, bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(22.dp)
     ) {
-        item {
-            Column(Modifier.padding(horizontal = 18.dp)) {
-                Text(if (mangaMode) "DISCOVER MANGA" else "DISCOVER ANIME", color = Violet, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
-                Spacer(Modifier.height(7.dp))
-                Text("Find your next favourite.", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = (-1).sp)
-                Text("Fresh stories, popular picks and new releases.", color = Muted, fontSize = 12.sp, modifier = Modifier.padding(top = 5.dp))
-            }
-        }
-
         if (featured.isNotEmpty()) {
             item {
+                val slides = featured.take(5)
+                val pagerState = rememberPagerState(pageCount = { slides.size })
+                LaunchedEffect(slides.size) {
+                    if (slides.size > 1) {
+                        while (true) {
+                            kotlinx.coroutines.delay(4500)
+                            pagerState.animateScrollToPage((pagerState.currentPage + 1) % slides.size)
+                        }
+                    }
+                }
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    HomeSectionTitle("Featured", "EDITOR'S PICKS")
-                    LazyRow(contentPadding = PaddingValues(horizontal = 18.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        items(featured, key = { it.id }) { media ->
-                            Card(
-                                Modifier.width(300.dp).clickable { onEntry(media.id) },
-                                shape = RoundedCornerShape(18.dp),
-                                colors = CardDefaults.cardColors(containerColor = Surface)
-                            ) {
-                                Box {
-                                    AsyncImage(
-                                        media.bannerImage ?: media.coverImage?.imageUrl,
-                                        media.title.display,
-                                        Modifier.fillMaxWidth().height(172.dp)
-                                    )
-                                    Column(
-                                        Modifier.align(Alignment.BottomStart).fillMaxWidth()
-                                            .background(Color(0xCC09090F)).padding(12.dp)
-                                    ) {
-                                        Text("FEATURED", color = Violet, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp)
-                                        Text(media.title.display, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                        Text(listOfNotNull(media.format, media.seasonYear?.toString()).joinToString(" · "), color = Color.LightGray, fontSize = 10.sp)
-                                    }
+                    HorizontalPager(
+                        state = pagerState,
+                        contentPadding = PaddingValues(horizontal = 18.dp),
+                        pageSpacing = 12.dp,
+                        modifier = Modifier.fillMaxWidth()
+                    ) { page ->
+                        val media = slides[page]
+                        Card(
+                            Modifier.fillMaxWidth().height(205.dp).clickable { onEntry(media.id) },
+                            shape = RoundedCornerShape(18.dp),
+                            colors = CardDefaults.cardColors(containerColor = Surface)
+                        ) {
+                            Box(Modifier.fillMaxSize()) {
+                                AsyncImage(
+                                    media.bannerImage ?: media.coverImage?.imageUrl,
+                                    media.title.display,
+                                    Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop
+                                )
+                                Column(
+                                    Modifier.align(Alignment.BottomStart).fillMaxWidth()
+                                        .background(Color(0xCC09090F)).padding(horizontal = 14.dp, vertical = 11.dp)
+                                ) {
+                                    Text("FEATURED", color = Violet, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp)
+                                    Text(media.title.display, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Text(listOfNotNull(media.format, media.seasonYear?.toString()).joinToString(" · "), color = Color.LightGray, fontSize = 10.sp)
                                 }
                             }
                         }
                     }
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        repeat(slides.size) { index ->
+                            Box(
+                                Modifier.padding(horizontal = 3.dp)
+                                    .size(if (pagerState.currentPage == index) 16.dp else 6.dp, 6.dp)
+                                    .clip(RoundedCornerShape(50))
+                                    .background(if (pagerState.currentPage == index) Violet else Color(0xFF55515F))
+                            )
+                        }
+                    }
                 }
             }
+        } else if (loading) {
+            item { HomeLoading() }
         }
 
         item {
