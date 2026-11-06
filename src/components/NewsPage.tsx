@@ -25,7 +25,7 @@ const safeImageUrl = (value?: string | null, base?: string) => {
   try {
     const url = new URL(value.replace(/&amp;/g, '&'), base);
     if (!['http:', 'https:'].includes(url.protocol)) return undefined;
-    if (/\\.svg(?:$|\\?)/i.test(url.pathname)) return undefined;
+    if (/\.svg(?:$|\?)/i.test(url.pathname)) return undefined;
     return url.toString();
   } catch {
     return undefined;
