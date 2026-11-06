@@ -478,6 +478,12 @@ private fun TubePlayer(video: TubeVideo, shortQueue: List<TubeVideo>, onClose: (
                 putExtra(TubePlayerActivity.EXTRA_TITLE, video.title)
                 putExtra(TubePlayerActivity.EXTRA_CREATOR, video.creator)
                 putExtra(TubePlayerActivity.EXTRA_THUMB, video.thumb)
+                putExtra(TubePlayerActivity.EXTRA_AVATAR, video.creatorAvatar)
+                val recommendations = videos.filter { !it.short && youtubeVideoId(it.url) != null && it.id != video.id }.take(24)
+                putStringArrayListExtra(TubePlayerActivity.EXTRA_RECOMMEND_IDS, ArrayList(recommendations.mapNotNull { youtubeVideoId(it.url) }))
+                putStringArrayListExtra(TubePlayerActivity.EXTRA_RECOMMEND_TITLES, ArrayList(recommendations.map { it.title }))
+                putStringArrayListExtra(TubePlayerActivity.EXTRA_RECOMMEND_CREATORS, ArrayList(recommendations.map { it.creator }))
+                putStringArrayListExtra(TubePlayerActivity.EXTRA_RECOMMEND_THUMBS, ArrayList(recommendations.map { it.thumb }))
                 putExtra(TubePlayerActivity.EXTRA_IS_SHORT, video.short)
                 if (video.short) {
                     val queue = shortQueue.filter { youtubeVideoId(it.url) != null }
