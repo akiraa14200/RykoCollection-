@@ -137,7 +137,8 @@ private fun EntryHero(m:AniListDetail,manga:Boolean,onShare:()->Unit) {
     Box(Modifier.fillMaxWidth().height(276.dp).background(ESurface)){
         AsyncImage(m.bannerImage ?: m.coverImage?.imageUrl,m.title.display,Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0x44000000),Color(0xFF08080C)))))
-        Row(Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(15.dp),verticalAlignment=Alignment.Bottom){
+        val context=LocalContext.current
+    Row(Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(15.dp),verticalAlignment=Alignment.Bottom){
             AsyncImage(m.coverImage?.imageUrl,m.title.display,Modifier.width(105.dp).height(148.dp).clip(RoundedCornerShape(12.dp)),contentScale=ContentScale.Crop)
             Column(Modifier.weight(1f).padding(start=12.dp),verticalArrangement=Arrangement.spacedBy(5.dp)){
                 Text("${m.format ?: if(manga) "MANGA" else "ANIME"} · ${m.seasonYear ?: m.startDate?.year ?: "YEAR N/A"}",color=EAccent,fontSize=9.sp,fontWeight=FontWeight.Bold)
@@ -147,9 +148,9 @@ private fun EntryHero(m:AniListDetail,manga:Boolean,onShare:()->Unit) {
                 Text(m.genres.take(3).joinToString(" • "),color=Color(0xFFD6CFFF),fontSize=9.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
                 Row(verticalAlignment=Alignment.CenterVertically){
                     IconButton(onClick=onShare,modifier=Modifier.size(34.dp)){Icon(Icons.Default.Share,"Share",tint=Color.White)}
-                    IconButton(onClick={},modifier=Modifier.size(34.dp)){Icon(Icons.Default.BookmarkAdd,"Add to list",tint=Color.White)}
-                    IconButton(onClick={},modifier=Modifier.size(34.dp)){Icon(Icons.Default.Favorite,"Like",tint=Color.White)}
-                    TextButton(onClick={}){Text("AniList ↗",color=Color.White,fontSize=9.sp)}
+                    TextButton(onClick={
+                        context.startActivity(Intent(Intent.ACTION_VIEW,Uri.parse("https://anilist.co/" + (if(manga) "manga" else "anime") + "/" + m.id)))
+                    }){Text("AniList ↗",color=Color.White,fontSize=9.sp)}
                 }
             }
         }
@@ -160,7 +161,7 @@ private fun EntryHero(m:AniListDetail,manga:Boolean,onShare:()->Unit) {
 }
 
 @Composable
-private fun EntryOverview(m:AniListDetail,manga:Boolean) {
+private fun ColumnScope.EntryOverview(m:AniListDetail,manga:Boolean) {
     val context=LocalContext.current
     LazyColumn(Modifier.weight(1f).fillMaxWidth(),contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(14.dp)){
         item {
@@ -192,7 +193,7 @@ private fun EntryOverview(m:AniListDetail,manga:Boolean) {
 }
 
 @Composable
-private fun EntryMetadata(m:AniListDetail,manga:Boolean) {
+private fun ColumnScope.EntryMetadata(m:AniListDetail,manga:Boolean) {
     LazyColumn(Modifier.weight(1f).fillMaxWidth(),contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
         item{Text("METADATA",color=EAccent,fontSize=10.sp,fontWeight=FontWeight.Bold,letterSpacing=1.4.sp)}
         item{EInfo("Type",m.format)}
@@ -226,7 +227,10 @@ private fun EntryMetadata(m:AniListDetail,manga:Boolean) {
         if(links.isNotEmpty()) item {
             Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(ESurface).padding(12.dp),verticalArrangement=Arrangement.spacedBy(7.dp)){
                 Text("EXTERNAL SOURCES",color=EAccent,fontSize=10.sp,fontWeight=FontWeight.Bold)
-                links.forEach{link->Row(Modifier.fillMaxWidth().clickable{}.padding(vertical=4.dp)){Text(link.site,color=Color.White,fontSize=12.sp)}}
+                val context=LocalContext.current
+                links.forEach{link->Row(Modifier.fillMaxWidth().clickable {
+                    runCatching { context.startActivity(Intent(Intent.ACTION_VIEW,Uri.parse(link.url))) }
+                }.padding(vertical=4.dp)){Text(link.site,color=Color.White,fontSize=12.sp)}}
             }
         }
         item{Text("Metadata provided by AniList. Missing fields are not estimated.",color=EMuted,fontSize=10.sp)}
@@ -234,7 +238,7 @@ private fun EntryMetadata(m:AniListDetail,manga:Boolean) {
 }
 
 @Composable
-private fun EntryCommentsPlaceholder(){
+private fun ColumnScope.EntryCommentsPlaceholder(){
     Column(Modifier.fillMaxWidth().weight(1f).padding(22.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center){
         Text("COMMUNITY DISCUSSION",color=EAccent,fontSize=10.sp,fontWeight=FontWeight.Bold,letterSpacing=1.4.sp)
         Text("Comments connection pending",color=Color.White,fontSize=19.sp,fontWeight=FontWeight.Bold,modifier=Modifier.padding(top=9.dp))
