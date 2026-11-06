@@ -80,7 +80,10 @@ export function NewsPage() {
     let unique: NewsItem[] = [];
     let failedSources: string[] = [];
     try {
-      const response = await fetch(`${NEWS_API_ORIGIN}/api/news-feed`, { headers: { Accept: 'application/json' } });
+      const response = await fetch(`${NEWS_API_ORIGIN}/api/news-feed`, {
+        headers: { Accept: 'application/json' },
+        signal: AbortSignal.timeout(15000)
+      });
       if (!response.ok) throw new Error('News feed service returned HTTP ' + response.status);
       const payload = await response.json() as FeedResponse;
       failedSources = payload.failedSources || [];
@@ -117,7 +120,8 @@ export function NewsPage() {
     requestedImages.current.add(item.link);
     try {
       const response = await fetch(`${NEWS_API_ORIGIN}/api/news-image?url=${encodeURIComponent(item.link)}`, {
-        headers: { Accept: 'application/json' }
+        headers: { Accept: 'application/json' },
+        signal: AbortSignal.timeout(9000)
       });
       if (!response.ok) return;
       const payload = await response.json() as { image?: string | null };
