@@ -66,7 +66,7 @@ private suspend fun fetchStories():Pair<List<NewsStory>,List<String>> = withCont
 private suspend fun resolveNewsImages(initial:List<NewsStory>,update:(String,String)->Unit)=withContext(Dispatchers.IO) {
     val queue=initial.filter{it.image==null}.take(48); val next=AtomicInteger(0)
     kotlinx.coroutines.coroutineScope {
-        List(4) { kotlinx.coroutines.launch(Dispatchers.IO) {
+        List(4) { launch(Dispatchers.IO) {
             while(true) {
                 val index=next.getAndIncrement(); if(index>=queue.size) break
                 val story=queue[index]
