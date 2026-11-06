@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.*
 import java.net.HttpURLConnection
@@ -41,7 +42,7 @@ private val NewsMuted = Color(0xFF96949F)
 private val NewsSurface = Color(0xFF111115)
 
 private data class NewsStory(val title:String,val link:String,val description:String,val date:String,val source:String,val category:String,val image:String?=null) {
-    val time:Long get() = runCatching { Instant.parse(date).toEpochMilli() }.getOrElse { runCatching { java.time.OffsetDateTime.parse(date).toInstant().toEpochMilli() }.getOrDefault(0L) }
+    val time:Long get() = runCatching { Instant.parse(date).toEpochMilli() }.getOrElse { runCatching { java.time.OffsetDateTime.parse(date).toInstant().toEpochMilli() }.getOrElse { runCatching { java.time.ZonedDateTime.parse(date, DateTimeFormatter.RFC_1123_DATE_TIME).toInstant().toEpochMilli() }.getOrDefault(0L) } }
 }
 private object NewsCache { var stories:List<NewsStory> = emptyList(); var failed:List<String> = emptyList(); var loadedAt:Long = 0L }
 private fun JsonObject.field(key:String)=this[key]?.jsonPrimitive?.contentOrNull.orEmpty()
