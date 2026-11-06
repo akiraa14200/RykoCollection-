@@ -476,7 +476,7 @@ private fun BrowsePage(mangaMode: Boolean, onEntry: (Int) -> Unit) {
         "Score" -> list.sortedByDescending { it.averageScore ?: 0 }
         "Newest" -> list.sortedByDescending { it.seasonYear ?: 0 }
         "Title" -> list.sortedBy { it.title.display.lowercase() }
-        else -> list.sortedByDescending { it.popularity ?: 0 }
+        else -> list.sortedByDescending { it.averageScore ?: 0 }
     } }
     Column(Modifier.fillMaxSize().background(Color.Black).padding(horizontal = 16.dp)) {
         Spacer(Modifier.height(8.dp))
@@ -554,17 +554,6 @@ private fun BrowsePage(mangaMode: Boolean, onEntry: (Int) -> Unit) {
             }
         }
     }
-}
-
-@Composable
-private fun readSearchHistory(context: Context, key: String): List<String> =
-    context.getSharedPreferences("ryko_search", Context.MODE_PRIVATE).getString(key, "").orEmpty().split("¦").filter { it.isNotBlank() }
-
-private fun saveSearchHistory(context: Context, key: String, value: String) {
-    val clean = value.trim()
-    if (clean.length < 2) return
-    val history = (listOf(clean) + readSearchHistory(context, key).filterNot { it.equals(clean, true) }).take(8)
-    context.getSharedPreferences("ryko_search", Context.MODE_PRIVATE).edit().putString(key, history.joinToString("¦")).apply()
 }
 
 @Composable
