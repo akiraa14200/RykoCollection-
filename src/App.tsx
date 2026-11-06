@@ -1091,8 +1091,9 @@ function VideoPage() {
     return blocks;
   },[recommendedRegular,recommendedShorts]);
 
+  const displayableCount=format==='all'?filtered.length:format==='short'?recommendedShorts.length:recommendedRegular.length;
   const loadMore=async()=>{
-    if(visibleCount<filtered.length){setVisibleCount(current=>Math.min(current+12,filtered.length));return;}
+    if(visibleCount<displayableCount){setVisibleCount(current=>Math.min(current+12,displayableCount));return;}
     if(loadingMore||!(hasMore||(format!=='video'&&shortHasMore)))return;
     setLoadingMore(true);
     setError('');
@@ -1114,7 +1115,7 @@ function VideoPage() {
     }
   };
 
-  const canLoadMore=visibleCount<filtered.length||hasMore||(format!=='video'&&shortHasMore);
+  const canLoadMore=visibleCount<displayableCount||hasMore||(format!=='video'&&shortHasMore);
   const videoSentinel=useNearViewport(()=>{void loadMore();},!loading&&canLoadMore&&!loadingMore&&!error);
 
   const filterBar=<>
