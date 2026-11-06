@@ -27,8 +27,8 @@ import coil.compose.AsyncImage
 import com.rykocollection.app.data.*
 import kotlinx.coroutines.launch
 
-private val EBg=Color(0xFF08080C)
-private val ESurface=Color(0xFF15151C)
+private val EBg=Color(0xFF090910)
+private val ESurface=Color(0xB31B1A2B)
 private val EAccent=Color(0xFFA99BFF)
 private val EMuted=Color(0xFFAAA8B5)
 
@@ -68,7 +68,7 @@ fun NativeEntryPage(id:Int,mangaMode:Boolean) {
         }
         return
     }
-    Column(Modifier.fillMaxSize().background(EBg)) {
+    Column(Modifier.fillMaxSize().background(Brush.radialGradient(listOf(Color(0xFF242039), Color(0xFF10101B), EBg)))) {
         EntryHero(item,mangaMode) {
             val share=Intent(Intent.ACTION_SEND).apply {
                 type="text/plain"
@@ -95,7 +95,7 @@ fun NativeEntryPage(id:Int,mangaMode:Boolean) {
                     item {
                         Row(horizontalArrangement=Arrangement.spacedBy(9.dp)){
                             group.forEach { edge ->
-                                Column(Modifier.weight(1f).clip(RoundedCornerShape(13.dp)).background(ESurface).clickable{selected=edge}.padding(7.dp)){
+                                Column(Modifier.weight(1f).rykoGlass(13.dp).clickable{selected=edge}.padding(7.dp)){
                                     AsyncImage(edge.node.image?.large ?: edge.node.image?.medium,edge.node.name.full,Modifier.fillMaxWidth().height(126.dp).clip(RoundedCornerShape(9.dp)),contentScale=ContentScale.Crop)
                                     Text(edge.node.name.full,color=Color.White,fontSize=11.sp,fontWeight=FontWeight.SemiBold,maxLines=2,minLines=2,overflow=TextOverflow.Ellipsis,modifier=Modifier.padding(top=6.dp))
                                     Text(edge.role.lowercase().replaceFirstChar{it.uppercase()},color=EAccent,fontSize=9.sp)
@@ -211,7 +211,7 @@ private fun ColumnScope.EntryMetadata(m:AniListDetail,manga:Boolean) {
         if(m.genres.isNotEmpty()) item{EInfo("Genres",m.genres.joinToString())}
         val staff=m.staff?.edges.orEmpty()
         if(staff.isNotEmpty()) item {
-            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(ESurface).padding(12.dp),verticalArrangement=Arrangement.spacedBy(7.dp)){
+            Column(Modifier.fillMaxWidth().rykoGlass(12.dp).padding(12.dp),verticalArrangement=Arrangement.spacedBy(7.dp)){
                 Text("STAFF & CREATORS",color=EAccent,fontSize=10.sp,fontWeight=FontWeight.Bold)
                 staff.take(15).forEach{Text("${it.node.name.full} · ${it.role}",color=Color.White,fontSize=12.sp)}
             }
