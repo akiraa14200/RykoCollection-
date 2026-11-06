@@ -103,7 +103,9 @@ private suspend fun fetchTubePage(page: Int): List<TubeVideo> = withContext(Disp
     require(key.isNotBlank()) { "RykoTube is missing its Supabase publishable key." }
     val from = (page - 1) * TUBE_PAGE_SIZE
     val to = from + TUBE_PAGE_SIZE - 1
-    val select = "id,title_id,legacy_title_id,video_url,platform,video_title,creator_name,creator_avatar_url,title_name,title_format,title_cover,action_type,action_url,sort_order,created_at"
+    // Keep this projection aligned with the proven web getRelatedVideos() query.
+    // related_videos does not contain title_name, title_format, or title_cover.
+    val select = "id,title_id,legacy_title_id,video_url,platform,video_title,creator_name,creator_avatar_url,action_type,action_url,sort_order,created_at"
     val url = "$baseUrl/rest/v1/related_videos?select=$select&order=sort_order.asc,created_at.desc&offset=$from&limit=$TUBE_PAGE_SIZE"
     val client = HttpClient(Android)
     try {
@@ -124,16 +126,15 @@ private suspend fun fetchTubePage(page: Int): List<TubeVideo> = withContext(Disp
             val videoUrl = row.string("video_url")
             if (videoUrl.isBlank()) return@mapNotNull null
             val platform = row.string("platform")
-            val cover = row.string("title_cover")
             TubeVideo(
                 id = row.string("id").ifBlank { videoUrl },
-                title = row.string("video_title").ifBlank { row.string("title_name").ifBlank { "Untitled video" } },
+                title = row.string("video_title").ifBlank { "Untitled video" },
                 url = videoUrl,
-                thumb = thumbnailFor(videoUrl, cover),
+                thumb = thumbnailFor(videoUrl, ""),
                 creator = row.string("creator_name").ifBlank { "RykoCollection" },
                 creatorAvatar = row.string("creator_avatar_url"),
-                titleName = row.string("title_name"),
-                titleFormat = row.string("title_format"),
+                titleName = "",
+                titleFormat = "",
                 short = isTubeShort(videoUrl, platform)
             )
         }.distinctBy { it.id }
