@@ -11,8 +11,11 @@ import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 
-@Serializable data class AniListGraphQLRequest(val query: String, val variables: Map<String, String>)
+@Serializable data class AniListGraphQLRequest(val query: String, val variables: JsonObject)
 @Serializable data class AniListEnvelope(val data: AniListData? = null, val errors: List<AniListError> = emptyList())
 @Serializable data class AniListError(val message: String = "AniList request failed")
 @Serializable data class AniListData(val Page: AniListPage? = null, val Media: AniListDetail? = null)
@@ -30,55 +33,75 @@ import kotlinx.serialization.json.Json
 @Serializable data class AniListCharacterImage(val large: String? = null, val medium: String? = null)
 
 class AniListRepository {
-    private val client = HttpClient(Android) { install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) } }
+    private val client = HttpClient(Android) {
+        install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
+    }
 
     suspend fun trendingMedia(manga: Boolean = false): List<AniListMedia> {
         val query = """
-            query($type: MediaType!) {
+            query(${'$'}type: MediaType!) {
               Page(page: 1, perPage: 18) {
-                media(type: $type, sort: TRENDING_DESC, isAdult: false) {
-                  id title { english romaji native } coverImage { large extraLarge } averageScore format seasonYear
+                media(type: ${'$'}type, sort: TRENDING_DESC, isAdult: false) {
+                  id title { english romaji native }
+                  coverImage { large extraLarge }
+                  averageScore format seasonYear
                 }
               }
             }
         """.trimIndent()
-        return request(query, mapOf("type" to if (manga) "MANGA" else "ANIME")).data?.Page?.media.orEmpty()
+        val variables = buildJsonObject { put("type", if (manga) "MANGA" else "ANIME") }
+        return request(query, variables).data?.Page?.media.orEmpty()
     }
 
     suspend fun searchMedia(term: String, manga: Boolean = false): List<AniListMedia> {
         val query = """
-            query($search: String!, $type: MediaType!, $page: Int!) {
-              Page(page: $page, perPage: 30) {
-                media(search: $search, type: $type, sort: SEARCH_MATCH, isAdult: false) {
-                  id title { english romaji native } coverImage { large extraLarge } averageScore format seasonYear
+            query(${'$'}search: String!, ${'$'}type: MediaType!, ${'$'}page: Int!) {
+              Page(page: ${'$'}page, perPage: 30) {
+                media(search: ${'$'}search, type: ${'$'}type, sort: SEARCH_MATCH, isAdult: false) {
+                  id title { english romaji native }
+                  coverImage { large extraLarge }
+                  averageScore format seasonYear
                 }
               }
             }
         """.trimIndent()
-        return request(query, mapOf("search" to term.trim(), "type" to if (manga) "MANGA" else "ANIME", "page" to "1")).data?.Page?.media.orEmpty()
+        val variables = buildJsonObject {
+            put("search", term.trim())
+            put("type", if (manga) "MANGA" else "ANIME")
+            put("page", 1)
+        }
+        return request(query, variables).data?.Page?.media.orEmpty()
     }
 
     suspend fun getMedia(id: Int): AniListDetail? {
         val query = """
-            query($id: Int!) {
-              Media(id: $id) {
-                id title { english romaji native } coverImage { large extraLarge } bannerImage
-                averageScore format seasonYear description(asHtml: false) episodes chapters status genres countryOfOrigin source
+            query(${'$'}id: Int!) {
+              Media(id: ${'$'}id) {
+                id title { english romaji native }
+                coverImage { large extraLarge } bannerImage
+                averageScore format seasonYear description(asHtml: false)
+                episodes chapters status genres countryOfOrigin source
                 studios(isMain: true) { nodes { name } }
-                characters(page: 1, perPage: 20, sort: ROLE) { edges { role node { name { full } image { large medium } } } }
+                characters(page: 1, perPage: 20, sort: ROLE) {
+                  edges { role node { name { full } image { large medium } } }
+                }
               }
             }
         """.trimIndent()
-        return request(query, mapOf("id" to id.toString())).data?.Media
+        val variables = buildJsonObject { put("id", id) }
+        return request(query, variables).data?.Media
     }
 
-    private suspend fun request(query: String, variables: Map<String, String>): AniListEnvelope {
+    private suspend fun request(query: String, variables: JsonObject): AniListEnvelope {
         val result: AniListEnvelope = client.post("https://graphql.anilist.co") {
             contentType(ContentType.Application.Json)
             setBody(AniListGraphQLRequest(query, variables))
         }.body()
-        if (result.errors.isNotEmpty() && result.data == null) throw IllegalStateException(result.errors.joinToString(" · ") { it.message })
+        if (result.errors.isNotEmpty() && result.data == null) {
+            throw IllegalStateException(result.errors.joinToString(" · ") { it.message })
+        }
         return result
     }
+
     fun close() = client.close()
 }
