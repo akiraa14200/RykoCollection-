@@ -59,6 +59,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -113,11 +114,11 @@ fun RykoApp() {
                         }
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xE6000000), titleContentColor = Color(0xFFF7F7FB), actionIconContentColor = Color(0xFFE8E5FF))
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF08080B), titleContentColor = Color(0xFFF7F7FB), actionIconContentColor = Color(0xFFE8E5FF))
             )
         },
         bottomBar = {
-            NavigationBar(containerColor = Color(0xFF080808), contentColor = Color(0xFFA99BFF)) {
+            NavigationBar(containerColor = Color(0xFF09090D), contentColor = Color(0xFFA99BFF), tonalElevation = 0.dp) {
                 MainTab.entries.forEach { item ->
                     val icon = when (item) {
                         MainTab.HOME -> Icons.Default.Home
@@ -126,7 +127,7 @@ fun RykoApp() {
                         MainTab.LIBRARY -> Icons.Default.BookmarkBorder
                         MainTab.ACCOUNT -> Icons.Default.Person
                     }
-                    NavigationBarItem(selected = tab == item && extraPage == null && selectedEntry == null, onClick = { tab = item; extraPage = null; selectedEntry = null }, icon = { Icon(icon, contentDescription = item.label) }, label = { Text(item.label, fontSize = 10.sp) })
+                    NavigationBarItem(selected = tab == item && extraPage == null && selectedEntry == null, onClick = { tab = item; extraPage = null; selectedEntry = null }, icon = { Icon(icon, contentDescription = item.label) }, label = { Text(item.label, fontSize = 10.sp, fontWeight = if (tab == item) FontWeight.SemiBold else FontWeight.Normal) })
                 }
             }
         },
@@ -187,7 +188,7 @@ private fun NativeHome(mangaMode: Boolean, onEntry: (Int) -> Unit) {
 
     LazyColumn(
         Modifier.fillMaxSize().background(Color.Black),
-        contentPadding = PaddingValues(top = 6.dp, bottom = 24.dp),
+        contentPadding = PaddingValues(top = 6.dp, bottom = 30.dp),
         verticalArrangement = Arrangement.spacedBy(22.dp)
     ) {
         if (featured.isNotEmpty()) {
@@ -211,7 +212,7 @@ private fun NativeHome(mangaMode: Boolean, onEntry: (Int) -> Unit) {
                     ) { page ->
                         val media = slides[page]
                         Card(
-                            Modifier.fillMaxWidth().height(205.dp).clickable { onEntry(media.id) },
+                            Modifier.fillMaxWidth().height(224.dp).clickable { onEntry(media.id) },
                             shape = RoundedCornerShape(18.dp),
                             colors = CardDefaults.cardColors(containerColor = Surface)
                         ) {
@@ -285,7 +286,7 @@ private fun NativeHome(mangaMode: Boolean, onEntry: (Int) -> Unit) {
                                     .clickable { onEntry(media.id) }.padding(9.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                AsyncImage(media.coverImage?.imageUrl, media.title.display, Modifier.size(58.dp, 78.dp).clip(RoundedCornerShape(8.dp)))
+                                AsyncImage(media.coverImage?.imageUrl, media.title.display, Modifier.size(58.dp, 78.dp).clip(RoundedCornerShape(8.dp)), contentScale = ContentScale.Crop)
                                 Column(Modifier.padding(start = 10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                     Text(media.title.display, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
                                     Text("Latest catalogue update", color = Muted, fontSize = 10.sp)
@@ -308,7 +309,7 @@ private fun NativeHome(mangaMode: Boolean, onEntry: (Int) -> Unit) {
                                     .clickable { onEntry(airing.media.id) }.padding(9.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                AsyncImage(airing.media.coverImage?.imageUrl, airing.media.title.display, Modifier.size(58.dp, 78.dp).clip(RoundedCornerShape(8.dp)))
+                                AsyncImage(airing.media.coverImage?.imageUrl, airing.media.title.display, Modifier.size(58.dp, 78.dp).clip(RoundedCornerShape(8.dp)), contentScale = ContentScale.Crop)
                                 Column(Modifier.padding(start = 10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                     Text(airing.media.title.display, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
                                     Text("Episode ${airing.episode}", color = Violet, fontSize = 11.sp)
@@ -397,7 +398,7 @@ private fun BrowsePage(mangaMode: Boolean, onEntry: (Int) -> Unit) {
 @Composable
 private fun SearchResultRow(media: AniListMedia, onClick: () -> Unit) {
     Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Surface).clickable(onClick = onClick).padding(9.dp), verticalAlignment = Alignment.CenterVertically) {
-        AsyncImage(media.coverImage?.imageUrl, media.title.display, Modifier.size(62.dp, 82.dp).clip(RoundedCornerShape(8.dp)))
+        AsyncImage(media.coverImage?.imageUrl, media.title.display, Modifier.size(62.dp, 82.dp).clip(RoundedCornerShape(8.dp)), contentScale = ContentScale.Crop)
         Column(Modifier.padding(start = 12.dp)) {
             Text(media.title.display, color = Color.White, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
             Text(listOfNotNull(media.format, media.seasonYear?.toString(), media.averageScore?.let { "$it%" }).joinToString(" · "), color = Muted, fontSize = 11.sp)
@@ -422,7 +423,7 @@ private fun EntryDetails(id: Int, mangaMode: Boolean) {
         error != null -> NativePlaceholder("Entry unavailable", error!!)
         entry != null -> LazyColumn(Modifier.fillMaxSize().background(Color.Black), contentPadding = PaddingValues(bottom = 28.dp)) {
             item {
-                AsyncImage(entry!!.bannerImage ?: entry!!.coverImage?.imageUrl, entry!!.title.display, Modifier.fillMaxWidth().height(190.dp))
+                AsyncImage(entry!!.bannerImage ?: entry!!.coverImage?.imageUrl, entry!!.title.display, Modifier.fillMaxWidth().height(210.dp), contentScale = ContentScale.Crop)
                 Column(Modifier.padding(18.dp)) {
                     Text(entry!!.title.display, color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
                     Text(listOfNotNull(entry!!.format, entry!!.seasonYear?.toString(), entry!!.averageScore?.let { "$it%" }).joinToString(" · "), color = Muted, fontSize = 12.sp)
@@ -475,7 +476,7 @@ private fun DetailLine(label: String, value: String?) {
 private fun NativeMediaCard(media: AniListMedia, onClick: () -> Unit) {
     Card(Modifier.width(132.dp).clickable(onClick = onClick), shape = RoundedCornerShape(13.dp), colors = CardDefaults.cardColors(containerColor = Surface)) {
         Column {
-            AsyncImage(media.coverImage?.imageUrl, media.title.display, Modifier.fillMaxWidth().height(178.dp).clip(RoundedCornerShape(topStart = 13.dp, topEnd = 13.dp)))
+            AsyncImage(media.coverImage?.imageUrl, media.title.display, Modifier.fillMaxWidth().height(188.dp).clip(RoundedCornerShape(topStart = 13.dp, topEnd = 13.dp)), contentScale = ContentScale.Crop)
             Column(Modifier.padding(9.dp)) {
                 Text(media.title.display, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 Spacer(Modifier.height(5.dp))
@@ -487,10 +488,51 @@ private fun NativeMediaCard(media: AniListMedia, onClick: () -> Unit) {
 
 @Composable
 private fun NativePlaceholder(title: String, subtitle: String) {
-    Column(Modifier.fillMaxSize().background(Color.Black).padding(22.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(title, color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.Bold)
-        Spacer(Modifier.height(10.dp))
-        Text(subtitle, color = Muted, fontSize = 13.sp)
+    val icon = when (title) {
+        "My Library" -> Icons.Default.BookmarkBorder
+        "Account" -> Icons.Default.Person
+        "Settings" -> Icons.Default.Menu
+        "Ryko Newsroom" -> Icons.Default.Explore
+        else -> Icons.Default.EmojiEvents
+    }
+    val eyebrow = when (title) {
+        "My Library" -> "YOUR COLLECTION"
+        "Account" -> "RYKO PROFILE"
+        "Settings" -> "PREFERENCES"
+        "Ryko Newsroom" -> "THE LATEST"
+        else -> "COMMUNITY RANKING"
+    }
+    Column(
+        Modifier.fillMaxSize().background(Color(0xFF050507)).padding(horizontal = 20.dp, vertical = 18.dp),
+        verticalArrangement = Arrangement.spacedBy(18.dp)
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(eyebrow, color = Violet, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
+            Text(title, color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = (-0.7).sp)
+            Text(subtitle, color = Muted, fontSize = 13.sp, lineHeight = 19.sp)
+        }
+        Box(
+            Modifier.fillMaxWidth().weight(1f).clip(RoundedCornerShape(24.dp))
+                .background(Color(0xFF101014)).padding(22.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Box(
+                    Modifier.size(72.dp).clip(RoundedCornerShape(22.dp)).background(Color(0x22A99BFF)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(icon, contentDescription = null, tint = Violet, modifier = Modifier.size(32.dp))
+                }
+                Text(title, color = Color.White, fontSize = 19.sp, fontWeight = FontWeight.Bold)
+                Text(
+                    "This area is being prepared for RykoCollection.",
+                    color = Muted, fontSize = 12.sp, lineHeight = 18.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
+                Box(Modifier.clip(RoundedCornerShape(50)).background(Color(0x1FA99BFF)).padding(horizontal = 13.dp, vertical = 7.dp)) {
+                    Text("COMING SOON", color = Violet, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
+                }
+            }
+        }
     }
 }
 
