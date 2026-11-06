@@ -142,11 +142,11 @@ fun RykoApp() {
                         }
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF08080B), titleContentColor = Color(0xFFF7F7FB), actionIconContentColor = Color(0xFFE8E5FF))
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xB310101A), titleContentColor = Color(0xFFF7F7FB), actionIconContentColor = Color(0xFFE8E5FF))
             )
         },
         bottomBar = {
-            NavigationBar(containerColor = Color(0xFF09090D), contentColor = Color(0xFFA99BFF), tonalElevation = 0.dp) {
+            NavigationBar(containerColor = Color(0xCC12121E), contentColor = Color(0xFFA99BFF), tonalElevation = 0.dp, modifier = Modifier.border(1.dp, Color(0x33FFFFFF), RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp))) {
                 MainTab.entries.forEach { item ->
                     val icon = when (item) {
                         MainTab.HOME -> Icons.Default.Home
@@ -161,7 +161,7 @@ fun RykoApp() {
         },
         containerColor = Color.Black
     ) { inner ->
-        Box(Modifier.padding(inner).fillMaxSize()) {
+        Box(Modifier.padding(inner).fillMaxSize().background(Brush.radialGradient(listOf(Color(0xFF242039), Color(0xFF10101B), Color(0xFF07070C))))) {
             // Keep visited tabs composed while hidden so their data and scroll state survive tab changes.
             if (visitedTabs.contains(MainTab.HOME)) {
                 Box(Modifier.fillMaxSize().graphicsLayer { alpha = if (tab == MainTab.HOME && selectedEntry == null && extraPage == null) 1f else 0f }.zIndex(if (tab == MainTab.HOME && selectedEntry == null && extraPage == null) 1f else -1f).then(if (tab == MainTab.HOME && selectedEntry == null && extraPage == null) Modifier else Modifier.offset(x = 10000.dp))) {
@@ -274,7 +274,7 @@ private fun NativeHome(mangaMode: Boolean, onEntry: (Int) -> Unit) {
                         Card(
                             Modifier.fillMaxWidth().height(252.dp).clickable { onEntry(media.id) },
                             shape = RoundedCornerShape(18.dp),
-                            colors = CardDefaults.cardColors(containerColor = Surface)
+                            colors = CardDefaults.cardColors(containerColor = Color(0xB31A1927))
                         ) {
                             Box(Modifier.fillMaxSize()) {
                                 AsyncImage(
