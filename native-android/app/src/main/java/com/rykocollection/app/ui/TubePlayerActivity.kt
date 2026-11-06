@@ -24,6 +24,8 @@ import android.widget.Toast
 import android.graphics.Color
 import android.util.Log
 import android.util.TypedValue
+import android.view.animation.AccelerateInterpolator
+import android.view.animation.OvershootInterpolator
 
 /** Standalone YouTube iframe player with a fixed YouTube-standard 16:9 viewing area. */
 class TubePlayerActivity : Activity() {
@@ -57,6 +59,7 @@ class TubePlayerActivity : Activity() {
     private var touchStartX = 0f
     private var touchStartAt = 0L
     private var swipeHandled = false
+    private var shortTransitionGeneration = 0
     private val playerOrigin = "https://rykocollection.vercel.app"
     private var saveAction: TextView? = null
 
@@ -132,8 +135,23 @@ class TubePlayerActivity : Activity() {
             webViewClient = object : WebViewClient() {
                 override fun onPageFinished(view: WebView?, url: String?) {
                     Log.d(TAG, "Page loaded: $url")
-                    if (isShort && view === webView) {
-                        view?.animate()?.translationY(0f)?.alpha(1f)?.setDuration(220)?.start()
+                    if (isShort && view === webView && swipeHandled) {
+                        // The new iframe document is ready: bring the incoming Short into place.
+                        view?.animate()
+                            ?.translationY(0f)
+                            ?.alpha(1f)
+                            ?.scaleX(1f)
+                            ?.scaleY(1f)
+                            ?.setDuration(360)
+                            ?.setInterpolator(OvershootInterpolator(0.72f))
+                            ?.withEndAction {
+                                view.translationY = 0f
+                                view.alpha = 1f
+                                view.scaleX = 1f
+                                view.scaleY = 1f
+                                swipeHandled = false
+                            }
+                            ?.start()
                     }
                 }
                 override fun onReceivedError(view: WebView?, request: android.webkit.WebResourceRequest?, error: android.webkit.WebResourceError?) {
@@ -266,21 +284,63 @@ class TubePlayerActivity : Activity() {
     }
 
     private fun moveShort(direction: Int) {
-        if (shortQueue.isEmpty()) return
+        if (shortQueue.isEmpty() || swipeHandled) return
         val next = shortIndex + direction
-        if (next !in shortQueue.indices || swipeHandled) return
+        if (next !in shortQueue.indices) {
+            // Give the end of the current Shorts queue a small elastic boundary response.
+            webView.animate().cancel()
+            webView.animate()
+                .translationY(if (direction > 0) -dp(28).toFloat() else dp(28).toFloat())
+                .setDuration(110)
+                .withEndAction {
+                    webView.animate().translationY(0f).setDuration(190)
+                        .setInterpolator(OvershootInterpolator(1.4f)).start()
+                }
+                .start()
+            return
+        }
+
         swipeHandled = true
+        val generation = ++shortTransitionGeneration
         shortIndex = next
         currentVideoId = shortQueue[next]
         if (next < shortTitles.size) currentTitle = shortTitles[next]
         if (next < shortCreators.size) currentCreator = shortCreators[next]
-        val exitY = if (direction > 0) -heightPx().toFloat() else heightPx().toFloat()
-        webView.animate().translationY(exitY).alpha(0f).setDuration(150).withEndAction {
-            webView.translationY = -exitY
-            webView.alpha = 0f
-            loadShortDocument()
-            webView.postDelayed({ swipeHandled = false }, 650)
-        }.start()
+
+        // Swipe up: the current Short exits upward and the next one enters from below.
+        // Swipe down: reverse the direction to reveal the previous Short.
+        val height = (root.height.takeIf { it > 0 } ?: heightPx()).toFloat()
+        val exitY = if (direction > 0) -height * 0.82f else height * 0.82f
+        val enterY = -exitY
+
+        webView.animate().cancel()
+        webView.animate()
+            .translationY(exitY)
+            .alpha(0.35f)
+            .scaleX(0.965f)
+            .scaleY(0.965f)
+            .setDuration(190)
+            .setInterpolator(AccelerateInterpolator(1.35f))
+            .withEndAction {
+                if (generation != shortTransitionGeneration || isFinishing) return@withEndAction
+                webView.translationY = enterY
+                webView.alpha = 0.72f
+                webView.scaleX = 0.965f
+                webView.scaleY = 0.965f
+                loadShortDocument()
+                // Safety unlock in case WebView never reports onPageFinished.
+                webView.postDelayed({
+                    if (generation == shortTransitionGeneration) {
+                        webView.animate()
+                            .translationY(0f).alpha(1f).scaleX(1f).scaleY(1f)
+                            .setDuration(360)
+                            .setInterpolator(OvershootInterpolator(0.72f))
+                            .withEndAction { swipeHandled = false }
+                            .start()
+                    }
+                }, 1800)
+            }
+            .start()
     }
 
     private fun heightPx(): Int = resources.displayMetrics.heightPixels
