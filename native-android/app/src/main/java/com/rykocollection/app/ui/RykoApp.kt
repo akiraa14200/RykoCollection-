@@ -134,7 +134,7 @@ fun RykoApp() {
                 extraPage == ExtraPage.SETTINGS -> NativePlaceholder("Settings", "Appearance, language, notifications and app preferences.")
                 tab == MainTab.HOME -> NativeHome(mangaMode, onEntry = { selectedEntry = it })
                 tab == MainTab.BROWSE -> BrowsePage(mangaMode, onEntry = { selectedEntry = it })
-                tab == MainTab.VIDEO -> NativePlaceholder("RykoTube", "Videos, trailers, channels, playlists and Shorts.")
+                tab == MainTab.VIDEO -> NativeRykoTube()
                 tab == MainTab.LIBRARY -> NativePlaceholder("My Library", "Watching, plan-to-watch, completed and saved entries.")
                 else -> NativePlaceholder("Account", "Sign in, profile, avatar, banner and account settings.")
             }
