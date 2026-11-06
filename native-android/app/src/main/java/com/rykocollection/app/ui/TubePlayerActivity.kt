@@ -156,7 +156,7 @@ class TubePlayerActivity : Activity() {
         toolbar.addView(iconAction(R.drawable.ic_more, "More options").apply {
             setOnClickListener { showMoreMenu(it) }
         }, LinearLayout.LayoutParams(dp(48), dp(52)))
-        if (!isShort) page.addView(toolbar)
+        // Match the reference player: video begins at the very top, without a separate toolbar.
 
         webView = WebView(this).apply {
             setBackgroundColor(Color.BLACK)
@@ -231,7 +231,7 @@ class TubePlayerActivity : Activity() {
         val playerHeightDp = (screenWidthDp * 9f / 16f).toInt()
         if (!isShort) {
             page.addView(webView, LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(playerHeightDp + 64)
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(playerHeightDp)
             ).apply {
                 leftMargin = -dp(1)
                 rightMargin = -dp(1)
@@ -241,15 +241,16 @@ class TubePlayerActivity : Activity() {
         val details = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(18), dp(18), dp(18), dp(18))
-            setBackgroundColor(Color.rgb(8, 8, 8))
+            setBackgroundColor(Color.rgb(18, 8, 28))
         }
+        applyVideoAmbient(details)
         details.addView(TextView(this).apply { text = currentTitle.ifBlank { "YouTube video" }; setTextColor(Color.WHITE); setTextSize(21f); setTypeface(null, android.graphics.Typeface.BOLD); maxLines = 3 })
         details.addView(TextView(this).apply { text = "@" + currentCreator.ifBlank { "RykoCollection" } + "   •   YouTube"; setTextColor(Color.rgb(208,190,220)); setTextSize(13f); setPadding(0,dp(8),0,dp(14)) })
         val channelRow = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL }
         val avatarView = android.widget.ImageView(this).apply { scaleType = android.widget.ImageView.ScaleType.CENTER_CROP; background = android.graphics.drawable.GradientDrawable().apply { shape = android.graphics.drawable.GradientDrawable.OVAL; setColor(Color.DKGRAY) }; clipToOutline = true }
         channelRow.addView(avatarView, LinearLayout.LayoutParams(dp(48), dp(48)))
         if (currentAvatar.isNotBlank()) loadImage(currentAvatar, avatarView)
-        channelRow.addView(TextView(this).apply { text = currentCreator.ifBlank { "RykoCollection" }; setTextColor(Color.WHITE); textSize = 14f; setTypeface(null,android.graphics.Typeface.BOLD); setPadding(dp(10),0,dp(8),0) }, LinearLayout.LayoutParams(0,dp(48),1f))
+        channelRow.addView(TextView(this).apply { text = currentCreator.ifBlank { "RykoCollection" }; setTextColor(Color.WHITE); textSize = 16f; setTypeface(null,android.graphics.Typeface.BOLD); setPadding(dp(10),0,dp(8),0) }, LinearLayout.LayoutParams(0,dp(48),1f))
         subscribeAction = actionLabel("Subscribe",13f).apply { background = android.graphics.drawable.GradientDrawable().apply { cornerRadius=dp(24).toFloat(); setColor(Color.WHITE) }; setTextColor(Color.BLACK); setOnClickListener { val prefs=getSharedPreferences(PREFS,MODE_PRIVATE); val k="sub_"+currentCreator; val next=!prefs.getBoolean(k,false); prefs.edit().putBoolean(k,next).apply(); text=if(next) "Subscribed" else "Subscribe" } }
         channelRow.addView(subscribeAction,LinearLayout.LayoutParams(dp(118),dp(42))); details.addView(channelRow)
         val actions = LinearLayout(this).apply { gravity=Gravity.CENTER_VERTICAL; setPadding(0,dp(12),0,dp(10)) }
@@ -266,7 +267,7 @@ class TubePlayerActivity : Activity() {
         actions.addView(saveAction,LinearLayout.LayoutParams(dp(48),dp(46)))
         actions.addView(iconAction(R.drawable.ic_more, "More options").apply { setOnClickListener { showMoreMenu(it) } },LinearLayout.LayoutParams(dp(42),dp(46)))
         details.addView(actions)
-        details.addView(TextView(this).apply { text = "Up next"; setTextColor(Color.WHITE); textSize = 19f; setTypeface(null, android.graphics.Typeface.BOLD); setPadding(0, dp(18), 0, dp(8)) })
+        details.addView(TextView(this).apply { text = "Up next"; setTextColor(Color.WHITE); textSize = 19f; setTypeface(null, android.graphics.Typeface.BOLD); setPadding(0, dp(22), 0, dp(8)) })
         recommendIds.indices.forEach { index ->
             val item = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL; setPadding(0, dp(7), 0, dp(7)) }
             val thumb = android.widget.ImageView(this).apply { scaleType = android.widget.ImageView.ScaleType.CENTER_CROP; background = android.graphics.drawable.GradientDrawable().apply { cornerRadius = dp(9).toFloat(); setColor(Color.DKGRAY) }; clipToOutline = true }
@@ -300,26 +301,70 @@ class TubePlayerActivity : Activity() {
               <meta name="referrer" content="origin">
               <style>
                 *{box-sizing:border-box}
-                html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#000}.player-wrapper{position:relative;width:100%;height:100%;background:#000;overflow:visible}#ambient-wrap{position:absolute;top:-4%;left:-4%;width:108%;height:108%;z-index:1;filter:blur(50px) brightness(1.2) opacity(.8);pointer-events:none;overflow:hidden}#ambient-player{width:100%;height:100%;border:0;transform:scale(1.12);pointer-events:none}#main-player{position:absolute;left:3%;top:32px;z-index:2;width:94%;height:calc(100% - 64px);border:0;background:#000}
+                html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#000}
+                .player-wrapper{position:relative;width:100%;height:100%;background:#000;overflow:hidden}
+                #main-player{display:block;position:absolute;inset:0;width:100%;height:100%;border:0;background:#000}
               </style>
             </head><body>
               <div class="player-wrapper">
-                <div id="ambient-wrap"><iframe id="ambient-player" src="https://www.youtube-nocookie.com/embed/$currentVideoId?enablejsapi=1&mute=1&controls=0&loop=1&playlist=$currentVideoId&playsinline=1&origin=$appOrigin" frameborder="0" title="Ambient glow player" tabindex="-1" aria-hidden="true" allow="autoplay; encrypted-media"></iframe></div>
-                <iframe id="main-player" src="https://www.youtube-nocookie.com/embed/$currentVideoId?enablejsapi=1&autoplay=1&playsinline=${if (isShort) 0 else 1}&origin=$appOrigin" frameborder="0" title="YouTube video player" referrerpolicy="origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+                <iframe id="main-player" src="https://www.youtube-nocookie.com/embed/$currentVideoId?autoplay=1&playsinline=${if (isShort) 0 else 1}&rel=0&origin=$appOrigin" frameborder="0" title="YouTube video player" referrerpolicy="origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
               </div>
               <script>
-                var mainPlayer=null, ambientPlayer=null, syncTimer=null;
-                function onYouTubeIframeAPIReady(){
-                  ambientPlayer=new YT.Player("ambient-player",{events:{onReady:function(e){e.target.mute();e.target.setVolume(0);if(mainPlayer&&mainPlayer.getPlayerState&&mainPlayer.getPlayerState()===YT.PlayerState.PLAYING)syncAmbient(true);}}});
-                  mainPlayer=new YT.Player("main-player",{events:{onReady:function(e){e.target.playVideo();},onStateChange:onPlayerStateChange,onError:function(e){console.log("Main player error",e.data);}}});
-                }
-                function syncAmbient(start){if(!mainPlayer||!ambientPlayer||!mainPlayer.getCurrentTime)return;try{var t=mainPlayer.getCurrentTime();if(start||Math.abs(ambientPlayer.getCurrentTime()-t)>0.8)ambientPlayer.seekTo(t,true);ambientPlayer.mute();ambientPlayer.setVolume(0);ambientPlayer.playVideo();}catch(e){console.log("Ambient sync pending",e);}}
-                function onPlayerStateChange(event){if(!ambientPlayer)return;if(event.data===YT.PlayerState.PLAYING){syncAmbient(true);if(syncTimer)clearInterval(syncTimer);syncTimer=setInterval(function(){if(mainPlayer&&mainPlayer.getPlayerState()===YT.PlayerState.PLAYING)syncAmbient(false);},1200);}else if(event.data===YT.PlayerState.PAUSED||event.data===YT.PlayerState.ENDED){ambientPlayer.pauseVideo();if(syncTimer){clearInterval(syncTimer);syncTimer=null;}}else if(event.data===YT.PlayerState.BUFFERING){syncAmbient(true);}}
-                var tag=document.createElement("script");tag.src="https://www.youtube.com/iframe_api";document.head.appendChild(tag);
+                // A single foreground YouTube iframe only. Ambient light is rendered natively
+                // from colours sampled from the video's thumbnail; no hidden/background player.
               </script>
             </body></html>
         """.trimIndent()
         webView.loadDataWithBaseURL("$appOrigin/", html, "text/html", "UTF-8", null)
+    }
+
+
+    /**
+     * Build the ambient wash from the video's own thumbnail (a representative video frame).
+     * This avoids a second YouTube iframe and keeps the glow tied to each video's imagery.
+     */
+    private fun applyVideoAmbient(target: View) {
+        val fallback = intArrayOf(Color.rgb(42, 15, 62), Color.rgb(17, 8, 25), Color.rgb(8, 8, 8))
+        fun apply(colors: IntArray) {
+            val drawable = android.graphics.drawable.GradientDrawable(
+                android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM,
+                colors
+            )
+            target.background = drawable
+        }
+        apply(fallback)
+        if (currentThumb.isBlank()) return
+        Thread {
+            try {
+                val connection = java.net.URL(currentThumb).openConnection() as java.net.HttpURLConnection
+                connection.connectTimeout = 7000
+                connection.readTimeout = 7000
+                connection.setRequestProperty("User-Agent", "RykoCollection Android")
+                val bitmap = connection.inputStream.use { android.graphics.BitmapFactory.decodeStream(it) }
+                connection.disconnect()
+                if (bitmap != null) {
+                    val points = intArrayOf(
+                        bitmap.getPixel(bitmap.width / 4, bitmap.height / 3),
+                        bitmap.getPixel(bitmap.width / 2, bitmap.height / 2),
+                        bitmap.getPixel(bitmap.width * 3 / 4, bitmap.height * 2 / 3)
+                    )
+                    val sampled = points.map { pixel ->
+                        val r = android.graphics.Color.red(pixel)
+                        val g = android.graphics.Color.green(pixel)
+                        val b = android.graphics.Color.blue(pixel)
+                        // Bias sampled frame colours gently toward the reference's purple ambience.
+                        val pr = (r * 0.58f + 92f * 0.42f).toInt().coerceIn(0, 255)
+                        val pg = (g * 0.48f + 38f * 0.52f).toInt().coerceIn(0, 255)
+                        val pb = (b * 0.62f + 132f * 0.38f).toInt().coerceIn(0, 255)
+                        android.graphics.Color.rgb(pr / 2, pg / 2, pb / 2)
+                    }.toIntArray()
+                    runOnUiThread { if (!isFinishing) apply(intArrayOf(sampled[0], sampled[1], sampled[2], Color.rgb(8, 8, 8))) }
+                    bitmap.recycle()
+                }
+            } catch (error: Exception) {
+                Log.w(TAG, "Ambient thumbnail sampling failed", error)
+            }
+        }.start()
     }
 
     private fun loadImage(url: String, target: android.widget.ImageView) {
