@@ -5,24 +5,20 @@ type VercelResponse = {
   json: (body: unknown) => void;
 };
 
-const blockedHost = (hostname: string) => {
-  const host = hostname.toLowerCase().replace(/^\[|\]$/g, '');
-  return host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.local') ||
-    host.endsWith('.internal') || host === '::1' || host === '0.0.0.0' ||
-    /^127\./.test(host) || /^10\./.test(host) || /^192\.168\./.test(host) ||
-    /^169\.254\./.test(host) || /^172\.(1[6-9]|2\d|3[01])\./.test(host);
-};
-
+// Only fetch article pages from publishers whose RSS feeds are configured in news-feed.ts.
+const ALLOWED_ARTICLE_HOSTS = ['animenewsnetwork.com','crunchyroll.com','animecorner.me','myanimelist.net','mangamogura.com','animeherald.com'];
 const safeHttpUrl = (value: string, base?: string) => {
   try {
     const url = new URL(value, base);
-    if (!['http:', 'https:'].includes(url.protocol) || blockedHost(url.hostname)) return null;
-    url.username = '';
-    url.password = '';
+    if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password) return null;
+    const host = url.hostname.toLowerCase().replace(/^\[|\]$/g, '').replace(/\.$/, '');
+    // Reject IP literals and require an exact publisher-domain boundary.
+    if (host.includes(':') || /^\d{1,3}(?:\.\d{1,3}){3}$/.test(host)) return null;
+    if (!ALLOWED_ARTICLE_HOSTS.some(domain => host === domain || host.endsWith('.' + domain))) return null;
+    url.hostname = host;
+    url.hash = '';
     return url;
-  } catch {
-    return null;
-  }
+  } catch { return null; }
 };
 
 const decodeEntities = (value: string) => value
@@ -92,26 +88,44 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     let response: Response | null = null;
-    for (let redirects = 0; redirects <= 4; redirects++) {
+    for (let redirects = 0; redirects <= 3; redirects++) {
       response = await fetch(current, {
         redirect: 'manual',
-        signal: AbortSignal.timeout(7000),
+        signal: AbortSignal.timeout(6500),
         headers: {
-          Accept: 'text/html,application/xhtml+xml;q=0.9,*/*;q=0.5',
+          Accept: 'text/html,application/xhtml+xml;q=0.9',
           'User-Agent': 'Mozilla/5.0 (compatible; RykoNewsImageBot/1.0; +https://rykocollection.vercel.app)'
         }
       });
       if (![301, 302, 303, 307, 308].includes(response.status)) break;
       const location = response.headers.get('location');
-      if (!location || redirects === 4) break;
+      if (!location || redirects === 3) return res.status(200).json({ image: null });
       const next = safeHttpUrl(location, current.toString());
       if (!next) return res.status(200).json({ image: null });
       current = next;
     }
-    if (!response?.ok || !/text\/html|application\/xhtml\+xml/i.test(response.headers.get('content-type') ?? '')) {
+    if (!response?.ok || !/text\\/html|application\\/xhtml\\+xml/i.test(response.headers.get('content-type') ?? '')) {
       return res.status(200).json({ image: null });
     }
-    const html = (await response.text()).slice(0, 1_500_000);
+    // Bound the response body while streaming to avoid large allocations.
+    const reader = response.body?.getReader();
+    if (!reader) return res.status(200).json({ image: null });
+    const chunks: Uint8Array[] = [];
+    let total = 0;
+    while (total < 1_500_000) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      const remaining = 1_500_000 - total;
+      const chunk = value.byteLength > remaining ? value.slice(0, remaining) : value;
+      chunks.push(chunk);
+      total += chunk.byteLength;
+      if (chunk.byteLength < value.byteLength) break;
+    }
+    await reader.cancel().catch(() => undefined);
+    const htmlBytes = new Uint8Array(total);
+    let offset = 0;
+    chunks.forEach(chunk => { htmlBytes.set(chunk, offset); offset += chunk.byteLength; });
+    const html = new TextDecoder().decode(htmlBytes);
     return res.status(200).json({ image: extractImage(html, current.toString()) });
   } catch {
     return res.status(200).json({ image: null });
