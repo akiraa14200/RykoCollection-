@@ -479,7 +479,7 @@ private fun TubePlayer(video: TubeVideo, recommendations: List<TubeVideo>, short
                 putExtra(TubePlayerActivity.EXTRA_CREATOR, video.creator)
                 putExtra(TubePlayerActivity.EXTRA_THUMB, video.thumb)
                 putExtra(TubePlayerActivity.EXTRA_AVATAR, video.creatorAvatar)
-                val related = recommendations.filter { it.id != video.id && youtubeVideoId(it.url) != null }.take(24)
+                val related = recommendations.filter { it.id != video.id && !it.short && youtubeVideoId(it.url) != null }.take(24)
                 putStringArrayListExtra(TubePlayerActivity.EXTRA_RECOMMEND_IDS, ArrayList(related.mapNotNull { youtubeVideoId(it.url) }))
                 putStringArrayListExtra(TubePlayerActivity.EXTRA_RECOMMEND_TITLES, ArrayList(related.map { it.title }))
                 putStringArrayListExtra(TubePlayerActivity.EXTRA_RECOMMEND_CREATORS, ArrayList(related.map { it.creator }))
