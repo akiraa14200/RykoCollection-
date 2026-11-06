@@ -156,7 +156,9 @@ export function NewsPage() {
     return matchesCategory && matchesQuery;
   }), [items, category, query]);
 
-  const visibleItems = filtered.slice(0, visibleCount);\n\n  return <main className="content-page ryko-news-page">
+  const visibleItems = filtered.slice(0, visibleCount);
+
+  return <main className="content-page ryko-news-page">
     <header className="news-hero">
       <span className="eyebrow"><Newspaper size={14}/> THE ANIME WORLD, IN ONE PLACE</span>
       <h1>Ryko <em>Newsroom.</em></h1>
