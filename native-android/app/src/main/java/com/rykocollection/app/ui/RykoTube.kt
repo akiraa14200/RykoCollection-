@@ -301,7 +301,7 @@ fun NativeRykoTube() {
         }
 
         if (selected != null) {
-            TubePlayer(selected!!) { selected = null }
+            TubePlayer(selected!!, filtered.filter { it.short }) { selected = null }
         } else {
             when {
                 loading && videos.isEmpty() -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -468,7 +468,7 @@ private fun TubeVideoCard(video: TubeVideo, onClick: () -> Unit) {
 }
 
 @Composable
-private fun TubePlayer(video: TubeVideo, onClose: () -> Unit) {
+private fun TubePlayer(video: TubeVideo, shortQueue: List<TubeVideo>, onClose: () -> Unit) {
     val context = LocalContext.current
     LaunchedEffect(video.id) {
         val youtubeId = youtubeVideoId(video.url)
@@ -478,6 +478,13 @@ private fun TubePlayer(video: TubeVideo, onClose: () -> Unit) {
                 putExtra(TubePlayerActivity.EXTRA_TITLE, video.title)
                 putExtra(TubePlayerActivity.EXTRA_CREATOR, video.creator)
                 putExtra(TubePlayerActivity.EXTRA_IS_SHORT, video.short)
+                if (video.short) {
+                    val queue = shortQueue.filter { youtubeVideoId(it.url) != null }
+                    putStringArrayListExtra(TubePlayerActivity.EXTRA_SHORT_QUEUE, ArrayList(queue.map { youtubeVideoId(it.url).orEmpty() }))
+                    putStringArrayListExtra(TubePlayerActivity.EXTRA_SHORT_TITLES, ArrayList(queue.map { it.title }))
+                    putStringArrayListExtra(TubePlayerActivity.EXTRA_SHORT_CREATORS, ArrayList(queue.map { it.creator }))
+                    putExtra(TubePlayerActivity.EXTRA_SHORT_INDEX, queue.indexOfFirst { it.id == video.id }.coerceAtLeast(0))
+                }
             }
             context.startActivity(intent)
         } else {
