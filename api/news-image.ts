@@ -105,9 +105,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (!next) return res.status(200).json({ image: null });
       current = next;
     }
-    if (!response?.ok || !/text\\/html|application\\/xhtml\\+xml/i.test(response.headers.get('content-type') ?? '')) {
-      return res.status(200).json({ image: null });
-    }
+    if (!response || !response.ok) return res.status(200).json({ image: null });
+    const contentType = response.headers.get('content-type') ?? '';
+    if (!contentType.includes('text/html') && !contentType.includes('application/xhtml+xml')) return res.status(200).json({ image: null });
     // Bound the response body while streaming to avoid large allocations.
     const reader = response.body?.getReader();
     if (!reader) return res.status(200).json({ image: null });
