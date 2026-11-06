@@ -349,10 +349,12 @@ private fun TubePlayer(video: TubeVideo, onClose: () -> Unit) {
         } else {
             val context = LocalContext.current
             key(youtubeId) {
+                var playerView by remember(youtubeId) { mutableStateOf<WebView?>(null) }
                 AndroidView(
                     modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f),
-                    factory = {
-                        WebView(context).apply {
+                    factory = { ctx ->
+                        WebView(ctx).apply {
+                            playerView = this
                             setBackgroundColor(android.graphics.Color.BLACK)
                             settings.javaScriptEnabled = true
                             settings.domStorageEnabled = true
@@ -361,11 +363,50 @@ private fun TubePlayer(video: TubeVideo, onClose: () -> Unit) {
                             webChromeClient = WebChromeClient()
                             webViewClient = WebViewClient()
                             CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
-                            loadUrl("https://www.youtube-nocookie.com/embed/$youtubeId?autoplay=1&playsinline=1&rel=0&fs=0")
+
+                            // Error 153 is returned when the embedded player cannot identify
+                            // the embedding client (commonly a missing HTTP Referer).
+                            // Load a real HTTPS-origin document containing the iframe instead
+                            // of navigating the WebView directly to the embed URL.
+                            val origin = "https://rykocollection.vercel.app"
+                            val html = """
+                                <!doctype html>
+                                <html>
+                                <head>
+                                  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+                                  <meta name="referrer" content="strict-origin-when-cross-origin">
+                                  <style>
+                                    html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#000}
+                                    iframe{border:0;width:100%;height:100%}
+                                  </style>
+                                </head>
+                                <body>
+                                  <iframe
+                                    src="https://www.youtube-nocookie.com/embed/$youtubeId?autoplay=1&playsinline=1&rel=0&fs=0&origin=$origin"
+                                    title="YouTube video player"
+                                    referrerpolicy="strict-origin-when-cross-origin"
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                    allowfullscreen>
+                                  </iframe>
+                                </body>
+                                </html>
+                            """.trimIndent()
+                            loadDataWithBaseURL("$origin/", html, "text/html", "UTF-8", null)
                         }
                     },
                     update = { }
                 )
+                DisposableEffect(youtubeId) {
+                    onDispose {
+                        playerView?.apply {
+                            stopLoading()
+                            loadUrl("about:blank")
+                            removeAllViews()
+                            destroy()
+                        }
+                        playerView = null
+                    }
+                }
             }
             Text(video.title, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(16.dp))
             Text(video.creator, color = Color.LightGray, modifier = Modifier.padding(horizontal = 16.dp))
