@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { getMediaCharacters, getTrailerCatalogue, searchTrailerCatalogue, getHomeCollections, searchMedia, getAniListMediaById } from './anilist';
+import { getMediaCharacters, getTrailerCatalogue, searchTrailerCatalogue, searchMedia, getAniListMediaById, getTrending as getAniListTrending, getPopular as getAniListPopular, getTrendingManga as getAniListTrendingManga, getPopularManga as getAniListPopularManga } from './anilist';
 import { readPersisted, writePersisted } from './persist';
 
 export type AnimeCharacter = {
@@ -346,7 +346,6 @@ async function fetchTitles(query: any): Promise<Anime[]> {
   throwIf(error);
   return ((data || []) as TitleRow[]).map(mapTitle);
 }
-const homeAniList = () => cached('home-anilist', getHomeCollections);
 const mergeUnique = (...lists: Anime[][]) => {
   const seen = new Set<string>();
   return lists.flat().filter(item => !seen.has(item.id) && !!seen.add(item.id)).slice(0, 36);
@@ -355,27 +354,27 @@ export async function getTrending(): Promise<Anime[]> {
   return cached('trending', async () => {
     const [local, remote] = await Promise.allSettled([
       fetchTitles(supabase.from('titles').select('*').or('is_featured.eq.true,is_trending.eq.true').order('popularity', { ascending: false }).limit(18)),
-      homeAniList()
+      getAniListTrending()
     ]);
     if (local.status === 'rejected' && remote.status === 'rejected') throw remote.reason;
-    return mergeUnique(remote.status === 'fulfilled' ? remote.value.trending.map(mapAniListMedia) : [], local.status === 'fulfilled' ? local.value : []);
+    return mergeUnique(remote.status === 'fulfilled' ? remote.value.map(mapAniListMedia) : [], local.status === 'fulfilled' ? local.value : []);
   });
 }
 export async function getPopular(): Promise<Anime[]> {
   return cached('popular', async () => {
     const [local, remote] = await Promise.allSettled([
       fetchTitles(supabase.from('titles').select('*').order('popularity', { ascending: false }).limit(18)),
-      homeAniList()
+      getAniListPopular()
     ]);
     if (local.status === 'rejected' && remote.status === 'rejected') throw remote.reason;
-    return mergeUnique(remote.status === 'fulfilled' ? remote.value.popular.map(mapAniListMedia) : [], local.status === 'fulfilled' ? local.value : []);
+    return mergeUnique(remote.status === 'fulfilled' ? remote.value.map(mapAniListMedia) : [], local.status === 'fulfilled' ? local.value : []);
   });
 }
 export async function getTrendingManga(): Promise<Anime[]> {
-  return cached('trending-manga', async () => (await homeAniList()).trendingManga.map(mapAniListMedia));
+  return cached('trending-manga', async () => (await getAniListTrendingManga()).map(mapAniListMedia));
 }
 export async function getPopularManga(): Promise<Anime[]> {
-  return cached('popular-manga', async () => (await homeAniList()).popularManga.map(mapAniListMedia));
+  return cached('popular-manga', async () => (await getAniListPopularManga()).map(mapAniListMedia));
 }
 export async function getSeasonal(): Promise<Anime[]> {
   return cached('seasonal', () => fetchTitles(supabase.from('titles').select('*').in('status', ['Airing','Ongoing']).order('release_year', { ascending: false }).limit(18)));
