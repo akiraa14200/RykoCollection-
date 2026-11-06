@@ -51,6 +51,7 @@ private data class TubeVideo(
     val id: String,
     val title: String,
     val url: String,
+    val platform: String,
     val thumb: String,
     val creator: String,
     val creatorAvatar: String,
@@ -136,6 +137,7 @@ private suspend fun fetchTubePage(page: Int): List<TubeVideo> = withContext(Disp
                 id = row.string("id").ifBlank { videoUrl },
                 title = row.string("video_title").ifBlank { "Untitled video" },
                 url = videoUrl,
+                platform = platform,
                 thumb = thumbnailFor(videoUrl, title?.string("cover_url").orEmpty()),
                 creator = row.string("creator_name").ifBlank { "RykoCollection" },
                 creatorAvatar = row.string("creator_avatar_url"),
@@ -448,12 +450,19 @@ private fun TubeVideoCard(video: TubeVideo, onClick: () -> Unit) {
 private fun TubePlayer(video: TubeVideo, onClose: () -> Unit) {
     val context = LocalContext.current
     LaunchedEffect(video.id) {
-        val intent = android.content.Intent(context, TubePlayerActivity::class.java).apply {
-            putExtra(TubePlayerActivity.EXTRA_VIDEO_ID, youtubeVideoId(video.url))
-            putExtra(TubePlayerActivity.EXTRA_TITLE, video.title)
-            putExtra(TubePlayerActivity.EXTRA_CREATOR, video.creator)
+        val youtubeId = youtubeVideoId(video.url)
+        if (youtubeId != null) {
+            val intent = android.content.Intent(context, TubePlayerActivity::class.java).apply {
+                putExtra(TubePlayerActivity.EXTRA_VIDEO_ID, youtubeId)
+                putExtra(TubePlayerActivity.EXTRA_TITLE, video.title)
+                putExtra(TubePlayerActivity.EXTRA_CREATOR, video.creator)
+                putExtra(TubePlayerActivity.EXTRA_IS_SHORT, video.short)
+            }
+            context.startActivity(intent)
+        } else {
+            val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(video.url))
+            runCatching { context.startActivity(intent) }
         }
-        context.startActivity(intent)
         onClose()
     }
     Box(Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
