@@ -16,6 +16,7 @@ import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.FrameLayout
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.PopupMenu
 import android.widget.ScrollView
@@ -62,8 +63,8 @@ class TubePlayerActivity : Activity() {
     private var recommendTitles = arrayListOf<String>()
     private var recommendCreators = arrayListOf<String>()
     private var recommendThumbs = arrayListOf<String>()
-    private var likeAction: TextView? = null
-    private var dislikeAction: TextView? = null
+    private var likeAction: ImageView? = null
+    private var dislikeAction: ImageView? = null
     private var subscribeAction: TextView? = null
     private var isShort = false
     private var shortQueue = arrayListOf<String>()
@@ -76,8 +77,20 @@ class TubePlayerActivity : Activity() {
     private var swipeHandled = false
     private var shortTransitionGeneration = 0
     private val playerOrigin = "https://rykocollection.vercel.app"
-    private var saveAction: TextView? = null
+    private var saveAction: ImageView? = null
 
+    private fun iconAction(resource: Int, description: String): ImageView =
+        ImageView(this).apply {
+            setImageResource(resource)
+            contentDescription = description
+            scaleType = ImageView.ScaleType.CENTER
+            setPadding(dp(12), dp(12), dp(12), dp(12))
+            imageTintList = android.content.res.ColorStateList.valueOf(Color.WHITE)
+            val attrs = intArrayOf(android.R.attr.selectableItemBackgroundBorderless)
+            val ta = obtainStyledAttributes(attrs)
+            background = ta.getDrawable(0)
+            ta.recycle()
+        }
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
 
     private fun actionLabel(text: String, size: Float = 14f): TextView =
@@ -130,7 +143,7 @@ class TubePlayerActivity : Activity() {
             setPadding(dp(6), 0, dp(8), 0)
             setBackgroundColor(Color.rgb(18, 18, 18))
         }
-        toolbar.addView(actionLabel("‹", 30f).apply {
+        toolbar.addView(iconAction(R.drawable.ic_arrow_back, "Back").apply {
             setPadding(dp(16), 0, dp(16), 0)
             setOnClickListener { finish() }
         }, LinearLayout.LayoutParams(dp(52), dp(52)))
@@ -138,7 +151,7 @@ class TubePlayerActivity : Activity() {
             gravity = Gravity.CENTER_VERTICAL
             setTypeface(null, android.graphics.Typeface.BOLD)
         }, LinearLayout.LayoutParams(0, dp(52), 1f))
-        toolbar.addView(actionLabel("⋮", 25f).apply {
+        toolbar.addView(iconAction(R.drawable.ic_more, "More options").apply {
             setOnClickListener { showMoreMenu(it) }
         }, LinearLayout.LayoutParams(dp(48), dp(52)))
         if (!isShort) page.addView(toolbar)
@@ -235,12 +248,19 @@ class TubePlayerActivity : Activity() {
         subscribeAction = actionLabel("Subscribe",13f).apply { background = android.graphics.drawable.GradientDrawable().apply { cornerRadius=dp(24).toFloat(); setColor(Color.WHITE) }; setTextColor(Color.BLACK); setOnClickListener { val prefs=getSharedPreferences(PREFS,MODE_PRIVATE); val k="sub_"+currentCreator; val next=!prefs.getBoolean(k,false); prefs.edit().putBoolean(k,next).apply(); text=if(next) "Subscribed" else "Subscribe" } }
         channelRow.addView(subscribeAction,LinearLayout.LayoutParams(dp(118),dp(42))); details.addView(channelRow)
         val actions = LinearLayout(this).apply { gravity=Gravity.CENTER_VERTICAL; setPadding(0,dp(12),0,dp(10)) }
-        likeAction = actionLabel("♡  Like",14f).apply { setOnClickListener { val prefs=getSharedPreferences(PREFS,MODE_PRIVATE); val next=!prefs.getBoolean("like_"+currentVideoId,false); prefs.edit().putBoolean("like_"+currentVideoId,next).apply(); text=if(next) "♥  Liked" else "♡  Like"; dislikeAction?.text="♧  Dislike" }; text=if(getSharedPreferences(PREFS,MODE_PRIVATE).getBoolean("like_"+currentVideoId,false)) "♥  Liked" else "♡  Like" }
-        dislikeAction = actionLabel("♧  Dislike",14f).apply { setOnClickListener { val next=!getSharedPreferences(PREFS,MODE_PRIVATE).getBoolean("dislike_"+currentVideoId,false); getSharedPreferences(PREFS,MODE_PRIVATE).edit().putBoolean("dislike_"+currentVideoId,next).apply(); text=if(next) "Disliked" else "♧  Dislike"; likeAction?.text="♡  Like" } }
+        likeAction = iconAction(R.drawable.ic_thumb_up, "Like").apply {
+            imageTintList = android.content.res.ColorStateList.valueOf(if (getSharedPreferences(PREFS, MODE_PRIVATE).getBoolean("like_"+currentVideoId,false)) Color.rgb(170,145,255) else Color.WHITE)
+            setOnClickListener { val prefs=getSharedPreferences(PREFS,MODE_PRIVATE); val next=!prefs.getBoolean("like_"+currentVideoId,false); prefs.edit().putBoolean("like_"+currentVideoId,next).putBoolean("dislike_"+currentVideoId,false).apply(); imageTintList=android.content.res.ColorStateList.valueOf(if(next) Color.rgb(170,145,255) else Color.WHITE); dislikeAction?.imageTintList=android.content.res.ColorStateList.valueOf(Color.WHITE) }
+        }
+        dislikeAction = iconAction(R.drawable.ic_thumb_down, "Dislike").apply {
+            setOnClickListener { val prefs=getSharedPreferences(PREFS,MODE_PRIVATE); val next=!prefs.getBoolean("dislike_"+currentVideoId,false); prefs.edit().putBoolean("dislike_"+currentVideoId,next).putBoolean("like_"+currentVideoId,false).apply(); imageTintList=android.content.res.ColorStateList.valueOf(if(next) Color.rgb(170,145,255) else Color.WHITE); likeAction?.imageTintList=android.content.res.ColorStateList.valueOf(Color.WHITE) }
+        }
         actions.addView(likeAction,LinearLayout.LayoutParams(0,dp(46),1f)); actions.addView(dislikeAction,LinearLayout.LayoutParams(0,dp(46),1f))
-        actions.addView(actionLabel("↗",23f).apply { setOnClickListener { shareVideo() } },LinearLayout.LayoutParams(dp(48),dp(46)))
-        saveAction=actionLabel(if(isSaved()) "▣" else "♧",22f).apply { setOnClickListener { toggleSaved(); text=if(isSaved()) "▣" else "♧" } }; actions.addView(saveAction,LinearLayout.LayoutParams(dp(48),dp(46)))
-        actions.addView(actionLabel("⋮",23f).apply { setOnClickListener { showMoreMenu(it) } },LinearLayout.LayoutParams(dp(42),dp(46))); details.addView(actions)
+        actions.addView(iconAction(R.drawable.ic_share, "Share").apply { setOnClickListener { shareVideo() } },LinearLayout.LayoutParams(dp(48),dp(46)))
+        saveAction=iconAction(if(isSaved()) R.drawable.ic_bookmark_filled else R.drawable.ic_bookmark, "Save video").apply { imageTintList=android.content.res.ColorStateList.valueOf(if(isSaved()) Color.rgb(170,145,255) else Color.WHITE); setOnClickListener { toggleSaved(); setImageResource(if(isSaved()) R.drawable.ic_bookmark_filled else R.drawable.ic_bookmark); imageTintList=android.content.res.ColorStateList.valueOf(if(isSaved()) Color.rgb(170,145,255) else Color.WHITE) } }
+        actions.addView(saveAction,LinearLayout.LayoutParams(dp(48),dp(46)))
+        actions.addView(iconAction(R.drawable.ic_more, "More options").apply { setOnClickListener { showMoreMenu(it) } },LinearLayout.LayoutParams(dp(42),dp(46)))
+        details.addView(actions)
         details.addView(TextView(this).apply { text = "Up next"; setTextColor(Color.WHITE); textSize = 19f; setTypeface(null, android.graphics.Typeface.BOLD); setPadding(0, dp(18), 0, dp(8)) })
         recommendIds.indices.forEach { index ->
             val item = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL; setPadding(0, dp(7), 0, dp(7)) }
@@ -275,13 +295,23 @@ class TubePlayerActivity : Activity() {
               <meta name="referrer" content="origin">
               <style>
                 *{box-sizing:border-box}
-                html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#000}.stack{position:absolute;inset:0;overflow:hidden;background:#000}.ambient{position:absolute;width:132%;height:132%;left:-16%;top:-16%;border:0;filter:blur(38px) saturate(1.8) brightness(1.35);opacity:.72;transform:scale(1.08);pointer-events:none;z-index:1}.main{position:absolute;inset:0;width:100%;height:100%;border:0;z-index:2;background:#000}
+                html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#000}.player-wrapper{position:relative;width:100%;height:100%;background:#000;overflow:visible}#ambient-wrap{position:absolute;top:-10%;left:-10%;width:120%;height:120%;z-index:1;filter:blur(50px) brightness(1.2) opacity(.8);pointer-events:none;overflow:hidden}#ambient-player{width:100%;height:100%;border:0;transform:scale(1.1);pointer-events:none}#main-player{position:relative;z-index:2;width:100%;height:100%;border:0;background:#000}
               </style>
             </head><body>
-              <div class="stack">
-                <iframe class="ambient" src="https://www.youtube.com/embed/$currentVideoId?autoplay=1&mute=1&controls=0&disablekb=1&playsinline=1&rel=0&origin=$appOrigin&enablejsapi=1" title="Ambient player" tabindex="-1" aria-hidden="true" referrerpolicy="origin" allow="autoplay; encrypted-media"></iframe>
-                <iframe class="main" src="https://www.youtube.com/embed/$currentVideoId?autoplay=1&playsinline=${if (isShort) 0 else 1}&controls=1&rel=0&origin=$appOrigin&enablejsapi=1" title="YouTube video player" referrerpolicy="origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+              <div class="player-wrapper">
+                <div id="ambient-wrap"><iframe id="ambient-player" src="https://www.youtube-nocookie.com/embed/$currentVideoId?enablejsapi=1&mute=1&controls=0&loop=1&playlist=$currentVideoId&playsinline=1&origin=$appOrigin" frameborder="0" title="Ambient glow player" tabindex="-1" aria-hidden="true" allow="autoplay; encrypted-media"></iframe></div>
+                <iframe id="main-player" src="https://www.youtube-nocookie.com/embed/$currentVideoId?enablejsapi=1&autoplay=1&playsinline=${if (isShort) 0 else 1}&origin=$appOrigin" frameborder="0" title="YouTube video player" referrerpolicy="origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
               </div>
+              <script>
+                var mainPlayer=null, ambientPlayer=null, syncTimer=null;
+                function onYouTubeIframeAPIReady(){
+                  ambientPlayer=new YT.Player("ambient-player",{events:{onReady:function(e){e.target.mute();e.target.setVolume(0);if(mainPlayer&&mainPlayer.getPlayerState&&mainPlayer.getPlayerState()===YT.PlayerState.PLAYING)syncAmbient(true);}}});
+                  mainPlayer=new YT.Player("main-player",{events:{onReady:function(e){e.target.playVideo();},onStateChange:onPlayerStateChange,onError:function(e){console.log("Main player error",e.data);}}});
+                }
+                function syncAmbient(start){if(!mainPlayer||!ambientPlayer||!mainPlayer.getCurrentTime)return;try{var t=mainPlayer.getCurrentTime();if(start||Math.abs(ambientPlayer.getCurrentTime()-t)>0.8)ambientPlayer.seekTo(t,true);ambientPlayer.mute();ambientPlayer.setVolume(0);ambientPlayer.playVideo();}catch(e){console.log("Ambient sync pending",e);}}
+                function onPlayerStateChange(event){if(!ambientPlayer)return;if(event.data===YT.PlayerState.PLAYING){syncAmbient(true);if(syncTimer)clearInterval(syncTimer);syncTimer=setInterval(function(){if(mainPlayer&&mainPlayer.getPlayerState()===YT.PlayerState.PLAYING)syncAmbient(false);},1200);}else if(event.data===YT.PlayerState.PAUSED||event.data===YT.PlayerState.ENDED){ambientPlayer.pauseVideo();if(syncTimer){clearInterval(syncTimer);syncTimer=null;}}else if(event.data===YT.PlayerState.BUFFERING){syncAmbient(true);}}
+                var tag=document.createElement("script");tag.src="https://www.youtube.com/iframe_api";document.head.appendChild(tag);
+              </script>
             </body></html>
         """.trimIndent()
         webView.loadDataWithBaseURL("$appOrigin/", html, "text/html", "UTF-8", null)
