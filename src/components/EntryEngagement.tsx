@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { getAnime, imageOf, titleOf, type Anime } from '../lib/catalogue';
+import { getAnimeByAniListIds, imageOf, titleOf, type Anime } from '../lib/catalogue';
 
 type CommentRow = {
   id: string;
@@ -257,11 +257,13 @@ export function RykoTrendingPage() {
       const { data, error: rpcError } = await supabase.rpc('get_ryko_top_trending', { period_key: period, result_limit: 30 });
       if (rpcError) { if (active) { setError(rpcError.message); setLoading(false); } return; }
       const rows = (data || []) as TrendRow[];
-      const results = await Promise.all(rows.map(async row => {
-        try { const anime = await getAnime(String(row.anilist_id)); return anime ? { anime, likes: Number(row.likes) } : null; }
-        catch { return null; }
-      }));
-      if (active) { setItems(results.filter((value): value is { anime: Anime; likes: number } => !!value)); setLoading(false); }
+      const entries = await getAnimeByAniListIds(rows.map(row => Number(row.anilist_id)));
+      const byId = new Map(entries.map(anime => [anime.anilistId, anime]));
+      const results = rows.flatMap(row => {
+        const anime = byId.get(Number(row.anilist_id));
+        return anime ? [{ anime, likes: Number(row.likes) }] : [];
+      });
+      if (active) { setItems(results); setLoading(false); }
     })();
     return () => { active = false; };
   }, [period]);
