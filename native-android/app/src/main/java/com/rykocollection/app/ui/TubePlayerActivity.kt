@@ -217,7 +217,7 @@ class TubePlayerActivity : Activity() {
               <style>
                 *{box-sizing:border-box}
                 html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#000}
-                iframe{display:block;border:0;width:100%;height:100%;${isShort ? "aspect-ratio:auto" : "aspect-ratio:16/9"}}
+                iframe{display:block;border:0;width:100%;height:100%;${if (isShort) "aspect-ratio:auto" else "aspect-ratio:16/9"}}
               </style>
             </head><body>
               <iframe src="https://www.youtube.com/embed/$currentVideoId?autoplay=1&playsinline=${if (isShort) 0 else 1}&rel=0&origin=$appOrigin"
