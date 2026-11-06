@@ -28,7 +28,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Color\nimport androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -284,7 +284,7 @@ fun NativeRykoTube() {
         if (query.isBlank()) matches else matches.sortedByDescending(::relevance)
     }
 
-    Column(Modifier.fillMaxSize().background(Color.Black)) {
+    Column(Modifier.fillMaxSize().background(Brush.radialGradient(listOf(Color(0xFF242039), Color(0xFF10101B), Color(0xFF07070C))))) {
         Row(
             Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -329,7 +329,7 @@ fun NativeRykoTube() {
                 if (catalogueResults.isEmpty() && !catalogueLoading) Text("No matching AniList titles.", color = Color.Gray, fontSize = 11.sp, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
                 LazyRow(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     items(catalogueResults, key = { "anilist-${it.id}" }) { media ->
-                        Column(Modifier.width(112.dp).clip(RoundedCornerShape(12.dp)).background(Color(0xFF111116))) {
+                        Column(Modifier.width(112.dp).rykoGlass(12.dp)) {
                             Box(Modifier.fillMaxWidth().height(142.dp).clickable {
                                 val trailer = media.trailer
                                 if (!trailer?.id.isNullOrBlank() && trailer?.site.equals("youtube", true)) {
@@ -502,7 +502,7 @@ private fun TubeVideoCard(video: TubeVideo, onClick: () -> Unit) {
     }
     Column(
         (if (video.short) Modifier.width(170.dp) else Modifier.fillMaxWidth())
-            .clip(RoundedCornerShape(18.dp)).background(Color(0xFF09090B))
+            .rykoGlass(18.dp)
     ) {
         Box(
             Modifier.fillMaxWidth()
