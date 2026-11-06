@@ -1,3 +1,4 @@
+import './news-page.css';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Clock3, ExternalLink, Image as ImageIcon, Newspaper, RefreshCw, Search, Tag } from 'lucide-react';
 
