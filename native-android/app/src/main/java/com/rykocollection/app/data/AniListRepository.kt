@@ -336,7 +336,23 @@ class AniListRepository {
         return request(query, buildJsonObject {}).data?.Media
     }
 
-    suspend fun getCharacters(id: Int, page: Int): List<AniListCharacterEdge> {\n        val query = \"\"\"\n            query {\n              Media(id: $id) {\n                characters(page: $page, perPage: 18, sort: ROLE) {\n                  edges { role node {\n                    id name { full } image { large medium } description(asHtml: false)\n                    gender age dateOfBirth { year month day } favourites siteUrl\n                  } }\n                }\n              }\n            }\n        \"\"\".trimIndent()\n        return request(query, buildJsonObject {}).data?.Media?.characters?.edges.orEmpty()\n    }\n\n    private suspend fun request(
+    suspend fun getCharacters(id: Int, page: Int): List<AniListCharacterEdge> {
+        val query = """
+            query {
+              Media(id: $id) {
+                characters(page: $page, perPage: 18, sort: ROLE) {
+                  edges { role node {
+                    id name { full } image { large medium } description(asHtml: false)
+                    gender age dateOfBirth { year month day } favourites siteUrl
+                  } }
+                }
+              }
+            }
+        """.trimIndent()
+        return request(query, buildJsonObject {}).data?.Media?.characters?.edges.orEmpty()
+    }
+
+    private suspend fun request(
         query: String,
         variables: JsonObject
     ): AniListEnvelope {
