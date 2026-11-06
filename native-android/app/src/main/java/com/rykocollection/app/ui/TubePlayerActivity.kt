@@ -184,7 +184,6 @@ class TubePlayerActivity : ComponentActivity() {
                 .autoplay(1)
                 .rel(0)
                 .ivLoadPolicy(3)
-                .privacyEnhancedMode(true)
                 .build()
             initialize(object : AbstractYouTubePlayerListener() {
                 override fun onReady(player: YouTubePlayer) {
