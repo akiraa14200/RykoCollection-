@@ -10,7 +10,7 @@
 .va-list{display:flex;flex-direction:column}
 .va-list button{display:flex;align-items:center;gap:14px;width:100%;text-align:left;border:0;background:transparent;color:#eee;padding:12px 10px;border-radius:10px;font-size:13px;font-weight:600}
 .va-list button:hover,.va-list button:focus-visible{background:#ffffff12;outline:none}
-.va-list button>svg:first-child{flex:none;color:#1BA0F4}
+.va-list button>svg:first-child{flex:none;color:#bdb4ff}
 .va-list button>span{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0}
 .va-list small{font-size:10.5px;font-weight:500;color:#8d8d8d}
 .va-trail{flex:none;color:#777}
@@ -22,10 +22,10 @@
 .va-report fieldset{border:0;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
 .va-report legend{font-size:11px;color:#8d8d8d;margin-bottom:6px}
 .va-report label{display:flex;align-items:center;gap:10px;padding:10px 11px;border:1px solid #ffffff14;border-radius:10px;font-size:12px;color:#ddd;cursor:pointer}
-.va-report label.active{border-color:#1BA0F4;background:#1BA0F41f;color:#fff}
-.va-report input[type=radio]{accent-color:#1BA0F4;margin:0}
+.va-report label.active{border-color:#8171e8;background:#8171e81f;color:#fff}
+.va-report input[type=radio]{accent-color:#8171e8;margin:0}
 .va-report textarea{resize:vertical;min-height:70px;background:#000;border:1px solid #ffffff1c;border-radius:10px;color:#fff;padding:10px;font:inherit;font-size:12px;outline:none}
-.va-report textarea:focus{border-color:#1BA0F4}
+.va-report textarea:focus{border-color:#8171e8}
 .va-report-foot{display:flex;align-items:center;gap:8px;justify-content:flex-end}
 .va-report-foot small{margin-right:auto;font-size:10px;color:#777}
 .va-report-foot .primary-btn:disabled{opacity:.6}
