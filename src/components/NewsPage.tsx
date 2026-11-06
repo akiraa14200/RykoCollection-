@@ -12,25 +12,7 @@ type NewsItem = {
   category: string;
   thumbnail?: string;
 };
-type FeedItem = {
-  title?: string;
-  link?: string;
-  description?: string;
-  content?: string;
-  pubDate?: string;
-  author?: string;
-  thumbnail?: string;
-  enclosure?: string | { link?: string; url?: string };
-};
-type FeedResponse = { status?: string; items?: FeedItem[] };
-
-const FEEDS = [
-  { name: 'Anime News Network', category: 'Industry', url: 'https://www.animenewsnetwork.com/all/rss.xml?ann-edition=us' },
-  { name: 'Crunchyroll News', category: 'Releases', url: 'https://www.crunchyroll.com/news/feed' },
-  { name: 'Anime Corner', category: 'Anime', url: 'https://animecorner.me/feed/' },
-  { name: 'Manga Mogura', category: 'Manga', url: 'https://mangamogura.com/feed/' },
-  { name: 'The Anime Daily', category: 'Anime', url: 'https://www.theanimedaily.com/feed/' }
-];
+type FeedResponse = { items?: NewsItem[]; failedSources?: string[] };
 
 const cleanText = (value = '') => value.replace(/<[^>]*>/g, ' ').replace(/&nbsp;|&#160;/g, ' ').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;|&apos;/g, "'").replace(/\s+/g, ' ').trim();
 const isRecent = (date: string) => {
@@ -43,22 +25,11 @@ const safeImageUrl = (value?: string | null, base?: string) => {
   try {
     const url = new URL(value.replace(/&amp;/g, '&'), base);
     if (!['http:', 'https:'].includes(url.protocol)) return undefined;
-    if (/\.(svg|gif)(?:$|\?)/i.test(url.pathname)) return undefined;
+    if (/\\.svg(?:$|\\?)/i.test(url.pathname)) return undefined;
     return url.toString();
   } catch {
     return undefined;
   }
-};
-
-const imageFromMarkup = (markup = '', base?: string) => {
-  const match = markup.match(/<img\b[^>]*(?:src|data-src|data-original)\s*=\s*["']([^"']+)["'][^>]*>/i);
-  return safeImageUrl(match?.[1], base);
-};
-
-const imageFromFeedItem = (item: FeedItem) => {
-  const enclosure = typeof item.enclosure === 'string' ? item.enclosure : item.enclosure?.link || item.enclosure?.url;
-  return safeImageUrl(item.thumbnail) || safeImageUrl(enclosure) ||
-    imageFromMarkup(item.content || '') || imageFromMarkup(item.description || '');
 };
 
 export function NewsPage() {
@@ -76,31 +47,36 @@ export function NewsPage() {
     if (manual) setRefreshing(true); else setLoading(true);
     setError('');
 
-    const results = await Promise.allSettled(FEEDS.map(async feed => {
-      const endpoint = 'https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent(feed.url);
-      const response = await fetch(endpoint, { headers: { Accept: 'application/json' } });
-      if (!response.ok) throw new Error(feed.name + ' feed unavailable');
+    let unique: NewsItem[] = [];
+    let failedSources: string[] = [];
+    try {
+      const response = await fetch('/api/news-feed', { headers: { Accept: 'application/json' } });
+      if (!response.ok) throw new Error('News feed service returned HTTP ' + response.status);
       const payload = await response.json() as FeedResponse;
-      if (payload.status !== 'ok' || !Array.isArray(payload.items)) throw new Error(feed.name + ' feed could not be read');
-      return payload.items.map(item => ({
+      failedSources = payload.failedSources || [];
+      const merged = Array.isArray(payload.items) ? payload.items : [];
+      unique = [...new Map(merged.map(item => [item.link, {
+        ...item,
         title: cleanText(item.title || 'Untitled story'),
-        link: item.link || '',
-        description: cleanText(item.description || item.content || '').slice(0, 360),
-        pubDate: item.pubDate || '',
-        author: item.author || '',
-        source: feed.name,
-        category: feed.category,
-        thumbnail: imageFromFeedItem(item)
-      })).filter(item => item.link && item.title && isRecent(item.pubDate));
-    }));
+        description: cleanText(item.description || '').slice(0, 360),
+        thumbnail: safeImageUrl(item.thumbnail, item.link)
+      }])).values()]
+        .filter(item => item.link && item.title && isRecent(item.pubDate))
+        .sort((a, b) => Date.parse(b.pubDate) - Date.parse(a.pubDate)).slice(0, 100);
+    } catch {
+      if (currentRequest === requestId.current) {
+        setItems([]);
+        setError('News feeds could not be reached right now. Please try again shortly.');
+        setLoading(false);
+        setRefreshing(false);
+      }
+      return;
+    }
 
     if (currentRequest !== requestId.current) return;
-    const merged = results.flatMap(result => result.status === 'fulfilled' ? result.value : []);
-    const unique = [...new Map(merged.map(item => [item.link, item])).values()]
-      .sort((a, b) => Date.parse(b.pubDate) - Date.parse(a.pubDate)).slice(0, 100);
     setItems(unique);
     if (!unique.length) setError('News feeds could not be reached right now. Please try again shortly.');
-    else if (results.every(result => result.status === 'rejected')) setError('Some feeds are temporarily unavailable; showing any stories that could be loaded.');
+    else if (failedSources.length) setError('Some sources are temporarily unavailable: ' + failedSources.join(', ') + '. Showing the stories that loaded.');
     setLoading(false);
     setRefreshing(false);
 
@@ -156,10 +132,10 @@ export function NewsPage() {
     {loading ? <div className="news-state">Collecting the latest headlines…</div> : error && !items.length ? <div className="news-state">{error}<button className="secondary-btn" onClick={() => void loadNews(true)}>Try again</button></div> : filtered.length ? <section className="news-grid">{filtered.map(item => <article className="news-card" key={item.link}>
       <a href={item.link} target="_blank" rel="noreferrer" className="news-image" aria-label={'Open article: ' + item.title}>
         <div className="news-image-placeholder"><ImageIcon size={25}/><span>Image unavailable</span></div>
-        {item.thumbnail && <img src={item.thumbnail} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={event => event.currentTarget.remove()}/>}
+        {item.thumbnail && <img src={item.thumbnail} alt="" loading="lazy" decoding="async" referrerPolicy="strict-origin-when-cross-origin" onError={event => event.currentTarget.remove()}/>}
       </a>
       <div className="news-card-content"><div className="news-meta"><span>{item.source}</span><span><Clock3 size={12}/>{new Date(item.pubDate).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}</span></div><h3><a href={item.link} target="_blank" rel="noreferrer">{item.title}</a></h3>{item.description && <p>{item.description}</p>}<a className="news-read-link" href={item.link} target="_blank" rel="noreferrer">Read full story <ExternalLink size={13}/></a></div>
     </article>)}</section> : <div className="news-state">No stories match this filter. Try another category or search term.</div>}
-    <footer className="news-sources"><Tag size={14}/> Sources: {FEEDS.map(feed => feed.name).join(' · ')}. Headlines link to their original publishers.</footer>
+    <footer className="news-sources"><Tag size={14}/> Headlines link to their original publishers. Images are loaded from RSS media metadata or article image metadata.</footer>
   </main>;
 }
