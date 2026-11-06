@@ -56,8 +56,11 @@ private data class TubeVideo(
     val creatorAvatar: String,
     val titleName: String,
     val titleFormat: String,
+    val sourceId: String,
     val short: Boolean
 )
+
+private data class TubeSource(val id: String, val type: String, val label: String)
 
 private object TubeFeedCache {
     var videos: List<TubeVideo> = emptyList()
@@ -107,7 +110,7 @@ private suspend fun fetchTubePage(page: Int): List<TubeVideo> = withContext(Disp
     val to = from + TUBE_PAGE_SIZE - 1
     // Keep this projection aligned with the proven web getRelatedVideos() query.
     // related_videos does not contain title_name, title_format, or title_cover.
-    val select = "id,title_id,legacy_title_id,video_url,platform,video_title,creator_name,creator_avatar_url,action_type,action_url,sort_order,created_at"
+    val select = "id,title_id,legacy_title_id,video_url,platform,video_title,creator_name,creator_avatar_url,action_type,action_url,sort_order,created_at,source_id,titles!related_videos_title_id_fkey(name,media_type,cover_url)"
     val url = "$baseUrl/rest/v1/related_videos?select=$select&order=sort_order.asc,created_at.desc&offset=$from&limit=$TUBE_PAGE_SIZE"
     val client = HttpClient(Android)
     try {
@@ -128,18 +131,43 @@ private suspend fun fetchTubePage(page: Int): List<TubeVideo> = withContext(Disp
             val videoUrl = row.string("video_url")
             if (videoUrl.isBlank()) return@mapNotNull null
             val platform = row.string("platform")
+            val title = row["titles"]?.let { runCatching { it.jsonObject }.getOrNull() }
             TubeVideo(
                 id = row.string("id").ifBlank { videoUrl },
                 title = row.string("video_title").ifBlank { "Untitled video" },
                 url = videoUrl,
-                thumb = thumbnailFor(videoUrl, ""),
+                thumb = thumbnailFor(videoUrl, title?.string("cover_url").orEmpty()),
                 creator = row.string("creator_name").ifBlank { "RykoCollection" },
                 creatorAvatar = row.string("creator_avatar_url"),
-                titleName = "",
-                titleFormat = "",
+                titleName = title?.string("name").orEmpty(),
+                titleFormat = title?.string("media_type").orEmpty(),
+                sourceId = row.string("source_id"),
                 short = isTubeShort(videoUrl, platform)
             )
         }.distinctBy { it.id }
+    } finally {
+        client.close()
+    }
+}
+
+private suspend fun fetchTubeSources(): List<TubeSource> = withContext(Dispatchers.IO) {
+    val baseUrl = BuildConfig.SUPABASE_URL.trimEnd('/')
+    val key = BuildConfig.SUPABASE_PUBLISHABLE_KEY.ifBlank { TUBE_PUBLIC_KEY_FALLBACK }
+    val client = HttpClient(Android)
+    try {
+        val response = client.get("$baseUrl/rest/v1/video_discovery_sources?select=id,source_type,label&enabled=eq.true&order=label.asc") {
+            header("apikey", key)
+            header("Authorization", "Bearer $key")
+            header("Accept", "application/json")
+        }
+        val body = response.bodyAsText()
+        if (response.status.value !in 200..299) {
+            throw IllegalStateException("Could not load channels and playlists (HTTP ${response.status.value}).")
+        }
+        Json.parseToJsonElement(body).jsonArray.map { item ->
+            val row = item.jsonObject
+            TubeSource(row.string("id"), row.string("source_type"), row.string("label"))
+        }.filter { it.id.isNotBlank() && it.label.isNotBlank() }
     } finally {
         client.close()
     }
@@ -154,9 +182,21 @@ fun NativeRykoTube() {
     var selectedFormat by remember { mutableStateOf("All") }
     var search by remember { mutableStateOf("") }
     var selected by remember { mutableStateOf<TubeVideo?>(null) }
+    var sources by remember { mutableStateOf<List<TubeSource>>(emptyList()) }
+    var selectedSource by remember { mutableStateOf("") }
+    var sourceError by remember { mutableStateOf<String?>(null) }
     var page by remember { mutableIntStateOf(1) }
     var hasMore by remember { mutableStateOf(true) }
     var refreshToken by remember { mutableIntStateOf(0) }
+
+    LaunchedEffect(Unit) {
+        try {
+            sources = fetchTubeSources()
+            sourceError = null
+        } catch (t: Throwable) {
+            sourceError = t.message ?: "Channels and playlists could not be loaded."
+        }
+    }
 
     LaunchedEffect(refreshToken) {
         if (refreshToken == 0 && TubeFeedCache.fresh()) {
@@ -189,7 +229,7 @@ fun NativeRykoTube() {
         }
         val textMatches = query.isBlank() || listOf(video.title, video.creator, video.titleName, video.titleFormat)
             .any { it.lowercase(Locale.ROOT).contains(query) }
-        formatMatches && textMatches
+        formatMatches && textMatches && (selectedSource.isBlank() || video.sourceId == selectedSource)
     }
 
     Column(Modifier.fillMaxSize().background(Color.Black)) {
@@ -220,6 +260,21 @@ fun NativeRykoTube() {
             listOf("All", "Videos", "Shorts").forEach { format ->
                 FilterChip(selected = selectedFormat == format, onClick = { selectedFormat = format }, label = { Text(format) })
             }
+        }
+        if (sources.isNotEmpty()) {
+            Column(Modifier.fillMaxWidth()) {
+                Text("Channels & playlists", color = Color.LightGray, fontSize = 12.sp, modifier = Modifier.padding(start = 16.dp, bottom = 6.dp))
+                LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    item {
+                        FilterChip(selected = selectedSource.isBlank(), onClick = { selectedSource = "" }, label = { Text("All sources") })
+                    }
+                    items(sources, key = { it.id }) { source ->
+                        FilterChip(selected = selectedSource == source.id, onClick = { selectedSource = if (selectedSource == source.id) "" else source.id }, label = { Text(source.label, maxLines = 1) })
+                    }
+                }
+            }
+        } else if (sourceError != null) {
+            Text("Channel and playlist filters unavailable", color = Color.Gray, fontSize = 11.sp, modifier = Modifier.padding(horizontal = 16.dp))
         }
 
         if (selected != null) {
