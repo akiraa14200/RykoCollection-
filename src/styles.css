@@ -810,3 +810,92 @@ body{padding-bottom:104px}
 .news-sources{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:24px;color:#817c8a;font-size:10px}
 .news-spinning{animation:news-spin .8s linear infinite}@keyframes news-spin{to{transform:rotate(360deg)}}
 @media(max-width:650px){.ryko-news-page{padding-top:24px}.news-grid{grid-template-columns:1fr}.news-image{height:205px}.news-toolbar{gap:7px}.news-toolbar .secondary-btn{padding:0 10px;font-size:11px}}
+
+
+/* Ryko entry discussion — threaded, mobile-first community feed */
+.ryko-discussion{margin-top:22px;padding:clamp(16px,3vw,26px);border:1px solid rgba(188,170,255,.15);border-radius:20px;background:radial-gradient(ellipse at 0 0,rgba(139,111,220,.10),transparent 42%),linear-gradient(155deg,#111016,#09090c 72%)}
+.ryko-discussion-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:20px}
+.ryko-discussion-heading .eyebrow{display:inline-flex;align-items:center;gap:6px;color:#b7a5f1;font-size:9px;font-weight:800;letter-spacing:.15em}
+.ryko-discussion-heading h2{margin:9px 0 6px;font:800 clamp(23px,3vw,31px) Manrope,sans-serif;letter-spacing:-.045em;color:#f6f3fc}
+.ryko-discussion-heading p{margin:0;color:#9691a2;font-size:12px;line-height:1.6}
+.ryko-discussion-heading p strong{color:#e4def5}
+.ryko-discussion-stats{display:flex;align-items:baseline;gap:5px;flex-wrap:wrap;justify-content:flex-end;color:#858091;font-size:10px;white-space:nowrap}
+.ryko-discussion-stats strong{color:#d9cdfc;font-size:15px;font-variant-numeric:tabular-nums}
+.ryko-discussion-stats i{font-style:normal;margin:0 3px;color:#5f596b}
+.ryko-comment-composer{display:flex;gap:12px;padding:14px;border:1px solid rgba(190,173,255,.17);border-radius:15px;background:rgba(255,255,255,.035);box-shadow:inset 0 1px 0 rgba(255,255,255,.035)}
+.ryko-composer-avatar,.ryko-comment-avatar{width:36px;height:36px;flex:0 0 36px;display:grid;place-items:center;border-radius:50%;background:linear-gradient(145deg,#d2c4ff,#806bd2);color:#171222;font-size:13px;font-weight:900;box-shadow:0 3px 14px #806bd233}
+.ryko-composer-main{min-width:0;flex:1}
+.ryko-composer-main textarea,.ryko-reply-composer textarea{display:block;width:100%;min-height:78px;resize:vertical;padding:11px 12px;border:1px solid #ffffff12;border-radius:10px;outline:none;background:#05050775;color:#f4f0ff;font:inherit;font-size:12px;line-height:1.65}
+.ryko-composer-main textarea:focus,.ryko-reply-composer textarea:focus{border-color:#ad9af077;box-shadow:0 0 0 3px #a58bea12}
+.ryko-composer-footer{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:10px}
+.ryko-composer-footer label{display:inline-flex;align-items:center;gap:6px;color:#aaa4b7;font-size:10px;cursor:pointer}
+.ryko-composer-footer label input{accent-color:#a995f0}
+.ryko-composer-footer label svg{color:#b7a5f1}
+.ryko-composer-footer>span{margin-left:auto;color:#777181;font-size:10px;font-variant-numeric:tabular-nums}
+.ryko-composer-footer .primary-btn,.ryko-reply-composer .primary-btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:34px;padding:0 13px;border:1px solid #c4b1ff44;border-radius:10px;background:linear-gradient(135deg,#a894ed,#7965c7);color:#fff;font-size:11px;font-weight:750}
+.ryko-composer-footer .primary-btn:disabled,.ryko-reply-composer .primary-btn:disabled{opacity:.45;cursor:not-allowed}
+.ryko-signin-prompt{display:flex;align-items:center;gap:12px;padding:16px;border:1px solid #ffffff13;border-radius:13px;background:#ffffff06;color:#bcaeff}
+.ryko-signin-prompt>span{display:grid;gap:4px}
+.ryko-signin-prompt strong{color:#e9e4f4;font-size:12px}
+.ryko-signin-prompt small{color:#928c9f;font-size:10px}
+.ryko-discussion-tools{display:flex;align-items:center;gap:9px;margin:22px 0 5px;padding-bottom:11px;border-bottom:1px solid #ffffff12}
+.ryko-discussion-sort{display:flex;gap:5px}
+.ryko-discussion-sort button,.ryko-refresh-comments{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:32px;padding:0 10px;border:1px solid transparent;border-radius:9px;background:transparent;color:#918b9d;font-size:10px}
+.ryko-discussion-sort button.active{border-color:#b39cfb33;background:#a58bea16;color:#e1d7ff}
+.ryko-comment-search{display:flex;align-items:center;gap:7px;min-width:0;max-width:220px;height:32px;margin-left:auto;padding:0 10px;border:1px solid #ffffff14;border-radius:9px;background:#ffffff06;color:#8d8799}
+.ryko-comment-search input{width:100%;min-width:0;border:0;outline:0;background:transparent;color:#f4f0ff;font:inherit;font-size:10px}
+.ryko-refresh-comments{width:32px;flex:0 0 32px;padding:0;border-color:#ffffff13;background:#ffffff06}
+.ryko-refresh-comments:disabled{opacity:.45}
+.ryko-comment-feed{display:grid}
+.ryko-comment{display:flex;align-items:flex-start;gap:11px;padding:17px 0;border-bottom:1px solid #ffffff0d;scroll-margin-top:90px}
+.ryko-comment-avatar{width:30px;height:30px;flex-basis:30px;font-size:11px}
+.ryko-comment-content{min-width:0;flex:1}
+.ryko-comment-byline{display:flex;align-items:center;gap:7px;flex-wrap:wrap;color:#777183;font-size:10px}
+.ryko-comment-byline strong{color:#e7e1f2;font-size:11px;font-weight:750}
+.ryko-comment-byline time{color:#858091}
+.ryko-comment-byline i{font-style:normal;color:#5e5868}
+.ryko-spoiler-label{padding:3px 6px;border:1px solid #e2b87933;border-radius:5px;background:#dca75c12;color:#e9c38e;font-size:8px;font-weight:800;letter-spacing:.08em}
+.ryko-comment-text{margin:9px 0 8px;color:#cbc6d4;font-size:12px;line-height:1.75;white-space:pre-wrap;overflow-wrap:anywhere}
+.ryko-comment-toolbar{display:flex;align-items:center;gap:15px;flex-wrap:wrap}
+.ryko-comment-toolbar button{display:inline-flex;align-items:center;gap:5px;padding:4px 0;border:0;background:transparent;color:#918b9d;font-size:10px;cursor:pointer}
+.ryko-comment-toolbar button:hover{color:#c8b8ff}
+.ryko-comment-thread{margin:12px 0 0 2px;padding-left:14px;border-left:1px solid rgba(180,160,255,.24)}
+.ryko-comment-reply{padding:11px 0 5px;border-bottom:0}
+.ryko-comment-reply .ryko-comment-avatar{width:25px;height:25px;flex-basis:25px;font-size:9px}
+.ryko-reply-composer{display:grid;gap:8px;margin:12px 0;padding:10px;border:1px solid #ffffff12;border-radius:11px;background:#ffffff05}
+.ryko-reply-composer textarea{min-height:62px}
+.ryko-reply-composer>div{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.ryko-reply-composer small{color:#807a8b;font-size:9px}
+.ryko-spoiler-cover{display:flex;align-items:center;gap:8px;width:100%;margin:10px 0;padding:12px;border:1px dashed #d4a86666;border-radius:9px;background:#d4a8660c;color:#e6c48f;text-align:left;font-size:11px}
+.ryko-comments-empty{display:flex;flex-direction:column;align-items:center;gap:8px;padding:34px 14px;text-align:center;color:#aaa2b7}
+.ryko-comments-empty>svg{color:#b5a3f1}
+.ryko-comments-empty strong{color:#e5e0ef;font-size:13px}
+.ryko-comments-empty p{margin:0;color:#898395;font-size:10px;line-height:1.6}
+.ryko-comments-empty .secondary-btn{margin-top:7px}
+.ryko-comment-skeleton{display:block;height:76px;margin:12px 0;border:1px solid #ffffff0c;border-radius:12px;background:linear-gradient(90deg,#ffffff05,#ffffff0c,#ffffff05);background-size:200% 100%;animation:ryko-comment-shimmer 1.5s linear infinite}
+@keyframes ryko-comment-shimmer{to{background-position:-200% 0}}
+.ryko-moderation-note{margin:14px 0 0;color:#777181;font-size:9px;line-height:1.6}
+@media(max-width:650px){
+ .ryko-discussion{padding:15px 12px;border-radius:15px}
+ .ryko-discussion-heading{align-items:flex-start;flex-direction:column;gap:9px}
+ .ryko-discussion-heading h2{font-size:23px}
+ .ryko-discussion-heading p{font-size:10px}
+ .ryko-discussion-stats{justify-content:flex-start}
+ .ryko-comment-composer{gap:8px;padding:10px}
+ .ryko-composer-avatar{width:29px;height:29px;flex-basis:29px}
+ .ryko-composer-main textarea{min-height:74px;font-size:11px}
+ .ryko-composer-footer{gap:8px}
+ .ryko-composer-footer>span{display:none}
+ .ryko-composer-footer .primary-btn{margin-left:auto;min-height:32px}
+ .ryko-discussion-tools{gap:5px}
+ .ryko-discussion-sort{gap:2px}
+ .ryko-discussion-sort button{padding:0 7px;font-size:9px}
+ .ryko-comment-search{max-width:none;flex:1;height:31px;padding:0 7px}
+ .ryko-refresh-comments{width:31px;flex-basis:31px}
+ .ryko-comment{gap:8px;padding:14px 0}
+ .ryko-comment-avatar{width:27px;height:27px;flex-basis:27px}
+ .ryko-comment-text{font-size:11px;line-height:1.7}
+ .ryko-comment-thread{padding-left:9px}
+ .ryko-comment-toolbar{gap:12px}
+}
+@media(prefers-reduced-motion:reduce){.ryko-comment-skeleton{animation:none}}
