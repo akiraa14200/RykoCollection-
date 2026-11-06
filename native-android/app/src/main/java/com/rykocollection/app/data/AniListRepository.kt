@@ -81,17 +81,28 @@ data class AniListDetail(
     val coverImage: AniListCover? = null,
     val bannerImage: String? = null,
     val averageScore: Int? = null,
+    val popularity: Int? = null,
+    val favourites: Int? = null,
     val format: String? = null,
     val seasonYear: Int? = null,
+    val season: String? = null,
     val description: String? = null,
     val episodes: Int? = null,
     val chapters: Int? = null,
+    val volumes: Int? = null,
+    val duration: Int? = null,
     val status: String? = null,
     val genres: List<String> = emptyList(),
     val countryOfOrigin: String? = null,
     val source: String? = null,
     val studios: AniListStudios? = null,
     val characters: AniListCharacters? = null,
+    val staff: AniListStaff? = null,
+    val externalLinks: List<AniListExternalLink> = emptyList(),
+    val synonyms: List<String> = emptyList(),
+    val startDate: AniListFuzzyDate? = null,
+    val endDate: AniListFuzzyDate? = null,
+    val nextAiringEpisode: AniListNextAiring? = null,
     val trailer: AniListTrailer? = null
 )
 
@@ -129,9 +140,27 @@ data class AniListCharacterEdge(
 
 @Serializable
 data class AniListCharacter(
+    val id: Int = 0,
     val name: AniListCharacterName,
-    val image: AniListCharacterImage? = null
+    val image: AniListCharacterImage? = null,
+    val description: String? = null,
+    val gender: String? = null,
+    val age: String? = null,
+    val dateOfBirth: AniListFuzzyDate? = null,
+    val favourites: Int? = null,
+    val siteUrl: String? = null
 )
+
+
+@Serializable data class AniListFuzzyDate(val year:Int?=null,val month:Int?=null,val day:Int?=null) {
+    fun display():String = listOfNotNull(year?.toString(),month?.let{it.toString().padStart(2,'0')},day?.let{it.toString().padStart(2,'0')}).joinToString("-").ifBlank{"—"}
+}
+@Serializable data class AniListNextAiring(val airingAt:Long=0,val timeUntilAiring:Long=0,val episode:Int=0)
+@Serializable data class AniListStaff(val edges:List<AniListStaffEdge> = emptyList())
+@Serializable data class AniListStaffEdge(val role:String="",val node:AniListStaffMember)
+@Serializable data class AniListStaffMember(val name:AniListStaffName)
+@Serializable data class AniListStaffName(val full:String="")
+@Serializable data class AniListExternalLink(val site:String="",val url:String="",val type:String?=null)
 
 @Serializable
 data class AniListCharacterName(val full: String = "")
@@ -286,20 +315,42 @@ class AniListRepository {
         val query = """
             query {
               Media(id: $id) {
-                id title { english romaji native }
-                coverImage { large extraLarge }
-                bannerImage
-                averageScore format seasonYear description(asHtml: false)
-                episodes chapters status genres countryOfOrigin source
-                trailer { id site thumbnail }
+                id title { english romaji native } coverImage { large extraLarge } bannerImage
+                averageScore popularity favourites format season seasonYear status genres
+                startDate { year month day } endDate { year month day }
+                episodes chapters volumes duration description(asHtml: false)
+                countryOfOrigin source synonyms trailer { id site thumbnail }
                 studios(isMain: true) { nodes { name } }
-                characters(page: 1, perPage: 20, sort: ROLE) {
-                  edges { role node { name { full } image { large medium } } }
+                staff(page: 1, perPage: 30, sort: RELEVANCE) { edges { role node { name { full } } } }
+                externalLinks { site url type }
+                nextAiringEpisode { airingAt timeUntilAiring episode }
+                characters(page: 1, perPage: 18, sort: ROLE) {
+                  edges { role node {
+                    id name { full } image { large medium } description(asHtml: false)
+                    gender age dateOfBirth { year month day } favourites siteUrl
+                  } }
                 }
               }
             }
         """.trimIndent()
         return request(query, buildJsonObject {}).data?.Media
+    }
+
+    suspend fun getCharacters(id: Int, page: Int): List<AniListCharacterEdge> {
+        val query = """
+            query($id: Int!, $page: Int!) {
+              Media(id: $id) {
+                characters(page: $page, perPage: 18, sort: ROLE) {
+                  edges { role node {
+                    id name { full } image { large medium } description(asHtml: false)
+                    gender age dateOfBirth { year month day } favourites siteUrl
+                  } }
+                }
+              }
+            }
+        """.trimIndent()
+        val variables = buildJsonObject { put("id", id); put("page", page) }
+        return request(query, variables).data?.Media?.characters?.edges.orEmpty()
     }
 
     private suspend fun request(
