@@ -229,8 +229,11 @@ class TubePlayerActivity : Activity() {
         val playerHeightDp = (screenWidthDp * 9f / 16f).toInt()
         if (!isShort) {
             page.addView(webView, LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(playerHeightDp)
-            ))
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(playerHeightDp + 64)
+            ).apply {
+                leftMargin = -dp(1)
+                rightMargin = -dp(1)
+            })
         }
 
         val details = LinearLayout(this).apply {
@@ -295,7 +298,7 @@ class TubePlayerActivity : Activity() {
               <meta name="referrer" content="origin">
               <style>
                 *{box-sizing:border-box}
-                html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#000}.player-wrapper{position:relative;width:100%;height:100%;background:#000;overflow:visible}#ambient-wrap{position:absolute;top:-10%;left:-10%;width:120%;height:120%;z-index:1;filter:blur(50px) brightness(1.2) opacity(.8);pointer-events:none;overflow:hidden}#ambient-player{width:100%;height:100%;border:0;transform:scale(1.1);pointer-events:none}#main-player{position:relative;z-index:2;width:100%;height:100%;border:0;background:#000}
+                html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#000}.player-wrapper{position:relative;width:100%;height:100%;background:#000;overflow:visible}#ambient-wrap{position:absolute;top:-4%;left:-4%;width:108%;height:108%;z-index:1;filter:blur(50px) brightness(1.2) opacity(.8);pointer-events:none;overflow:hidden}#ambient-player{width:100%;height:100%;border:0;transform:scale(1.12);pointer-events:none}#main-player{position:absolute;left:3%;top:32px;z-index:2;width:94%;height:calc(100% - 64px);border:0;background:#000}
               </style>
             </head><body>
               <div class="player-wrapper">
