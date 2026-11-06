@@ -102,14 +102,29 @@ export async function getRelatedVideosBySourceIds(sourceIds: string[], page = 1)
 export async function getRelatedShortVideos(page = 1): Promise<RelatedVideo[]> {
   const from = Math.max(0, page - 1) * VIDEO_PAGE_SIZE;
   const columns = 'id,title_id,legacy_title_id,source_id,video_url,platform,video_title,creator_name,creator_avatar_url,action_type,action_url,sort_order,created_at';
-  const requests = await Promise.all([
+  const requests = await Promise.allSettled([
     supabase.from('related_videos').select(columns).ilike('video_url', '%youtube.com/shorts/%').order('created_at', { ascending: false }).range(from, from + VIDEO_PAGE_SIZE - 1),
     supabase.from('related_videos').select(columns).or('video_url.ilike.%instagram.com/reel/%,video_url.ilike.%instagram.com/reels/%,video_url.ilike.%instagr.am/reel/%').order('created_at', { ascending: false }).range(from, from + VIDEO_PAGE_SIZE - 1),
-    supabase.from('related_videos').select(columns).ilike('video_url', '%tiktok.com/%').order('created_at', { ascending: false }).range(from, from + 39)
+    supabase.from('related_videos').select(columns).ilike('video_url', '%tiktok.com/%').order('created_at', { ascending: false }).range(from, from + VIDEO_PAGE_SIZE - 1)
   ]);
-  requests.forEach(({ error }) => { if (error) throwIf(error); });
   const unique = new Map<string, RelatedVideo>();
-  requests.forEach(({ data }) => ((data || []) as RelatedVideoRow[]).forEach(row => unique.set(row.id, mapRelatedVideo(row))));
+  const failures: string[] = [];
+  requests.forEach((result, index) => {
+    if (result.status === 'rejected') {
+      failures.push(['YouTube Shorts', 'Instagram Reels', 'TikTok'][index]);
+      console.warn('Short-video provider unavailable:', failures[failures.length - 1], result.reason);
+      return;
+    }
+    if (result.value.error) {
+      failures.push(['YouTube Shorts', 'Instagram Reels', 'TikTok'][index]);
+      console.warn('Short-video provider query failed:', failures[failures.length - 1], result.value.error);
+      return;
+    }
+    ((result.value.data || []) as RelatedVideoRow[]).forEach(row => unique.set(row.id, mapRelatedVideo(row)));
+  });
+  if (!unique.size && failures.length === requests.length) {
+    throw new Error('Shorts are temporarily unavailable from all providers.');
+  }
   return [...unique.values()].sort((a,b)=>Date.parse(b.createdAt)-Date.parse(a.createdAt));
 }
 
@@ -171,6 +186,32 @@ export async function searchRelatedVideos(query: string, page = 1): Promise<Rela
   return [...unique.values()];
 }
 
+const mapAniListTrailerVideos = (items: import('./anilist').Anime[]): RelatedVideo[] => {
+  const unique = new Map<string, RelatedVideo>();
+  items.forEach(item => {
+    const trailerId = item.trailer?.site?.toLowerCase() === 'youtube' && /^[a-zA-Z0-9_-]{6,}$/.test(item.trailer.id)
+      ? item.trailer.id : '';
+    if (!trailerId) return;
+    const videoUrl = `https://www.youtube.com/watch?v=${trailerId}`;
+    if (unique.has(videoUrl)) return;
+    const mediaFormat = item.format || '';
+    const country = item.countryOfOrigin || '';
+    const titleFormat = /MANGA|NOVEL|ONE_SHOT/.test(mediaFormat)
+      ? (country === 'KR' ? 'Manhwa' : country === 'CN' ? 'Manhua' : 'Manga')
+      : 'Anime';
+    const titleName = item.title?.english || item.title?.romaji || item.title?.native || 'Untitled';
+    unique.set(videoUrl, {
+      id: `anilist-trailer-${item.id}`, titleId: `anilist:${item.id}`, videoUrl,
+      platform: 'youtube', videoTitle: titleName, creatorName: 'YouTube', creatorAvatarUrl: '',
+      actionType: 'watch', actionUrl: item.siteUrl || videoUrl, sortOrder: 0,
+      createdAt: '1970-01-01T00:00:00.000Z', titleName,
+      titleCover: item.coverImage?.extraLarge || item.coverImage?.large || '',
+      titleFormat, releaseYear: item.seasonYear, genres: item.genres || []
+    });
+  });
+  return [...unique.values()];
+};
+
 export async function getRelatedVideos(page = 1, titleId?: string): Promise<RelatedVideo[]> {
   const from = (page - 1) * VIDEO_PAGE_SIZE;
   let request = supabase.from('related_videos').select('id,title_id,legacy_title_id,source_id,video_url,platform,video_title,creator_name,creator_avatar_url,action_type,action_url,sort_order,created_at').order('sort_order', { ascending: true }).order('created_at', { ascending: false }).range(from, from + VIDEO_PAGE_SIZE - 1);
@@ -181,7 +222,15 @@ export async function getRelatedVideos(page = 1, titleId?: string): Promise<Rela
   const trailersRequest = titleId ? null : getTrailerCatalogue(page);
   trailersRequest?.catch(() => undefined); // handled below; avoid unhandled-rejection noise
   const { data, error } = await request;
-  throwIf(error);
+  if (error) {
+    if (!trailersRequest) throwIf(error);
+    console.warn('Saved video database unavailable; falling back to AniList trailers.', error);
+    const fallback = await trailersRequest!.catch(trailerError => {
+      console.warn('AniList trailer fallback unavailable.', trailerError);
+      return { anime: [], manga: [] };
+    });
+    return mapAniListTrailerVideos([...fallback.anime, ...fallback.manga]);
+  }
   const videos = ((data || []) as RelatedVideoRow[]).map(mapRelatedVideo);
   // Only query UUID-backed title rows. Legacy AniList IDs and empty legacy_title_id
   // values are text identifiers, not PostgreSQL UUIDs; never pass them to .in('id', ...).
@@ -420,8 +469,8 @@ export async function getAnime(id: string): Promise<Anime | null> {
     const anime = mapTitle(row);
     const { data: characters, error: characterError } = await supabase
       .from('characters').select('*').eq('title_id', id).order('created_at').limit(50);
-    throwIf(characterError);
-    const localEdges = ((characters || []) as CharacterRow[]).map(row => ({
+    if (characterError) console.warn('Local character enrichment unavailable; keeping the entry details.', characterError);
+    const localEdges = ((characterError ? [] : characters || []) as CharacterRow[]).map(row => ({
       role: row.role || 'Supporting',
       node: {
         id: hashId(row.id), name: { full: row.name },
