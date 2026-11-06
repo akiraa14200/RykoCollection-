@@ -338,82 +338,19 @@ private fun TubeVideoCard(video: TubeVideo, onClick: () -> Unit) {
     }
 }
 
-@SuppressLint("SetJavaScriptEnabled")
 @Composable
 private fun TubePlayer(video: TubeVideo, onClose: () -> Unit) {
-    Column(Modifier.fillMaxSize().background(Color.Black)) {
-        TextButton(onClick = onClose) { Text("‹ Back to RykoTube", color = Color(0xFFA99BFF)) }
-        val youtubeId = youtubeVideoId(video.url)
-        if (youtubeId == null) {
-            Text("This provider cannot be embedded here. Open the original video from its source.", color = Color.White, modifier = Modifier.padding(18.dp))
-        } else {
-            val context = LocalContext.current
-            key(youtubeId) {
-                var playerView by remember(youtubeId) { mutableStateOf<WebView?>(null) }
-                AndroidView(
-                    modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f),
-                    factory = { ctx ->
-                        WebView(ctx).apply {
-                            playerView = this
-                            // Keep the WebView on its normal compositor path. The app/activity
-                            // already have hardware acceleration enabled; forcing a separate
-                            // View hardware layer can interfere with WebView video surfaces.
-                            setLayerType(android.view.View.LAYER_TYPE_NONE, null)
-                            setBackgroundColor(android.graphics.Color.BLACK)
-                            settings.javaScriptEnabled = true
-                            settings.domStorageEnabled = true
-                            settings.mediaPlaybackRequiresUserGesture = false
-                            settings.mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
-                            webChromeClient = WebChromeClient()
-                            webViewClient = WebViewClient()
-                            CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
-
-                            // Error 153 is returned when the embedded player cannot identify
-                            // the embedding client (commonly a missing HTTP Referer).
-                            // Load a real HTTPS-origin document containing the iframe instead
-                            // of navigating the WebView directly to the embed URL.
-                            val origin = "https://rykocollection.vercel.app"
-                            val html = """
-                                <!doctype html>
-                                <html>
-                                <head>
-                                  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-                                  <meta name="referrer" content="strict-origin-when-cross-origin">
-                                  <style>
-                                    html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#000}
-                                    iframe{border:0;width:100%;height:100%}
-                                  </style>
-                                </head>
-                                <body>
-                                  <iframe
-                                    src="https://www.youtube-nocookie.com/embed/$youtubeId?autoplay=1&playsinline=1&rel=0&fs=0&origin=$origin"
-                                    title="YouTube video player"
-                                    referrerpolicy="strict-origin-when-cross-origin"
-                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                                    allowfullscreen>
-                                  </iframe>
-                                </body>
-                                </html>
-                            """.trimIndent()
-                            loadDataWithBaseURL("$origin/", html, "text/html", "UTF-8", null)
-                        }
-                    },
-                    update = { }
-                )
-                DisposableEffect(youtubeId) {
-                    onDispose {
-                        playerView?.apply {
-                            stopLoading()
-                            loadUrl("about:blank")
-                            removeAllViews()
-                            destroy()
-                        }
-                        playerView = null
-                    }
-                }
-            }
-            Text(video.title, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(16.dp))
-            Text(video.creator, color = Color.LightGray, modifier = Modifier.padding(horizontal = 16.dp))
+    val context = LocalContext.current
+    LaunchedEffect(video.id) {
+        val intent = android.content.Intent(context, TubePlayerActivity::class.java).apply {
+            putExtra(TubePlayerActivity.EXTRA_VIDEO_ID, youtubeVideoId(video.url))
+            putExtra(TubePlayerActivity.EXTRA_TITLE, video.title)
+            putExtra(TubePlayerActivity.EXTRA_CREATOR, video.creator)
         }
+        context.startActivity(intent)
+        onClose()
+    }
+    Box(Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
+        CircularProgressIndicator(color = Color(0xFFA99BFF))
     }
 }
