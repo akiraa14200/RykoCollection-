@@ -477,6 +477,7 @@ private fun TubePlayer(video: TubeVideo, shortQueue: List<TubeVideo>, onClose: (
                 putExtra(TubePlayerActivity.EXTRA_VIDEO_ID, youtubeId)
                 putExtra(TubePlayerActivity.EXTRA_TITLE, video.title)
                 putExtra(TubePlayerActivity.EXTRA_CREATOR, video.creator)
+                putExtra(TubePlayerActivity.EXTRA_THUMB, video.thumb)
                 putExtra(TubePlayerActivity.EXTRA_IS_SHORT, video.short)
                 if (video.short) {
                     val queue = shortQueue.filter { youtubeVideoId(it.url) != null }
