@@ -476,6 +476,24 @@ class TubePlayerActivity : Activity() {
         setContentView(root)
 
         val appOrigin = "https://rykocollection.vercel.app"
+        // Build Kotlin strings separately: HTML/JavaScript use single quotes, which
+        // must not be parsed as Kotlin character literals inside interpolation.
+        val playerElement = if (isShort) {
+            """<div id="main-player"></div><div id="short-playback-indicator">Ⅱ</div>"""
+        } else {
+            """<iframe id="main-player" src="https://www.youtube-nocookie.com/embed/$currentVideoId?autoplay=1&playsinline=1&rel=0&origin=$appOrigin" frameborder="0" title="YouTube video player" referrerpolicy="origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>"""
+        }
+        val playerCreation = if (isShort) {
+            """rykoPlayer = new YT.Player('main-player', { videoId: '$currentVideoId', playerVars: { autoplay: 1, controls: 0, playsinline: 1, rel: 0, fs: 1, disablekb: 1, origin: '$appOrigin' },"""
+        } else {
+            """new YT.Player('main-player', {"""
+        }
+        val playbackIndicatorUpdate = if (isShort) {
+            """var indicator = document.getElementById('short-playback-indicator'); if (indicator) indicator.textContent = event.data === YT.PlayerState.PLAYING ? 'Ⅱ' : '▶';"""
+        } else ""
+        val shortTapHandler = if (isShort) {
+            """document.addEventListener('click', function() { if (!rykoPlayer) return; var state = rykoPlayer.getPlayerState(); if (state === YT.PlayerState.PLAYING) rykoPlayer.pauseVideo(); else rykoPlayer.playVideo(); var indicator = document.getElementById('short-playback-indicator'); if (indicator) { indicator.style.opacity = '1'; clearTimeout(indicatorTimer); indicatorTimer = setTimeout(function(){ indicator.style.opacity = '0'; }, 650); } });"""
+        } else ""
         val html = """
             <!doctype html><html><head>
               <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
@@ -488,7 +506,7 @@ class TubePlayerActivity : Activity() {
               </style>
             </head><body>
               <div class="player-wrapper">
-                ${if (isShort) '<div id="main-player"></div><div id="short-playback-indicator">Ⅱ</div>' else '<iframe id="main-player" src="https://www.youtube-nocookie.com/embed/$currentVideoId?autoplay=1&playsinline=1&rel=0&origin=$appOrigin" frameborder="0" title="YouTube video player" referrerpolicy="origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>'}
+                                $playerElement
               </div>
               <script>
                 var rykoPlayer = null;
@@ -497,14 +515,14 @@ class TubePlayerActivity : Activity() {
                 ambientApiScript.src = 'https://www.youtube.com/iframe_api';
                 document.head.appendChild(ambientApiScript);
                 function onYouTubeIframeAPIReady() {
-                  ${if (isShort) "rykoPlayer = new YT.Player('main-player', { videoId: '$currentVideoId', playerVars: { autoplay: 1, controls: 0, playsinline: 1, rel: 0, fs: 1, disablekb: 1, origin: '$appOrigin' }," else "new YT.Player('main-player', {"}
+                                    $playerCreation
                     events: { onStateChange: function(event) {
                       if (window.ambientBridge) window.ambientBridge.onPlaybackState(event.data === YT.PlayerState.PLAYING);
-                      ${if (isShort) "var indicator = document.getElementById('short-playback-indicator'); if (indicator) indicator.textContent = event.data === YT.PlayerState.PLAYING ? 'Ⅱ' : '▶';" else ""}
+                                            $playbackIndicatorUpdate
                     }}
                   });
                 }
-                ${if (isShort) "document.addEventListener('click', function() { if (!rykoPlayer) return; var state = rykoPlayer.getPlayerState(); if (state === YT.PlayerState.PLAYING) rykoPlayer.pauseVideo(); else rykoPlayer.playVideo(); var indicator = document.getElementById('short-playback-indicator'); if (indicator) { indicator.style.opacity = '1'; clearTimeout(indicatorTimer); indicatorTimer = setTimeout(function(){ indicator.style.opacity = '0'; }, 650); } });" else ""}
+                                $shortTapHandler
                 window.loadRykoShort = function(id) { if (rykoPlayer && id) rykoPlayer.loadVideoById({videoId:id, startSeconds:0}); };
               </script>
             </body></html>
