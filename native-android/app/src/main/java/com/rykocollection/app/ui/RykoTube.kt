@@ -32,6 +32,8 @@ import androidx.compose.ui.platform.LocalContext
 import coil.compose.AsyncImage
 import androidx.compose.ui.layout.ContentScale
 import com.rykocollection.app.BuildConfig
+import com.rykocollection.app.data.AniListMedia
+import com.rykocollection.app.data.AniListRepository
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.android.Android
 import io.ktor.client.request.get
@@ -190,6 +192,26 @@ fun NativeRykoTube() {
     var page by remember { mutableIntStateOf(1) }
     var hasMore by remember { mutableStateOf(true) }
     var refreshToken by remember { mutableIntStateOf(0) }
+    var catalogueResults by remember { mutableStateOf<List<AniListMedia>>(emptyList()) }
+    var catalogueLoading by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val tubeHistory = remember { context.getSharedPreferences("ryko_search", android.content.Context.MODE_PRIVATE).getString("tube", "").orEmpty().split("¦").filter { it.isNotBlank() }.take(8) }
+
+    LaunchedEffect(search) {
+        val term = search.trim()
+        if (term.length < 2) { catalogueResults = emptyList(); return@LaunchedEffect }
+        kotlinx.coroutines.delay(420)
+        catalogueLoading = true
+        val repository = AniListRepository()
+        try {
+            val anime = repository.searchMedia(term, false)
+            val manga = repository.searchMedia(term, true)
+            catalogueResults = (anime + manga).distinctBy { it.id }.take(12)
+            val history = (listOf(term) + tubeHistory.filterNot { it.equals(term, true) }).take(8)
+            context.getSharedPreferences("ryko_search", android.content.Context.MODE_PRIVATE).edit().putString("tube", history.joinToString("¦")).apply()
+        } catch (_: Throwable) { catalogueResults = emptyList() }
+        finally { repository.close(); catalogueLoading = false }
+    }
 
     LaunchedEffect(Unit) {
         try {
@@ -279,6 +301,37 @@ fun NativeRykoTube() {
                 focusedPlaceholderColor = Color.Gray, unfocusedPlaceholderColor = Color.Gray
             )
         )
+        if (search.isBlank() && tubeHistory.isNotEmpty()) {
+            LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                items(tubeHistory) { term -> AssistChip(onClick = { search = term }, label = { Text(term, maxLines = 1) }) }
+            }
+        }
+        if (search.trim().length >= 2) {
+            Column(Modifier.fillMaxWidth().padding(top = 8.dp)) {
+                Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text("ANIME & MANGA ON ANILIST", color = Color(0xFFA99BFF), fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                    if (catalogueLoading) CircularProgressIndicator(color = Color(0xFFA99BFF), modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                }
+                if (catalogueResults.isEmpty() && !catalogueLoading) Text("No matching AniList titles.", color = Color.Gray, fontSize = 11.sp, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+                LazyRow(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    items(catalogueResults, key = { "anilist-${it.id}" }) { media ->
+                        Column(Modifier.width(112.dp).clip(RoundedCornerShape(12.dp)).background(Color(0xFF111116))) {
+                            Box(Modifier.fillMaxWidth().height(142.dp).clickable {
+                                val trailer = media.trailer
+                                if (!trailer?.id.isNullOrBlank() && trailer?.site.equals("youtube", true)) {
+                                    selected = TubeVideo("anilist-${media.id}", media.title.display, "https://www.youtube.com/watch?v=${trailer?.id}", "youtube", trailer?.thumbnail ?: media.coverImage?.imageUrl.orEmpty(), "AniList", "", media.title.display, media.format.orEmpty(), "", false)
+                                }
+                            }) {
+                                AsyncImage(media.coverImage?.imageUrl, media.title.display, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                                if (!media.trailer?.id.isNullOrBlank() && media.trailer?.site.equals("youtube", true)) Icon(Icons.Default.PlayArrow, "Play trailer", Modifier.align(Alignment.Center).size(34.dp), tint = Color.White)
+                            }
+                            Text(media.title.display, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, modifier = Modifier.padding(7.dp), overflow = TextOverflow.Ellipsis)
+                            Text(if (media.trailer?.id.isNullOrBlank()) "No trailer" else "Watch trailer", color = Color(0xFFA99BFF), fontSize = 9.sp, modifier = Modifier.padding(start = 7.dp, bottom = 7.dp))
+                        }
+                    }
+                }
+            }
+        }
         Row(Modifier.padding(horizontal = 16.dp, vertical = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf("All", "Videos", "Shorts").forEach { format ->
                 FilterChip(selected = selectedFormat == format, onClick = { selectedFormat = format }, label = { Text(format) })
