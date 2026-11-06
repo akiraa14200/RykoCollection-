@@ -155,10 +155,11 @@ class TubePlayerActivity : Activity() {
         // The embedded video stays 16:9 instead of stretching to fill a tall phone screen.
         val screenWidthDp = (resources.displayMetrics.widthPixels / resources.displayMetrics.density).toInt()
         val playerHeightDp = (screenWidthDp * 9f / 16f).toInt()
-        page.addView(webView, LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            if (isShort) ViewGroup.LayoutParams.MATCH_PARENT else dp(playerHeightDp)
-        ))
+        if (!isShort) {
+            page.addView(webView, LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(playerHeightDp)
+            ))
+        }
 
         val details = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
