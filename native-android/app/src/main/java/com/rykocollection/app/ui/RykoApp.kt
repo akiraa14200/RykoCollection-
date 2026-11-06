@@ -250,7 +250,7 @@ private fun NativeHome(mangaMode: Boolean, onEntry: (Int) -> Unit) {
                 }
             }
         } else if (loading) {
-            item { HomeLoading() }
+            item { FeaturedSkeleton() }
         }
 
         item {
@@ -328,7 +328,7 @@ private fun NativeHome(mangaMode: Boolean, onEntry: (Int) -> Unit) {
                     if (videos.isEmpty() && loading) HomeLoading()
                     else LazyRow(contentPadding = PaddingValues(horizontal = 18.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         items(videos, key = { it.id }) { media ->
-                            Column(Modifier.width(190.dp).clickable {
+                            Column(Modifier.width(190.dp).height(164.dp).clickable {
                                 val trailerId = media.trailer?.id ?: return@clickable
                                 val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.youtube.com/watch?v=$trailerId"))
                                 context.startActivity(intent)
@@ -337,8 +337,8 @@ private fun NativeHome(mangaMode: Boolean, onEntry: (Int) -> Unit) {
                                     AsyncImage(media.trailer?.thumbnail ?: media.coverImage?.imageUrl, media.title.display, Modifier.fillMaxWidth().height(108.dp).clip(RoundedCornerShape(12.dp)))
                                     Icon(Icons.Default.PlayCircle, contentDescription = "Play trailer", tint = Color.White, modifier = Modifier.align(Alignment.Center).size(38.dp))
                                 }
-                                Text(media.title.display, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.dp))
-                                Text("Official trailer", color = Muted, fontSize = 10.sp)
+                                Text(media.title.display, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, minLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.dp).height(34.dp))
+                                Text("Official trailer", color = Muted, fontSize = 10.sp, maxLines = 1)
                             }
                         }
                     }
@@ -360,9 +360,51 @@ private fun HomeSectionTitle(title: String, eyebrow: String) {
 }
 
 @Composable
+private fun SkeletonBlock(modifier: Modifier = Modifier) {
+    val transition = androidx.compose.animation.core.rememberInfiniteTransition(label = "skeleton")
+    val alpha by transition.animateFloat(
+        initialValue = 0.32f,
+        targetValue = 0.72f,
+        animationSpec = androidx.compose.animation.core.infiniteRepeatable(
+            animation = androidx.compose.animation.core.tween(850),
+            repeatMode = androidx.compose.animation.core.RepeatMode.Reverse
+        ),
+        label = "skeletonAlpha"
+    )
+    Box(modifier.background(Color.White.copy(alpha = alpha), RoundedCornerShape(9.dp)))
+}
+
+@Composable
+private fun FeaturedSkeleton() {
+    Column(
+        Modifier.fillMaxWidth().padding(horizontal = 18.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        SkeletonBlock(Modifier.fillMaxWidth().height(224.dp))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+            repeat(5) { SkeletonBlock(Modifier.padding(horizontal = 3.dp).size(6.dp)) }
+        }
+    }
+}
+
+@Composable
 private fun HomeLoading() {
-    Box(Modifier.fillMaxWidth().height(74.dp), contentAlignment = Alignment.Center) {
-        CircularProgressIndicator(color = Violet, modifier = Modifier.size(22.dp), strokeWidth = 2.dp)
+    LazyRow(
+        contentPadding = PaddingValues(horizontal = 18.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        items(3) {
+            Column(
+                Modifier.width(132.dp).height(270.dp).clip(RoundedCornerShape(13.dp))
+                    .background(Surface).padding(0.dp)
+            ) {
+                SkeletonBlock(Modifier.fillMaxWidth().height(188.dp))
+                Column(Modifier.fillMaxWidth().padding(9.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                    SkeletonBlock(Modifier.fillMaxWidth(0.88f).height(11.dp))
+                    SkeletonBlock(Modifier.fillMaxWidth(0.58f).height(8.dp))
+                }
+            }
+        }
     }
 }
 
@@ -473,13 +515,38 @@ private fun DetailLine(label: String, value: String?) {
 
 @Composable
 private fun NativeMediaCard(media: AniListMedia, onClick: () -> Unit) {
-    Card(Modifier.width(132.dp).clickable(onClick = onClick), shape = RoundedCornerShape(13.dp), colors = CardDefaults.cardColors(containerColor = Surface)) {
-        Column {
-            AsyncImage(media.coverImage?.imageUrl, media.title.display, Modifier.fillMaxWidth().height(188.dp).clip(RoundedCornerShape(topStart = 13.dp, topEnd = 13.dp)), contentScale = ContentScale.Crop)
-            Column(Modifier.padding(9.dp)) {
-                Text(media.title.display, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                Spacer(Modifier.height(5.dp))
-                Text(listOfNotNull(media.format, media.seasonYear?.toString()).joinToString(" · "), color = Muted, fontSize = 9.sp)
+    Card(
+        Modifier.width(132.dp).height(270.dp).clickable(onClick = onClick),
+        shape = RoundedCornerShape(13.dp),
+        colors = CardDefaults.cardColors(containerColor = Surface)
+    ) {
+        Column(Modifier.fillMaxSize()) {
+            AsyncImage(
+                media.coverImage?.imageUrl,
+                media.title.display,
+                Modifier.fillMaxWidth().height(188.dp).clip(RoundedCornerShape(topStart = 13.dp, topEnd = 13.dp)),
+                contentScale = ContentScale.Crop
+            )
+            Column(
+                Modifier.fillMaxWidth().weight(1f).padding(9.dp),
+                verticalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    media.title.display,
+                    color = Color.White,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 2,
+                    minLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    listOfNotNull(media.format, media.seasonYear?.toString()).joinToString(" · ").ifBlank { " " },
+                    color = Muted,
+                    fontSize = 9.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
         }
     }
