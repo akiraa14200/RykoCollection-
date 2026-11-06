@@ -38,7 +38,7 @@ const isRecent = (date: string) => {
   return Number.isFinite(time) && time <= Date.now() + 86400000 && time >= Date.now() - 1000 * 60 * 60 * 24 * 45;
 };
 
-const safeImageUrl = (value?: string, base?: string) => {
+const safeImageUrl = (value?: string | null, base?: string) => {
   if (!value) return undefined;
   try {
     const url = new URL(value.replace(/&amp;/g, '&'), base);
