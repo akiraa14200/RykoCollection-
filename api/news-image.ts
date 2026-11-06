@@ -83,8 +83,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const raw = req.query?.url;
   const requestedUrl = Array.isArray(raw) ? raw[0] : raw;
   if (!requestedUrl || requestedUrl.length > 2048) return res.status(400).json({ error: 'A valid article URL is required' });
-  let current = safeHttpUrl(requestedUrl);
-  if (!current) return res.status(400).json({ error: 'Only public HTTP(S) article URLs are supported' });
+  const initialUrl = safeHttpUrl(requestedUrl);
+  if (!initialUrl) return res.status(400).json({ error: 'Only configured public publisher URLs are supported' });
+  let current: URL = initialUrl;
 
   try {
     let response: Response | null = null;
@@ -113,8 +114,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const chunks: Uint8Array[] = [];
     let total = 0;
     while (total < 1_500_000) {
-      const { done, value } = await reader.read();
-      if (done) break;
+      const readResult = await reader.read();
+      if (readResult.done || !readResult.value) break;
+      const value = readResult.value;
       const remaining = 1_500_000 - total;
       const chunk = value.byteLength > remaining ? value.slice(0, remaining) : value;
       chunks.push(chunk);
