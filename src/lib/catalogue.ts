@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { getMediaCharacters, getTrailerCatalogue, searchTrailerCatalogue, searchMedia, getAniListMediaById, getTrending as getAniListTrending, getPopular as getAniListPopular, getTrendingManga as getAniListTrendingManga, getPopularManga as getAniListPopularManga } from './anilist';
+import { getMediaCharacters, getTrailerCatalogue, searchTrailerCatalogue, searchMedia, getAniListMediaById, getAniListMediaByIds, getTrending as getAniListTrending, getPopular as getAniListPopular, getTrendingManga as getAniListTrendingManga, getPopularManga as getAniListPopularManga } from './anilist';
 import { readPersisted, writePersisted } from './persist';
 
 export type AnimeCharacter = {
@@ -449,6 +449,11 @@ const isMangaTitle = (format = '') => /manga|manhwa|manhua|webtoon|comic/i.test(
 const emptyCharacters = (page = 1): NonNullable<Anime['characters']> => ({
   pageInfo: { currentPage: page, hasNextPage: false }, edges: []
 });
+
+export async function getAnimeByAniListIds(ids: number[], mediaType: 'ANIME' | 'MANGA' = 'ANIME'): Promise<Anime[]> {
+  const media = await getAniListMediaByIds(ids, mediaType);
+  return media.map(mapAniListMedia);
+}
 
 export async function getAnime(id: string): Promise<Anime | null> {
   if (!id) return null;
