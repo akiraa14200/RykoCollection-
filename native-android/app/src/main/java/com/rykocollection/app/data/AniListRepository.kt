@@ -153,9 +153,9 @@ class AniListRepository {
 
     suspend fun trendingMedia(manga: Boolean = false): List<AniListMedia> {
         val query = """
-            query($type: MediaType!) {
+            query(${'$'}type: MediaType!) {
               Page(page: 1, perPage: 18) {
-                media(type: $type, sort: TRENDING_DESC, isAdult: false) {
+                media(type: ${'$'}type, sort: TRENDING_DESC, isAdult: false) {
                   id title { english romaji native }
                   coverImage { large extraLarge }
                   averageScore format seasonYear
@@ -171,9 +171,9 @@ class AniListRepository {
 
     suspend fun featuredMedia(manga: Boolean = false): List<AniListMedia> {
         val query = """
-            query($type: MediaType!) {
+            query(${'$'}type: MediaType!) {
               Page(page: 1, perPage: 5) {
-                media(type: $type, sort: TRENDING_DESC, isAdult: false) {
+                media(type: ${'$'}type, sort: TRENDING_DESC, isAdult: false) {
                   id title { english romaji native }
                   coverImage { large extraLarge }
                   bannerImage
@@ -190,9 +190,9 @@ class AniListRepository {
 
     suspend fun popularRecommendations(manga: Boolean = false): List<AniListMedia> {
         val query = """
-            query($type: MediaType!) {
+            query(${'$'}type: MediaType!) {
               Page(page: 1, perPage: 12) {
-                media(type: $type, sort: POPULARITY_DESC, isAdult: false) {
+                media(type: ${'$'}type, sort: POPULARITY_DESC, isAdult: false) {
                   id title { english romaji native }
                   coverImage { large extraLarge }
                   averageScore format seasonYear
@@ -262,9 +262,9 @@ class AniListRepository {
 
     suspend fun searchMedia(term: String, manga: Boolean = false): List<AniListMedia> {
         val query = """
-            query($search: String!, $type: MediaType!, $page: Int!) {
-              Page(page: $page, perPage: 30) {
-                media(search: $search, type: $type, sort: SEARCH_MATCH, isAdult: false) {
+            query(${'$'}search: String!, ${'$'}type: MediaType!, ${'$'}page: Int!) {
+              Page(page: ${'$'}page, perPage: 30) {
+                media(search: ${'$'}search, type: ${'$'}type, sort: SEARCH_MATCH, isAdult: false) {
                   id title { english romaji native }
                   coverImage { large extraLarge }
                   averageScore format seasonYear
