@@ -340,6 +340,7 @@ function SearchPage() {
   const [recent, setRecent] = useState<string[]>(() => readRecentSearches());
   const navigate = useNavigate();
   const [items, setItems] = useState<Anime[]>([]);
+  const [visibleCount, setVisibleCount] = useState(24);
   const [busy, setBusy] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [page, setPage] = useState(1);
@@ -363,7 +364,7 @@ function SearchPage() {
   useEffect(() => {
     let active = true;
     const timer = window.setTimeout(() => {
-      setBusy(true); setError(''); setPage(1); setHasMore(true);
+      setBusy(true); setError(''); setPage(1); setHasMore(true); setVisibleCount(24);
       searchAnime(term.trim(), 1, genre || undefined, status || undefined, format || undefined, sort || undefined)
         .then(data => { if (active) { setItems(data); setHasMore(data.length === 50); } })
         .catch(e => { if (active) setError(e instanceof Error ? e.message : 'Search failed.'); })
@@ -373,6 +374,7 @@ function SearchPage() {
   }, [term, genre, status, format, sort]);
 
   const loadMore = async () => {
+    if (visibleCount < items.length) { setVisibleCount(current => Math.min(current + 24, items.length)); return; }
     if (loadingMore || !hasMore) return;
     setLoadingMore(true); setError('');
     const next = page + 1;
@@ -383,7 +385,7 @@ function SearchPage() {
     } catch (e) { setError(e instanceof Error ? e.message : 'Could not load more titles.'); }
     finally { setLoadingMore(false); }
   };
-  const searchSentinel = useNearViewport(() => { void loadMore(); }, hasMore && !busy && !loadingMore && !error && items.length > 0);
+  const searchSentinel = useNearViewport(() => { void loadMore(); }, (visibleCount < items.length || hasMore) && !busy && !loadingMore && !error && items.length > 0);
   const genres = ['Action','Adventure','Comedy','Drama','Fantasy','Horror','Mystery','Romance','Sci-Fi','Slice of Life','Sports','Supernatural'];
   return <main className="content-page browse-page"><div className="page-heading"><span className="eyebrow">THE ANILIST CATALOGUE</span><h1>Explore <em>anime & manga.</em></h1><p>Search across anime, manga, manhwa, manhua and light novels.</p></div>
     <div className="filter-bar browse-filters"><label className="large-search"><Search size={19}/><input ref={browseSearchRef} value={term} onChange={e => setTerm(e.target.value)} placeholder="Search titles, series, stories..." autoComplete="off"/></label>
@@ -396,7 +398,7 @@ function SearchPage() {
     <div className="browse-results-head"><div className="results-caption">{busy ? 'Updating catalogue…' : `${items.length} AniList titles loaded`}{term && <span> for “{term}”</span>}</div><button type="button" className="secondary-btn surprise-btn" onClick={surprise} disabled={!items.length}><Shuffle size={15}/> Surprise me</button></div>
     {error && <div className="notice">{error}</div>}
     {busy && !items.length ? <div className="anime-grid">{Array.from({length:8},(_,i)=><div className="skeleton-card" key={i}><div className="skeleton-poster"/><div className="skeleton-line"/></div>)}</div> :
-      items.length ? <><div className="anime-grid">{items.map(item=><AnimeCard key={item.id} anime={item} saved={saved.some(a=>a.id===item.id)} onSave={toggle}/>)}</div>{hasMore && <div className="load-more-wrap" ref={searchSentinel}><button className="secondary-btn load-more-btn" onClick={loadMore} disabled={loadingMore}>{loadingMore?'Loading more titles…':'Load more titles'}</button></div>}</> :
+      items.length ? <><div className="anime-grid">{items.slice(0, visibleCount).map(item=><AnimeCard key={item.id} anime={item} saved={saved.some(a=>a.id===item.id)} onSave={toggle}/>)}</div>{(visibleCount < items.length || hasMore) && <div className="load-more-wrap" ref={searchSentinel}><button className="secondary-btn load-more-btn" onClick={loadMore} disabled={loadingMore}>{loadingMore?'Loading more titles…':visibleCount < items.length?'Show more titles':'Load more titles'}</button></div>}</> :
       <div className="empty-state"><Search size={28}/><h3>No anime or manga found</h3><p>Try a different title, remove a filter, or return to discovery.</p><div className="empty-state-actions"><button className="secondary-btn" onClick={()=>{setTerm("");setGenre("");setStatus("");setFormat("");setSort("");}}>Reset search</button><Link className="primary-btn" to="/">Go to Home <ChevronRight size={15}/></Link></div></div>}
   </main>;
 }
