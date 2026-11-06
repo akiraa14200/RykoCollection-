@@ -248,9 +248,27 @@ fun NativeRykoTube() {
                     contentPadding = PaddingValues(14.dp),
                     verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    if (selectedFormat == "All" && query.isBlank()) {
-                        val regular = filtered.filterNot { it.short }
-                        val shorts = filtered.filter { it.short }
+                    val regular = filtered.filterNot { it.short }
+                    val shorts = filtered.filter { it.short }
+                    if (selectedFormat == "Shorts") {
+                        // The Shorts tab mirrors the web feed: portrait cards stay in swipeable rows.
+                        shorts.chunked(8).forEachIndexed { rowIndex, shortBatch ->
+                            item(key = "shorts-filter-row-$rowIndex") {
+                                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Text(if (rowIndex == 0) "Shorts" else "More Shorts", color = Color(0xFFA99BFF), fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                                    LazyRow(
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                        contentPadding = PaddingValues(end = 4.dp)
+                                    ) {
+                                        items(shortBatch, key = { it.id }) { video ->
+                                            TubeVideoCard(video) { selected = video }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } else if (selectedFormat == "All") {
+                        // Match the web feed: 10 regular videos, then a taste-ranked Shorts row (6–10 items).
                         var regularIndex = 0
                         var shortIndex = 0
                         while (regularIndex < regular.size) {
@@ -261,7 +279,8 @@ fun NativeRykoTube() {
                             items(batch, key = { it.id }) { video -> TubeVideoCard(video) { selected = video } }
                             regularIndex += batch.size
                             if (shortIndex < shorts.size) {
-                                val shortBatch = shorts.drop(shortIndex).take(8)
+                                val batchSize = 6 + ((shorts[shortIndex].id.hashCode().toUInt().toLong() % 5L).toInt())
+                                val shortBatch = shorts.drop(shortIndex).take(batchSize)
                                 item(key = "shorts-row-$shortIndex") {
                                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                         Text("Shorts", color = Color(0xFFA99BFF), fontSize = 18.sp, fontWeight = FontWeight.Bold)
@@ -279,19 +298,21 @@ fun NativeRykoTube() {
                             }
                         }
                         if (regular.isEmpty() && shorts.isNotEmpty()) {
-                            item(key = "shorts-only-row") {
-                                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    Text("Shorts", color = Color(0xFFA99BFF), fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                                    LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                        items(shorts, key = { it.id }) { video ->
-                                            TubeVideoCard(video) { selected = video }
+                            shorts.chunked(8).forEachIndexed { rowIndex, shortBatch ->
+                                item(key = "shorts-only-row-$rowIndex") {
+                                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        Text(if (rowIndex == 0) "Shorts" else "More Shorts", color = Color(0xFFA99BFF), fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                                        LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                            items(shortBatch, key = { it.id }) { video ->
+                                                TubeVideoCard(video) { selected = video }
+                                            }
                                         }
                                     }
                                 }
                             }
                         }
                     } else {
-                        items(filtered, key = { it.id }) { video -> TubeVideoCard(video) { selected = video } }
+                        items(regular, key = { it.id }) { video -> TubeVideoCard(video) { selected = video } }
                     }
                     if (hasMore) {
                         item(key = "load-more") {
