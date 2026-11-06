@@ -604,7 +604,12 @@ class TubePlayerActivity : Activity() {
         private var paletteTarget = palette.copyOf()
 
         init {
-            setLayerType(View.LAYER_TYPE_SOFTWARE, null)
+            // Hardware blur softens the colour fields into one continuous glow.
+            if (android.os.Build.VERSION.SDK_INT >= 31) {
+                setRenderEffect(android.graphics.RenderEffect.createBlurEffect(
+                    dp(38).toFloat(), dp(38).toFloat(), Shader.TileMode.CLAMP
+                ))
+            }
         }
 
         fun setPalette(colours: List<Int>) {
@@ -629,7 +634,7 @@ class TubePlayerActivity : Activity() {
                 return
             }
             animator = ValueAnimator.ofFloat(phase, phase + 1f).apply {
-                duration = 18000L
+                duration = 30000L
                 repeatCount = ValueAnimator.INFINITE
                 interpolator = LinearInterpolator()
                 addUpdateListener {
@@ -648,21 +653,24 @@ class TubePlayerActivity : Activity() {
             val h = height.toFloat()
             if (w <= 0f || h <= 0f) return
             canvas.drawColor(Color.rgb(5, 5, 8))
+            // Gentle overlapping drift: the fields share one slow current and
+            // merge like coloured ink instead of orbiting as separate moving spots.
             val p = phase * (Math.PI.toFloat() * 2f)
             val centers = arrayOf(
-                floatArrayOf(w * (0.22f + 0.10f * kotlin.math.sin(p)), h * (0.28f + 0.10f * kotlin.math.cos(p * 0.8f))),
-                floatArrayOf(w * (0.76f + 0.11f * kotlin.math.cos(p * 0.7f)), h * (0.34f + 0.12f * kotlin.math.sin(p))),
-                floatArrayOf(w * (0.42f + 0.13f * kotlin.math.sin(p * 0.55f + 1f)), h * (0.72f + 0.08f * kotlin.math.cos(p))),
-                floatArrayOf(w * (0.88f + 0.06f * kotlin.math.sin(p + 2f)), h * (0.76f + 0.08f * kotlin.math.cos(p * 0.65f)))
+                floatArrayOf(w * (0.24f + 0.055f * kotlin.math.sin(p)), h * (0.34f + 0.045f * kotlin.math.sin(p * 0.72f + 0.4f))),
+                floatArrayOf(w * (0.73f + 0.060f * kotlin.math.sin(p + 1.7f)), h * (0.31f + 0.050f * kotlin.math.cos(p * 0.78f))),
+                floatArrayOf(w * (0.38f + 0.050f * kotlin.math.cos(p * 0.68f + 2.2f)), h * (0.76f + 0.035f * kotlin.math.sin(p + 2.8f))),
+                floatArrayOf(w * (0.82f + 0.045f * kotlin.math.cos(p + 3.6f)), h * (0.72f + 0.040f * kotlin.math.sin(p * 0.74f + 1.2f)))
             )
-            val radius = maxOf(w * 0.62f, h * 1.25f)
+            val radius = maxOf(w * 0.88f, h * 1.75f)
             centers.forEachIndexed { index, center ->
                 val colour = palette[index]
-                val glowColour = Color.argb(188, Color.red(colour), Color.green(colour), Color.blue(colour))
+                val glowColour = Color.argb(142, Color.red(colour), Color.green(colour), Color.blue(colour))
+                val midColour = Color.argb(54, Color.red(colour), Color.green(colour), Color.blue(colour))
                 paint.shader = RadialGradient(
                     center[0], center[1], radius,
-                    intArrayOf(glowColour, Color.argb(76, Color.red(colour), Color.green(colour), Color.blue(colour)), Color.TRANSPARENT),
-                    floatArrayOf(0f, 0.48f, 1f), Shader.TileMode.CLAMP
+                    intArrayOf(glowColour, midColour, Color.TRANSPARENT),
+                    floatArrayOf(0f, 0.42f, 1f), Shader.TileMode.CLAMP
                 )
                 paint.alpha = 255
                 canvas.drawCircle(center[0], center[1], radius, paint)
