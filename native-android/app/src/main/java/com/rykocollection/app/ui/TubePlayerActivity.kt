@@ -264,7 +264,7 @@ class TubePlayerActivity : Activity() {
             setLineSpacing(dp(1).toFloat(), 1f)
         })
         content.addView(TextView(this).apply {
-            text = "@${currentCreator.ifBlank { "RykoCollection" }}   7.3k likes   •   YouTube   •   more"
+            text = "@${currentCreator.ifBlank { "RykoCollection" }}   •   YouTube   •   more"
             setTextColor(Color.rgb(224, 211, 232))
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
             setPadding(0, dp(7), 0, dp(14))
@@ -399,7 +399,6 @@ class TubePlayerActivity : Activity() {
                 clipToOutline = true
             }
             metadata.addView(smallAvatar, LinearLayout.LayoutParams(dp(34), dp(34)))
-            val creatorThumb = recommendThumbs.getOrNull(index).orEmpty()
             // The creator avatar is not supplied by this feed payload; keep a neutral channel badge.
             val labels = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
