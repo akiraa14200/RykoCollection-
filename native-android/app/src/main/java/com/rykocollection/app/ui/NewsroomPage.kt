@@ -15,7 +15,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Color\nimport androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -118,7 +118,7 @@ fun NativeNewsroomPage() {
         }
         match && (search.isBlank() || text.contains(search.trim(),true))
     }
-    Column(Modifier.fillMaxSize().background(Color.Black)) {
+    Column(Modifier.fillMaxSize().background(Brush.radialGradient(listOf(Color(0xFF242039), Color(0xFF10101B), Color(0xFF07070C))))) {
         LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(13.dp)) {
             item {
                 Row(verticalAlignment=Alignment.CenterVertically) {
@@ -165,7 +165,7 @@ fun NativeNewsroomPage() {
 }
 @Composable
 private fun NewsCard(story:NewsStory,onOpen:()->Unit) {
-    Card(Modifier.fillMaxWidth().clickable(onClick=onOpen),shape=RoundedCornerShape(18.dp),colors=CardDefaults.cardColors(containerColor=NewsSurface)){
+    Card(Modifier.fillMaxWidth().rykoGlass(18.dp).clickable(onClick=onOpen),shape=RoundedCornerShape(18.dp),colors=CardDefaults.cardColors(containerColor=Color.Transparent)){
         Column{
             Box(Modifier.fillMaxWidth().height(190.dp).background(Color(0xFF202027)),contentAlignment=Alignment.Center){
                 if(story.image!=null) AsyncImage(story.image,story.title,Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
