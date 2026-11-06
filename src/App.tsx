@@ -197,40 +197,67 @@ function Home() {
     const query = homeSearchTerm.trim();
     navigate(query ? `/search?q=${encodeURIComponent(query)}` : '/search');
   };
-  // Stale-while-revalidate: show the last good catalogue instantly, then refresh it.
-  const [snapshot] = useState(() => { const value = readPersisted<HomeSnapshot>(HOME_CACHE_KEY, HOME_CACHE_AGE); if (value) Object.values(value).forEach(rememberPreviews); return value; });
+  // Read cached collections immediately, but fetch each collection only when its
+  // section is needed. AniList requests are separated so Home no longer downloads
+  // anime, manga and popularity lists together on first paint.
+  const [snapshot] = useState(() => {
+    const value = readPersisted<HomeSnapshot>(HOME_CACHE_KEY, HOME_CACHE_AGE);
+    if (value) Object.values(value).forEach(rememberPreviews);
+    return value;
+  });
   const [trending, setTrending] = useState<Anime[]>(snapshot?.trending || []);
   const [popular, setPopular] = useState<Anime[]>(snapshot?.popular || []);
   const [seasonal, setSeasonal] = useState<Anime[]>(snapshot?.seasonal || []);
   const [trendingManga, setTrendingMangaItems] = useState<Anime[]>(snapshot?.trendingManga || []);
   const [popularManga, setPopularMangaItems] = useState<Anime[]>(snapshot?.popularManga || []);
-  const [loading, setLoading] = useState(!snapshot);
+  const [loading, setLoading] = useState(!snapshot?.trending?.length && catalogueMode === 'anime' || !snapshot?.trendingManga?.length && catalogueMode === 'manga');
   const [error, setError] = useState('');
+  const requestedSections = useRef(new Set<string>());
   const { saved, history, toggle } = useLibrary();
-  useEffect(() => {
-    let active = true;
-    // Each section appears as soon as its own data arrives; one failing source no longer blanks the page.
-    const sources: [keyof HomeSnapshot, () => Promise<Anime[]>, (items: Anime[]) => void][] = [
-      ['trending', getTrending, setTrending], ['popular', getPopular, setPopular], ['seasonal', getSeasonal, setSeasonal],
-      ['trendingManga', getTrendingManga, setTrendingMangaItems], ['popularManga', getPopularManga, setPopularMangaItems]
-    ];
-    const fresh: Partial<HomeSnapshot> = {};
-    Promise.allSettled(sources.map(([key, load, set]) => load().then(items => {
-      if (!active) return;
-      fresh[key] = items;
-      if (items.length || !snapshot?.[key]?.length) set(items);
-      setLoading(false);
-    }))).then(results => {
-      if (!active) return;
-      setLoading(false);
-      const failed = results.filter(result => result.status === 'rejected') as PromiseRejectedResult[];
-      if (failed.length === results.length && !snapshot) setError(failed[0].reason instanceof Error ? failed[0].reason.message : 'Could not load anime right now.');
-      else setError('');
-      if (!failed.length) writePersisted(HOME_CACHE_KEY, fresh);
-      else if (Object.keys(fresh).length) writePersisted(HOME_CACHE_KEY, { ...(snapshot || {}), ...fresh });
-    });
-    return () => { active = false; };
+
+  const loadHomeSection = useCallback(async (
+    key: keyof HomeSnapshot,
+    load: () => Promise<Anime[]>,
+    setItems: (items: Anime[]) => void
+  ) => {
+    if (requestedSections.current.has(key)) return;
+    requestedSections.current.add(key);
+    try {
+      const items = await load();
+      setItems(items);
+      const cached = readPersisted<HomeSnapshot>(HOME_CACHE_KEY, HOME_CACHE_AGE) || {} as HomeSnapshot;
+      writePersisted(HOME_CACHE_KEY, { ...cached, [key]: items });
+      if (key === 'trending' || key === 'trendingManga') setError('');
+    } catch (reason) {
+      requestedSections.current.delete(key);
+      if (key === 'trending' || key === 'trendingManga') {
+        setError(reason instanceof Error ? reason.message : 'Could not load the catalogue right now.');
+      }
+    } finally {
+      if (key === 'trending' || key === 'trendingManga') setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    if (catalogueMode === 'anime') {
+      void loadHomeSection('trending', getTrending, setTrending);
+    } else {
+      void loadHomeSection('trendingManga', getTrendingManga, setTrendingMangaItems);
+    }
+  }, [catalogueMode, loadHomeSection]);
+
+  const popularSentinel = useNearViewport(
+    () => void loadHomeSection('popular', getPopular, setPopular),
+    catalogueMode === 'anime' && !popular.length
+  );
+  const mangaPopularSentinel = useNearViewport(
+    () => void loadHomeSection('popularManga', getPopularManga, setPopularMangaItems),
+    catalogueMode === 'manga' && !popularManga.length
+  );
+  const seasonalSentinel = useNearViewport(
+    () => void loadHomeSection('seasonal', getSeasonal, setSeasonal),
+    !seasonal.length
+  );
   const [heroIndex, setHeroIndex] = useState(0);
   // Local Supabase rows can contain both media types; never trust their source
   // query alone when rendering the Anime mode.
@@ -282,12 +309,14 @@ function Home() {
     {catalogueMode === 'anime' ? <>
       <Section title="Trending anime" subtitle="What the anime community is watching" items={animeTrending} saved={saved.map(a => a.id)} onSave={toggle} to="/search?sort=trending"/>
       {recommendations.length > 0 && <Section title="Recommended for you" subtitle={saved.length ? 'Picked from your saved genres, themes and viewing activity' : 'Popular, highly rated picks to help shape your taste profile'} items={recommendations} saved={saved.map(a=>a.id)} onSave={toggle} to="/search"/>}
+      {!popular.length && <div className="load-more-wrap" ref={popularSentinel}><span className="muted">Loading popular anime as you scroll…</span></div>}
       <Section title="Popular anime" subtitle="Fan favorites worth your time" items={animePopular} saved={saved.map(a => a.id)} onSave={toggle}/>
     </> : <>
       <Section title="Trending manga & manhwa" subtitle="Popular manga, manhwa and manhua" items={trendingManga} saved={saved.map(a => a.id)} onSave={toggle} to="/search?format=MANGA"/>
       {recommendations.length > 0 && <Section title="Recommended for you" subtitle={saved.length ? 'Picked from your saved genres, themes and reading activity' : 'Popular, highly rated picks to help shape your taste profile'} items={recommendations} saved={saved.map(a=>a.id)} onSave={toggle} to="/search?format=MANGA"/>}
       <Section title="Popular manga" subtitle="Reader favorites across the AniList catalogue" items={popularManga} saved={saved.map(a => a.id)} onSave={toggle} to="/search?format=MANGA"/>
     </>}
+    {!seasonal.length && <div className="load-more-wrap" ref={seasonalSentinel}><span className="muted">Loading release schedule when needed…</span></div>}
     {releaseSchedule.length > 0 && <section className="section"><div className="section-head"><div><h2>Upcoming episodes</h2><p>Next release times for currently airing anime</p></div><Link to="/activity" className="text-link">Activity <ChevronRight size={15}/></Link></div><div className="release-schedule">{releaseSchedule.map(item=><Link to={'/anime/'+item.id} className="release-item" key={item.id}><img src={imageOf(item)} alt=""/><span><strong>{titleOf(item)}</strong><small>Episode {item.nextAiringEpisode?.episode}</small></span><time>{formatCountdown(item.nextAiringEpisode!.airingAt)}</time></Link>)}</div></section>}
     {history.length > 0 && <section className="section"><div className="section-head"><div><h2>Pick up where you left off</h2><p>Your recently opened anime</p></div></div><div className="history-row">{history.slice(0,5).map(item => <Link to={`/anime/${item.id}`} className="history-item" key={item.id}><img src={item.image} alt=""/><span>{item.title}</span><small>Recently viewed</small></Link>)}</div></section>}
     <div className="api-credit">Catalogue powered by the RykoCollection website database.</div>
