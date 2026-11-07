@@ -258,6 +258,8 @@ class TubePlayerActivity : ComponentActivity() {
         details.addView(ambientLayer, FrameLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, dp(220), Gravity.TOP
         ))
+        // Attach the live colour-field renderer; playback callbacks animate it only while video plays.
+        startAmbientPreviewCycle(ambientLayer)
         // Keep the player backdrop neutral instead of sampling thumbnail colours.
         val content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
