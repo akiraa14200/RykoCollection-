@@ -34,7 +34,8 @@ enum class RykoGlassLevel(val fill: Color, val highlight: Float, val radius: Dp)
 fun Modifier.rykoGlass(
     cornerRadius: Dp = 20.dp,
     surfaceTint: Color = RykoGlassLevel.Secondary.fill,
-    highlight: Float = 0.28f
+    highlight: Float = 0.28f,
+    blurRadius: Dp = 26.dp
 ): Modifier {
     val hazeState = LocalRykoHazeState.current
     // Keep every glass-backed card and control softly rounded; avoid sharp rectangular corners.
@@ -43,7 +44,7 @@ fun Modifier.rykoGlass(
     val blurStyle = HazeStyle(
         backgroundColor = Color.Transparent,
         tints = emptyList(),
-        blurRadius = 26.dp,
+        blurRadius = blurRadius,
         noiseFactor = 0.08f
     )
 
