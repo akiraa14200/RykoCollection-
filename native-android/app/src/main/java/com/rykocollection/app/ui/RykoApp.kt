@@ -322,7 +322,7 @@ private fun NativeHome(mangaMode: Boolean, onEntry: (Int) -> Unit) {
 
     LazyColumn(
         Modifier.fillMaxSize().background(Color.Black),
-        contentPadding = PaddingValues(top = 109.dp, bottom = 30.dp),
+        contentPadding = PaddingValues(top = 109.dp, bottom = 144.dp),
         verticalArrangement = Arrangement.spacedBy(22.dp)
     ) {
         if (featured.isNotEmpty()) {
