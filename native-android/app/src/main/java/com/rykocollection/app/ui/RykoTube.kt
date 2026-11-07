@@ -299,7 +299,7 @@ fun NativeRykoTube() {
                 Text("RykoCollection", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1)
             }
             OutlinedTextField(
-                value = search, onValueChange = { search = it }, modifier = Modifier.weight(1f),
+                value = search, onValueChange = { search = it }, modifier = Modifier.weight(1f).rykoGlass(14.dp, Color(0x3318181B), 0.24f),
                 singleLine = true, placeholder = { Text("Search videos, creators or titles", maxLines = 1) },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                 colors = OutlinedTextFieldDefaults.colors(
