@@ -2,9 +2,9 @@ name: Web application checks
 
 on:
   push:
-    branches: [main, feature/hybrid-video-catalogue, ryko-ecosystem-upgrades]
+    branches: [main, feature/hybrid-video-catalogue, ryko-ecosystem-upgrades, security-hardening-2026-11]
   pull_request:
-    branches: [main]
+    branches: [main, ryko-ecosystem-upgrades]
 
 permissions:
   contents: read
@@ -21,4 +21,11 @@ jobs:
       - run: npm run typecheck
       - run: npm run build
 
-# Keep this workflow available for isolated hybrid-video-catalogue branch validation.
+  edge-function-typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v1
+        with:
+          deno-version: v2.x
+      - run: deno check supabase/functions/video-metadata/index.ts && deno check supabase/functions/video-report/index.ts
