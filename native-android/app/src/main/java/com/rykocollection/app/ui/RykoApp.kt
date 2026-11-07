@@ -580,6 +580,7 @@ private fun BrowsePage(mangaMode: Boolean, onEntry: (Int) -> Unit) {
     var genre by remember(mangaMode) { mutableStateOf("All") }
     var sort by remember(mangaMode) { mutableStateOf("Popular") }
     val history = remember(mangaMode) { readSearchHistory(context, historyKey) }
+    val hazeState = LocalRykoHazeState.current
     val genres = listOf("All", "Action", "Adventure", "Comedy", "Drama", "Fantasy", "Romance", "Sci-Fi", "Slice of Life", "Sports", "Supernatural")
     LaunchedEffect(mangaMode) {
         loading = true
