@@ -173,7 +173,13 @@ private fun ColumnScope.EntryOverview(m:AniListDetail,manga:Boolean) {
             val t=m.trailer
             if(!t?.id.isNullOrBlank() && t?.site.equals("youtube",true)){
                 Box(Modifier.fillMaxWidth().padding(top=8.dp).height(194.dp).rykoGlass(16.dp, Color(0xD91B1B1F), 0.24f).clickable{
-                    context.startActivity(Intent(Intent.ACTION_VIEW,Uri.parse("https://www.youtube.com/watch?v=${t!!.id}")))
+                    val intent = Intent(context, TubePlayerActivity::class.java).apply {
+                        putExtra(TubePlayerActivity.EXTRA_VIDEO_ID, t!!.id)
+                        putExtra(TubePlayerActivity.EXTRA_TITLE, m.title.display + " — Official Trailer")
+                        putExtra(TubePlayerActivity.EXTRA_CREATOR, "Official trailer")
+                        putExtra(TubePlayerActivity.EXTRA_THUMB, t.thumbnail ?: m.coverImage?.imageUrl.orEmpty())
+                    }
+                    context.startActivity(intent)
                 }){
                     AsyncImage(t?.thumbnail ?: m.coverImage?.imageUrl,"Official trailer",Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
                     Icon(Icons.Default.PlayCircle,null,tint=Color.White,modifier=Modifier.align(Alignment.Center).size(56.dp))
