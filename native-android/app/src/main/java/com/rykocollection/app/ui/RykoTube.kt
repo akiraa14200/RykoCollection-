@@ -285,7 +285,7 @@ fun NativeRykoTube() {
         if (query.isBlank()) matches else matches.sortedByDescending(::relevance)
     }
 
-    Column(Modifier.fillMaxSize().background(Brush.radialGradient(listOf(Color(0xFF30264D), Color(0xFF151322), Color(0xFF080810))))) {
+    Column(Modifier.fillMaxSize().background(Brush.radialGradient(listOf(Color(0xFF30264D), Color(0xFF151322), Color(0xFF080810)))).windowInsetsPadding(WindowInsets.statusBars)) {
         Row(
             Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 9.dp).rykoGlass(22.dp, Color(0xD91A1728), 0.38f).padding(horizontal = 5.dp),
             verticalAlignment = Alignment.CenterVertically,
