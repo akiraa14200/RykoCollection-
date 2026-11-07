@@ -144,7 +144,7 @@ fun NativeNewsroomPage() {
             }
             if(failed.isNotEmpty() && stories.isNotEmpty()) item { Text("Some sources are unavailable: "+failed.joinToString()+". Showing available stories.",color=Color(0xFFFFD18A),fontSize=11.sp,modifier=Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Color(0x22C98C35)).padding(12.dp)) }
             if(loading && stories.isEmpty()) items(4) {
-                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(17.dp)).background(NewsSurface).padding(13.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
+                Column(Modifier.fillMaxWidth().rykoGlass(17.dp).padding(13.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
                     Box(Modifier.fillMaxWidth().height(165.dp).clip(RoundedCornerShape(10.dp)).background(Color(0xFF25252B)))
                     Box(Modifier.fillMaxWidth(.45f).height(10.dp).background(Color(0xFF25252B)))
                     Box(Modifier.fillMaxWidth(.9f).height(15.dp).background(Color(0xFF25252B)))
