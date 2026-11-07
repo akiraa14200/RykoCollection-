@@ -157,18 +157,7 @@ fun RykoApp() {
         containerColor = Color.Black
     ) { inner ->
         Box(Modifier.padding(inner).fillMaxSize().background(Color.Black).hazeSource(hazeState)) {
-            // Pages occupy the full area to the bottom; the floating glass navigation overlays them.
-            RykoBottomNavigation(
-                selectedTab = tab,
-                visible = selectedEntry == null && extraPage == null,
-                onSelect = { item ->
-                    tab = item
-                    if (!visitedTabs.contains(item)) visitedTabs.add(item)
-                    extraPage = null
-                    selectedEntry = null
-                },
-                modifier = Modifier.align(Alignment.BottomCenter)
-            )
+
 
             // Keep visited tabs composed while hidden so their data and scroll state survive tab changes.
             if (visitedTabs.contains(MainTab.HOME)) {
@@ -204,6 +193,19 @@ fun RykoApp() {
                 ExtraPage.SETTINGS -> NativePlaceholder("Settings", "Appearance, language, notifications and app preferences.")
                 null -> Unit
             }
+
+            // Draw last so it floats above every page instead of being covered by page content.
+            RykoBottomNavigation(
+                selectedTab = tab,
+                visible = selectedEntry == null && extraPage == null,
+                onSelect = { item ->
+                    tab = item
+                    if (!visitedTabs.contains(item)) visitedTabs.add(item)
+                    extraPage = null
+                    selectedEntry = null
+                },
+                modifier = Modifier.align(Alignment.BottomCenter).zIndex(20f)
+            )
         }
         if (showExitDialog) {
             AlertDialog(
@@ -227,27 +229,14 @@ private fun RykoBottomNavigation(
     modifier: Modifier = Modifier
 ) {
     if (!visible) return
-    val hazeState = LocalRykoHazeState.current
-    val shape = RoundedCornerShape(28.dp)
+    val shape = RoundedCornerShape(22.dp)
     Row(
         modifier
             .fillMaxWidth()
             .padding(horizontal = 10.dp, vertical = 6.dp)
             .navigationBarsPadding()
-            .clip(shape)
-            .then(
-                if (hazeState != null) Modifier.hazeEffect(
-                    state = hazeState,
-                    style = dev.chrisbanes.haze.HazeStyle(
-                        backgroundColor = Color.Transparent,
-                        tints = emptyList(),
-                        blurRadius = 34.dp,
-                        noiseFactor = 0.10f
-                    )
-                ) else Modifier
-            )
-            .background(Color(0xC9101013), shape)
-            .border(1.dp, Color.White.copy(alpha = 0.15f), shape)
+            // Match the character detail dialog's exact shared frosted-glass treatment.
+            .rykoGlass(22.dp, Color(0xF01A1A1D), 0.42f)
             .padding(horizontal = 7.dp, vertical = 7.dp),
         horizontalArrangement = Arrangement.SpaceAround,
         verticalAlignment = Alignment.CenterVertically
