@@ -91,6 +91,7 @@ import com.rykocollection.app.data.AniListMedia
 import com.rykocollection.app.data.AniListDetail
 import com.rykocollection.app.data.AniListRepository
 import dev.chrisbanes.haze.hazeSource
+import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.rememberHazeState
 
 private enum class MainTab(val label: String) { HOME("Home"), BROWSE("Browse"), VIDEO("Video"), LIBRARY("Library"), ACCOUNT("Account") }
