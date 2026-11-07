@@ -720,7 +720,6 @@ private fun NativePlaceholder(title: String, subtitle: String) {
             }
         }
     }
-    }
 }
 
 private val Violet = Color(0xFFA99BFF)
