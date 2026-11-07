@@ -357,11 +357,6 @@ fun NativeRykoTube() {
                 contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 116.dp, bottom = 24.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                
-                                modifier = Modifier.fillMaxSize(),
-                                contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 8.dp, bottom = 24.dp),
-                                verticalArrangement = Arrangement.spacedBy(14.dp)
-                            ) {
                                 if (search.isBlank() && tubeHistory.isNotEmpty()) {
                                     item(key = "tube-search-history") {
                                         LazyRow(contentPadding = PaddingValues(horizontal = 2.dp), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
