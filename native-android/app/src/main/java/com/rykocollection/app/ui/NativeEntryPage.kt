@@ -138,7 +138,7 @@ private fun EntryHero(m:AniListDetail,manga:Boolean,onShare:()->Unit) {
         AsyncImage(m.bannerImage ?: m.coverImage?.imageUrl,m.title.display,Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0x44000000),Color(0xFF08080C)))))
         val context=LocalContext.current
-    Row(Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(15.dp),verticalAlignment=Alignment.Bottom){
+    Row(Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(12.dp).rykoGlass(18.dp, Color(0xD91A1728), 0.28f).padding(7.dp),verticalAlignment=Alignment.Bottom){
             AsyncImage(m.coverImage?.imageUrl,m.title.display,Modifier.width(105.dp).height(148.dp).clip(RoundedCornerShape(12.dp)),contentScale=ContentScale.Crop)
             Column(Modifier.weight(1f).padding(start=12.dp),verticalArrangement=Arrangement.spacedBy(5.dp)){
                 Text("${m.format ?: if(manga) "MANGA" else "ANIME"} · ${m.seasonYear ?: m.startDate?.year ?: "YEAR N/A"}",color=EAccent,fontSize=9.sp,fontWeight=FontWeight.Bold)
@@ -166,13 +166,13 @@ private fun ColumnScope.EntryOverview(m:AniListDetail,manga:Boolean) {
     LazyColumn(Modifier.weight(1f).fillMaxWidth(),contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(14.dp)){
         item {
             Text("STORY",color=EAccent,fontSize=10.sp,fontWeight=FontWeight.Bold,letterSpacing=1.4.sp)
-            Text(clean(m.description).ifBlank{"No synopsis has been provided by AniList."},color=Color(0xFFE0DEE7),fontSize=13.sp,lineHeight=20.sp,modifier=Modifier.padding(top=7.dp))
+            Text(clean(m.description).ifBlank{"No synopsis has been provided by AniList."},color=Color(0xFFE0DEE7),fontSize=13.sp,lineHeight=20.sp,modifier=Modifier.fillMaxWidth().rykoGlass(16.dp, Color(0xD91B1A2B), 0.20f).padding(14.dp).padding(top=7.dp))
         }
         item {
             Text("OFFICIAL TRAILER",color=EAccent,fontSize=10.sp,fontWeight=FontWeight.Bold,letterSpacing=1.4.sp)
             val t=m.trailer
             if(!t?.id.isNullOrBlank() && t?.site.equals("youtube",true)){
-                Box(Modifier.fillMaxWidth().padding(top=8.dp).height(194.dp).clip(RoundedCornerShape(15.dp)).background(ESurface).clickable{
+                Box(Modifier.fillMaxWidth().padding(top=8.dp).height(194.dp).rykoGlass(16.dp, Color(0xD91B1A2B), 0.24f).clickable{
                     context.startActivity(Intent(Intent.ACTION_VIEW,Uri.parse("https://www.youtube.com/watch?v=${t!!.id}")))
                 }){
                     AsyncImage(t?.thumbnail ?: m.coverImage?.imageUrl,"Official trailer",Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
