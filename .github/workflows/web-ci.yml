@@ -29,3 +29,4 @@ jobs:
         with:
           deno-version: v2.x
       - run: deno check supabase/functions/video-metadata/index.ts
+          deno check supabase/functions/video-report/index.ts
