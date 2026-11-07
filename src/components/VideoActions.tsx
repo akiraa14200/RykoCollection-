@@ -62,8 +62,9 @@ const readJson = <T,>(key: string, fallback: T): T => { try { const v = JSON.par
 export const hasReported = (id: string) => readJson<string[]>(REPORTED_KEY, []).includes(id);
 
 async function sendReport(report: PendingReport) {
-  const { error } = await supabase.from('video_reports').insert(report);
+  const { data, error } = await supabase.functions.invoke('video-report', { body: report });
   if (error) throw error;
+  if (!data?.ok) throw new Error(data?.error || 'Report could not be submitted');
 }
 /** Retries reports that were stored on this device while the server table was unavailable. */
 export async function flushPendingReports() {
