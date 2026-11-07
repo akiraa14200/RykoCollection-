@@ -348,196 +348,209 @@ fun NativeRykoTube() {
         if (query.isBlank()) matches else matches.sortedByDescending(::relevance)
     }
 
-    Column(Modifier.fillMaxSize().background(Color.Black).windowInsetsPadding(WindowInsets.statusBars)) {
-        // These two controls remain pinned while the discovery panels and feed scroll.
-        Row(
-            Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 9.dp).rykoGlass(22.dp, Color(0xD91B1B1F), 0.38f).padding(horizontal = 5.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.width(142.dp)) {
-                Box(Modifier.size(31.dp).clip(RoundedCornerShape(9.dp)).background(Color(0xFFA99BFF)), contentAlignment = Alignment.Center) {
-                    Text("R", color = Color(0xFF100D1D), fontWeight = FontWeight.Black, fontSize = 18.sp)
-                }
-                Spacer(Modifier.width(8.dp))
-                Text("RykoTube", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1)
-            }
-            OutlinedTextField(
-                value = search, onValueChange = { search = it },
-                modifier = Modifier.weight(1f).focusRequester(searchFocus).rykoGlass(18.dp, Color(0x3318181B), 0.30f),
-                singleLine = true,
-                placeholder = { Text("Search videos, creators or titles", maxLines = 1, fontSize = 12.sp) },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search videos") },
-                trailingIcon = { if (search.isNotEmpty()) IconButton(onClick = { search = ""; focusManager.clearFocus() }) { Icon(Icons.Default.Close, contentDescription = "Clear search", tint = Color.LightGray) } },
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() }),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = Color.White, unfocusedTextColor = Color.White,
-                    focusedBorderColor = Color(0xFFA99BFF), unfocusedBorderColor = Color.Transparent,
-                    focusedPlaceholderColor = Color.Gray, unfocusedPlaceholderColor = Color.Gray,
-                    cursorColor = Color(0xFFA99BFF)
-                )
-            )
-        }
-        Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 5.dp).rykoGlass(18.dp, Color(0x9918181B), 0.22f).padding(horizontal = 5.dp, vertical = 2.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf("All", "Videos", "Shorts").forEach { format ->
-                FilterChip(selected = selectedFormat == format, onClick = { selectedFormat = format }, label = { Text(format) })
-            }
-            Spacer(Modifier.weight(1f))
-            IconButton(onClick = { refreshToken++ }) { Icon(Icons.Default.Refresh, "Refresh", tint = Color.White) }
-        }
-
+    Box(Modifier.fillMaxSize().background(Color.Black)) {
         if (selected != null) {
             TubePlayer(selected!!, rankRelatedVideos(selected!!, filtered, context), filtered.filter { it.short }) { selected = null }
         } else {
             LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 8.dp, bottom = 24.dp),
+                modifier = Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.statusBars),
+                contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 116.dp, bottom = 24.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                if (search.isBlank() && tubeHistory.isNotEmpty()) {
-                    item(key = "tube-search-history") {
-                        LazyRow(contentPadding = PaddingValues(horizontal = 2.dp), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                            items(tubeHistory) { term -> AssistChip(onClick = { search = term }, label = { Text(term, maxLines = 1) }) }
-                        }
-                    }
-                }
-                if (search.trim().length >= 2) {
-                    item(key = "tube-anilist-results") {
-                        Column(Modifier.fillMaxWidth().rykoGlass(18.dp, Color(0x7718181B), 0.18f).padding(vertical = 8.dp)) {
-                            Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Text("ANIME & MANGA ON ANILIST", color = Color(0xFFA99BFF), fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                                if (catalogueLoading) CircularProgressIndicator(color = Color(0xFFA99BFF), modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-                            }
-                            if (catalogueResults.isEmpty() && !catalogueLoading) Text("No matching AniList titles.", color = Color.Gray, fontSize = 11.sp, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
-                            LazyRow(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                items(catalogueResults, key = { "anilist-${it.id}" }) { media ->
-                                    Column(Modifier.width(112.dp).rykoGlass(14.dp)) {
-                                        Box(Modifier.fillMaxWidth().height(142.dp).clickable {
-                                            val trailer = media.trailer
-                                            if (!trailer?.id.isNullOrBlank() && trailer?.site.equals("youtube", true)) {
-                                                selected = TubeVideo("anilist-${media.id}", media.title.display, "https://www.youtube.com/watch?v=${trailer?.id}", "youtube", trailer?.thumbnail ?: media.coverImage?.imageUrl.orEmpty(), "AniList", "", media.title.display, media.format.orEmpty(), "", false)
+                
+                                modifier = Modifier.fillMaxSize(),
+                                contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 8.dp, bottom = 24.dp),
+                                verticalArrangement = Arrangement.spacedBy(14.dp)
+                            ) {
+                                if (search.isBlank() && tubeHistory.isNotEmpty()) {
+                                    item(key = "tube-search-history") {
+                                        LazyRow(contentPadding = PaddingValues(horizontal = 2.dp), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                                            items(tubeHistory) { term -> AssistChip(onClick = { search = term }, label = { Text(term, maxLines = 1) }) }
+                                        }
+                                    }
+                                }
+                                if (search.trim().length >= 2) {
+                                    item(key = "tube-anilist-results") {
+                                        Column(Modifier.fillMaxWidth().rykoGlass(18.dp, Color(0x7718181B), 0.18f).padding(vertical = 8.dp)) {
+                                            Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+                                                Text("ANIME & MANGA ON ANILIST", color = Color(0xFFA99BFF), fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                                                if (catalogueLoading) CircularProgressIndicator(color = Color(0xFFA99BFF), modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
                                             }
-                                        }) {
-                                            AsyncImage(media.coverImage?.imageUrl, media.title.display, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-                                            if (!media.trailer?.id.isNullOrBlank() && media.trailer?.site.equals("youtube", true)) Icon(Icons.Default.PlayArrow, "Play trailer", Modifier.align(Alignment.Center).size(34.dp), tint = Color.White)
-                                        }
-                                        Text(media.title.display, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, modifier = Modifier.padding(7.dp), overflow = TextOverflow.Ellipsis)
-                                        Text(if (media.trailer?.id.isNullOrBlank()) "No trailer" else "Watch trailer", color = Color(0xFFA99BFF), fontSize = 9.sp, modifier = Modifier.padding(start = 7.dp, bottom = 7.dp))
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                if (sources.isNotEmpty()) {
-                    item(key = "tube-discovery-sources") {
-                        val channels = sources.filterNot { it.type.contains("playlist", true) }
-                        val playlists = sources.filter { it.type.contains("playlist", true) }
-                        Column(Modifier.fillMaxWidth().rykoGlass(20.dp, Color(0x6618181B), 0.24f).padding(vertical = 5.dp)) {
-                            Row(Modifier.fillMaxWidth().clickable { channelsExpanded = !channelsExpanded }.padding(horizontal = 13.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Text("Channels", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-                                Text("${channels.size}", color = Color.Gray, fontSize = 11.sp)
-                                Icon(if (channelsExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore, "Toggle channels", tint = Color.LightGray)
-                            }
-                            if (channelsExpanded) LazyRow(contentPadding = PaddingValues(horizontal = 12.dp, vertical = 3.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                item { FilterChip(selected = selectedSource.isBlank(), onClick = { selectedSource = "" }, label = { Text("All channels") }) }
-                                items(channels, key = { it.id }) { source -> FilterChip(selected = selectedSource == source.id, onClick = { selectedSource = if (selectedSource == source.id) "" else source.id }, label = { Text(source.label, maxLines = 1) }) }
-                            }
-                            if (playlists.isNotEmpty()) {
-                                Divider(color = Color.White.copy(alpha = 0.08f), modifier = Modifier.padding(horizontal = 12.dp))
-                                Row(Modifier.fillMaxWidth().clickable { playlistsExpanded = !playlistsExpanded }.padding(horizontal = 13.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                                    Text("Playlists", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-                                    Text("${playlists.size}", color = Color.Gray, fontSize = 11.sp)
-                                    Icon(if (playlistsExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore, "Toggle playlists", tint = Color.LightGray)
-                                }
-                                if (playlistsExpanded) LazyRow(contentPadding = PaddingValues(horizontal = 12.dp, vertical = 3.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    items(playlists, key = { it.id }) { source -> FilterChip(selected = selectedSource == source.id, onClick = { selectedSource = if (selectedSource == source.id) "" else source.id }, label = { Text(source.label, maxLines = 1) }) }
-                                }
-                            }
-                        }
-                    }
-                } else if (sourceError != null) {
-                    item(key = "tube-source-error") { Text("Channel and playlist filters unavailable", color = Color.Gray, fontSize = 11.sp) }
-                }
-
-                when {
-                    loading && videos.isEmpty() -> item(key = "tube-loading") {
-                        Box(Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = Color(0xFFA99BFF)) }
-                    }
-                    error != null && videos.isEmpty() -> item(key = "tube-error") {
-                        Column(Modifier.fillMaxWidth().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("RykoTube couldn't load", color = Color.White, fontWeight = FontWeight.Bold)
-                            Spacer(Modifier.height(8.dp)); Text(error!!, color = Color.LightGray)
-                            Spacer(Modifier.height(14.dp)); Button(onClick = { refreshToken++ }) { Text("Retry") }
-                        }
-                    }
-                    filtered.isEmpty() -> item(key = "tube-empty") {
-                        Box(Modifier.fillMaxWidth().padding(30.dp), contentAlignment = Alignment.Center) {
-                            Text(if (videos.isEmpty()) "No videos are published yet." else "No matching videos. Try another search or filter.", color = Color.LightGray)
-                        }
-                    }
-                    else -> {
-                        val regular = filtered.filterNot { it.short }
-                        val shorts = filtered.filter { it.short }
-                        if (selectedFormat == "Shorts") {
-                            shorts.chunked(8).forEachIndexed { rowIndex, shortBatch ->
-                                item(key = "shorts-filter-row-$rowIndex") {
-                                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        Text(if (rowIndex == 0) "Shorts" else "More Shorts", color = Color(0xFFA99BFF), fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                                        LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(end = 4.dp)) {
-                                            items(shortBatch, key = { it.id }) { video -> TubeVideoCard(video) { selected = video } }
-                                        }
-                                    }
-                                }
-                            }
-                        } else if (selectedFormat == "All") {
-                            var regularIndex = 0
-                            var shortIndex = 0
-                            while (regularIndex < regular.size) {
-                                val batch = regular.drop(regularIndex).take(10)
-                                item(key = "regular-heading-$regularIndex") {
-                                    Text(if (regularIndex == 0) "Recommended videos" else "More videos", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                                }
-                                items(batch, key = { it.id }) { video -> TubeVideoCard(video) { selected = video } }
-                                regularIndex += batch.size
-                                if (shortIndex < shorts.size) {
-                                    val batchSize = 6 + ((shorts[shortIndex].id.hashCode().toUInt().toLong() % 5L).toInt())
-                                    val shortBatch = shorts.drop(shortIndex).take(batchSize)
-                                    item(key = "shorts-row-$shortIndex") {
-                                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                            Text("Shorts", color = Color(0xFFA99BFF), fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                                            LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(end = 4.dp)) {
-                                                items(shortBatch, key = { it.id }) { video -> TubeVideoCard(video) { selected = video } }
+                                            if (catalogueResults.isEmpty() && !catalogueLoading) Text("No matching AniList titles.", color = Color.Gray, fontSize = 11.sp, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+                                            LazyRow(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                                items(catalogueResults, key = { "anilist-${it.id}" }) { media ->
+                                                    Column(Modifier.width(112.dp).rykoGlass(14.dp)) {
+                                                        Box(Modifier.fillMaxWidth().height(142.dp).clickable {
+                                                            val trailer = media.trailer
+                                                            if (!trailer?.id.isNullOrBlank() && trailer?.site.equals("youtube", true)) {
+                                                                selected = TubeVideo("anilist-${media.id}", media.title.display, "https://www.youtube.com/watch?v=${trailer?.id}", "youtube", trailer?.thumbnail ?: media.coverImage?.imageUrl.orEmpty(), "AniList", "", media.title.display, media.format.orEmpty(), "", false)
+                                                            }
+                                                        }) {
+                                                            AsyncImage(media.coverImage?.imageUrl, media.title.display, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                                                            if (!media.trailer?.id.isNullOrBlank() && media.trailer?.site.equals("youtube", true)) Icon(Icons.Default.PlayArrow, "Play trailer", Modifier.align(Alignment.Center).size(34.dp), tint = Color.White)
+                                                        }
+                                                        Text(media.title.display, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, modifier = Modifier.padding(7.dp), overflow = TextOverflow.Ellipsis)
+                                                        Text(if (media.trailer?.id.isNullOrBlank()) "No trailer" else "Watch trailer", color = Color(0xFFA99BFF), fontSize = 9.sp, modifier = Modifier.padding(start = 7.dp, bottom = 7.dp))
+                                                    }
+                                                }
                                             }
                                         }
                                     }
-                                    shortIndex += shortBatch.size
                                 }
-                            }
-                            if (regular.isEmpty() && shorts.isNotEmpty()) {
-                                shorts.chunked(8).forEachIndexed { rowIndex, shortBatch ->
-                                    item(key = "shorts-only-row-$rowIndex") {
-                                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                            Text(if (rowIndex == 0) "Shorts" else "More Shorts", color = Color(0xFFA99BFF), fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                                            LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) { items(shortBatch, key = { it.id }) { video -> TubeVideoCard(video) { selected = video } } }
+                                if (sources.isNotEmpty()) {
+                                    item(key = "tube-discovery-sources") {
+                                        val channels = sources.filterNot { it.type.contains("playlist", true) }
+                                        val playlists = sources.filter { it.type.contains("playlist", true) }
+                                        Column(Modifier.fillMaxWidth().rykoGlass(20.dp, Color(0x6618181B), 0.24f).padding(vertical = 5.dp)) {
+                                            Row(Modifier.fillMaxWidth().clickable { channelsExpanded = !channelsExpanded }.padding(horizontal = 13.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                                                Text("Channels", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                                                Text("${channels.size}", color = Color.Gray, fontSize = 11.sp)
+                                                Icon(if (channelsExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore, "Toggle channels", tint = Color.LightGray)
+                                            }
+                                            if (channelsExpanded) LazyRow(contentPadding = PaddingValues(horizontal = 12.dp, vertical = 3.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                                item { FilterChip(selected = selectedSource.isBlank(), onClick = { selectedSource = "" }, label = { Text("All channels") }) }
+                                                items(channels, key = { it.id }) { source -> FilterChip(selected = selectedSource == source.id, onClick = { selectedSource = if (selectedSource == source.id) "" else source.id }, label = { Text(source.label, maxLines = 1) }) }
+                                            }
+                                            if (playlists.isNotEmpty()) {
+                                                Divider(color = Color.White.copy(alpha = 0.08f), modifier = Modifier.padding(horizontal = 12.dp))
+                                                Row(Modifier.fillMaxWidth().clickable { playlistsExpanded = !playlistsExpanded }.padding(horizontal = 13.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                                                    Text("Playlists", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                                                    Text("${playlists.size}", color = Color.Gray, fontSize = 11.sp)
+                                                    Icon(if (playlistsExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore, "Toggle playlists", tint = Color.LightGray)
+                                                }
+                                                if (playlistsExpanded) LazyRow(contentPadding = PaddingValues(horizontal = 12.dp, vertical = 3.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                                    items(playlists, key = { it.id }) { source -> FilterChip(selected = selectedSource == source.id, onClick = { selectedSource = if (selectedSource == source.id) "" else source.id }, label = { Text(source.label, maxLines = 1) }) }
+                                                }
+                                            }
+                                        }
+                                    }
+                                } else if (sourceError != null) {
+                                    item(key = "tube-source-error") { Text("Channel and playlist filters unavailable", color = Color.Gray, fontSize = 11.sp) }
+                                }
+                
+                                when {
+                                    loading && videos.isEmpty() -> item(key = "tube-loading") {
+                                        Box(Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = Color(0xFFA99BFF)) }
+                                    }
+                                    error != null && videos.isEmpty() -> item(key = "tube-error") {
+                                        Column(Modifier.fillMaxWidth().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                            Text("RykoTube couldn't load", color = Color.White, fontWeight = FontWeight.Bold)
+                                            Spacer(Modifier.height(8.dp)); Text(error!!, color = Color.LightGray)
+                                            Spacer(Modifier.height(14.dp)); Button(onClick = { refreshToken++ }) { Text("Retry") }
+                                        }
+                                    }
+                                    filtered.isEmpty() -> item(key = "tube-empty") {
+                                        Box(Modifier.fillMaxWidth().padding(30.dp), contentAlignment = Alignment.Center) {
+                                            Text(if (videos.isEmpty()) "No videos are published yet." else "No matching videos. Try another search or filter.", color = Color.LightGray)
+                                        }
+                                    }
+                                    else -> {
+                                        val regular = filtered.filterNot { it.short }
+                                        val shorts = filtered.filter { it.short }
+                                        if (selectedFormat == "Shorts") {
+                                            shorts.chunked(8).forEachIndexed { rowIndex, shortBatch ->
+                                                item(key = "shorts-filter-row-$rowIndex") {
+                                                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                                        Text(if (rowIndex == 0) "Shorts" else "More Shorts", color = Color(0xFFA99BFF), fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                                                        LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(end = 4.dp)) {
+                                                            items(shortBatch, key = { it.id }) { video -> TubeVideoCard(video) { selected = video } }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        } else if (selectedFormat == "All") {
+                                            var regularIndex = 0
+                                            var shortIndex = 0
+                                            while (regularIndex < regular.size) {
+                                                val batch = regular.drop(regularIndex).take(10)
+                                                item(key = "regular-heading-$regularIndex") {
+                                                    Text(if (regularIndex == 0) "Recommended videos" else "More videos", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                                                }
+                                                items(batch, key = { it.id }) { video -> TubeVideoCard(video) { selected = video } }
+                                                regularIndex += batch.size
+                                                if (shortIndex < shorts.size) {
+                                                    val batchSize = 6 + ((shorts[shortIndex].id.hashCode().toUInt().toLong() % 5L).toInt())
+                                                    val shortBatch = shorts.drop(shortIndex).take(batchSize)
+                                                    item(key = "shorts-row-$shortIndex") {
+                                                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                                            Text("Shorts", color = Color(0xFFA99BFF), fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                                                            LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(end = 4.dp)) {
+                                                                items(shortBatch, key = { it.id }) { video -> TubeVideoCard(video) { selected = video } }
+                                                            }
+                                                        }
+                                                    }
+                                                    shortIndex += shortBatch.size
+                                                }
+                                            }
+                                            if (regular.isEmpty() && shorts.isNotEmpty()) {
+                                                shorts.chunked(8).forEachIndexed { rowIndex, shortBatch ->
+                                                    item(key = "shorts-only-row-$rowIndex") {
+                                                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                                            Text(if (rowIndex == 0) "Shorts" else "More Shorts", color = Color(0xFFA99BFF), fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                                                            LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) { items(shortBatch, key = { it.id }) { video -> TubeVideoCard(video) { selected = video } } }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        } else {
+                                            items(regular, key = { it.id }) { video -> TubeVideoCard(video) { selected = video } }
+                                        }
+                                        if (hasMore) {
+                                            item(key = "load-more") {
+                                                Button(onClick = { if (!loadingMore) { loadingMore = true; error = null } }, enabled = !loadingMore, modifier = Modifier.fillMaxWidth()) {
+                                                    Text(if (loadingMore) "Loading…" else "Load more")
+                                                }
+                                            }
                                         }
                                     }
                                 }
                             }
-                        } else {
-                            items(regular, key = { it.id }) { video -> TubeVideoCard(video) { selected = video } }
                         }
-                        if (hasMore) {
-                            item(key = "load-more") {
-                                Button(onClick = { if (!loadingMore) { loadingMore = true; error = null } }, enabled = !loadingMore, modifier = Modifier.fillMaxWidth()) {
-                                    Text(if (loadingMore) "Loading…" else "Load more")
-                                }
-                            }
-                        }
-                    }
-                }
             }
+        }
+        Column(
+            Modifier.align(Alignment.TopCenter).fillMaxWidth()
+                .windowInsetsPadding(WindowInsets.statusBars)
+                .background(Color.Transparent)
+        ) {
+                    Row(
+                        Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 9.dp).rykoGlass(22.dp, Color(0xD91B1B1F), 0.38f).padding(horizontal = 5.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.width(142.dp)) {
+                            Box(Modifier.size(31.dp).clip(RoundedCornerShape(9.dp)).background(Color(0xFFA99BFF)), contentAlignment = Alignment.Center) {
+                                Text("R", color = Color(0xFF100D1D), fontWeight = FontWeight.Black, fontSize = 18.sp)
+                            }
+                            Spacer(Modifier.width(8.dp))
+                            Text("RykoTube", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1)
+                        }
+                        OutlinedTextField(
+                            value = search, onValueChange = { search = it },
+                            modifier = Modifier.weight(1f).focusRequester(searchFocus).rykoGlass(18.dp, Color(0x3318181B), 0.30f),
+                            singleLine = true,
+                            placeholder = { Text("Search videos, creators or titles", maxLines = 1, fontSize = 12.sp) },
+                            leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search videos") },
+                            trailingIcon = { if (search.isNotEmpty()) IconButton(onClick = { search = ""; focusManager.clearFocus() }) { Icon(Icons.Default.Close, contentDescription = "Clear search", tint = Color.LightGray) } },
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                            keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() }),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedTextColor = Color.White, unfocusedTextColor = Color.White,
+                                focusedBorderColor = Color(0xFFA99BFF), unfocusedBorderColor = Color.Transparent,
+                                focusedPlaceholderColor = Color.Gray, unfocusedPlaceholderColor = Color.Gray,
+                                cursorColor = Color(0xFFA99BFF)
+                            )
+                        )
+                    }
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 5.dp).rykoGlass(18.dp, Color(0x9918181B), 0.22f).padding(horizontal = 5.dp, vertical = 2.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf("All", "Videos", "Shorts").forEach { format ->
+                            FilterChip(selected = selectedFormat == format, onClick = { selectedFormat = format }, label = { Text(format) })
+                        }
+                        Spacer(Modifier.weight(1f))
+                        IconButton(onClick = { refreshToken++ }) { Icon(Icons.Default.Refresh, "Refresh", tint = Color.White) }
+                    }
+            
+            
         }
     }
     LaunchedEffect(loadingMore) {
