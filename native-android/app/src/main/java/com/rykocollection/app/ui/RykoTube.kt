@@ -23,6 +23,15 @@ import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -196,6 +205,8 @@ fun NativeRykoTube() {
     var selected by remember { mutableStateOf<TubeVideo?>(null) }
     var sources by remember { mutableStateOf<List<TubeSource>>(emptyList()) }
     var selectedSource by remember { mutableStateOf("") }
+    var channelsExpanded by remember { mutableStateOf(false) }
+    var playlistsExpanded by remember { mutableStateOf(false) }
     var sourceError by remember { mutableStateOf<String?>(null) }
     var page by remember { mutableIntStateOf(1) }
     var hasMore by remember { mutableStateOf(true) }
@@ -203,6 +214,8 @@ fun NativeRykoTube() {
     var catalogueResults by remember { mutableStateOf<List<AniListMedia>>(emptyList()) }
     var catalogueLoading by remember { mutableStateOf(false) }
     val context = LocalContext.current
+    val focusManager = LocalFocusManager.current
+    val searchFocus = remember { FocusRequester() }
     val tubeHistory = remember { context.getSharedPreferences("ryko_search", android.content.Context.MODE_PRIVATE).getString("tube", "").orEmpty().split("¦").filter { it.isNotBlank() }.take(8) }
 
     LaunchedEffect(search) {
@@ -299,13 +312,24 @@ fun NativeRykoTube() {
                 Text("RykoCollection", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1)
             }
             OutlinedTextField(
-                value = search, onValueChange = { search = it }, modifier = Modifier.weight(1f).rykoGlass(14.dp, Color(0x3318181B), 0.24f),
-                singleLine = true, placeholder = { Text("Search videos, creators or titles", maxLines = 1) },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                value = search,
+                onValueChange = { search = it },
+                modifier = Modifier.weight(1f).focusRequester(searchFocus).rykoGlass(18.dp, Color(0x3318181B), 0.30f),
+                singleLine = true,
+                placeholder = { Text("Search videos, creators or titles", maxLines = 1, fontSize = 12.sp) },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search videos") },
+                trailingIcon = {
+                    if (search.isNotEmpty()) IconButton(onClick = { search = ""; focusManager.clearFocus() }) {
+                        Icon(Icons.Default.Close, contentDescription = "Clear search", tint = Color.LightGray)
+                    }
+                },
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() }),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedTextColor = Color.White, unfocusedTextColor = Color.White,
-                    focusedBorderColor = Color(0xFFA99BFF), unfocusedBorderColor = Color.DarkGray,
-                    focusedPlaceholderColor = Color.Gray, unfocusedPlaceholderColor = Color.Gray
+                    focusedBorderColor = Color(0xFFA99BFF), unfocusedBorderColor = Color.Transparent,
+                    focusedPlaceholderColor = Color.Gray, unfocusedPlaceholderColor = Color.Gray,
+                    cursorColor = Color(0xFFA99BFF)
                 )
             )
         }
@@ -348,14 +372,31 @@ fun NativeRykoTube() {
             }
         }
         if (sources.isNotEmpty()) {
-            Column(Modifier.fillMaxWidth()) {
-                Text("Channels & playlists", color = Color.LightGray, fontSize = 12.sp, modifier = Modifier.padding(start = 16.dp, bottom = 6.dp))
-                LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    item {
-                        FilterChip(selected = selectedSource.isBlank(), onClick = { selectedSource = "" }, label = { Text("All sources") })
-                    }
-                    items(sources, key = { it.id }) { source ->
+            val channels = sources.filterNot { it.type.contains("playlist", true) }
+            val playlists = sources.filter { it.type.contains("playlist", true) }
+            Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp).rykoGlass(20.dp, Color(0x6618181B), 0.24f).padding(vertical = 5.dp)) {
+                Row(Modifier.fillMaxWidth().clickable { channelsExpanded = !channelsExpanded }.padding(horizontal = 13.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text("Channels", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                    Text("${channels.size}", color = Color.Gray, fontSize = 11.sp)
+                    Icon(if (channelsExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore, "Toggle channels", tint = Color.LightGray)
+                }
+                if (channelsExpanded) LazyRow(contentPadding = PaddingValues(horizontal = 12.dp, vertical = 3.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    item { FilterChip(selected = selectedSource.isBlank(), onClick = { selectedSource = "" }, label = { Text("All channels") }) }
+                    items(channels, key = { it.id }) { source ->
                         FilterChip(selected = selectedSource == source.id, onClick = { selectedSource = if (selectedSource == source.id) "" else source.id }, label = { Text(source.label, maxLines = 1) })
+                    }
+                }
+                if (playlists.isNotEmpty()) {
+                    Divider(color = Color.White.copy(alpha = 0.08f), modifier = Modifier.padding(horizontal = 12.dp))
+                    Row(Modifier.fillMaxWidth().clickable { playlistsExpanded = !playlistsExpanded }.padding(horizontal = 13.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text("Playlists", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                        Text("${playlists.size}", color = Color.Gray, fontSize = 11.sp)
+                        Icon(if (playlistsExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore, "Toggle playlists", tint = Color.LightGray)
+                    }
+                    if (playlistsExpanded) LazyRow(contentPadding = PaddingValues(horizontal = 12.dp, vertical = 3.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        items(playlists, key = { it.id }) { source ->
+                            FilterChip(selected = selectedSource == source.id, onClick = { selectedSource = if (selectedSource == source.id) "" else source.id }, label = { Text(source.label, maxLines = 1) })
+                        }
                     }
                 }
             }
