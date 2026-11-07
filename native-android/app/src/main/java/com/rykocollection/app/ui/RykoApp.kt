@@ -124,25 +124,30 @@ fun RykoApp() {
         modifier = Modifier,
         contentWindowInsets = WindowInsets(0),
         topBar = {
-            if (!(tab == MainTab.VIDEO && selectedEntry == null && extraPage == null)) TopAppBar(
-                title = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+            if (!(tab == MainTab.VIDEO && selectedEntry == null && extraPage == null)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 7.dp)
+                        .rykoGlass(22.dp, Color(0xF01A1A1D), 0.42f)
+                        .padding(horizontal = 8.dp, vertical = 3.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (selectedEntry != null) {
+                        IconButton(onClick = { selectedEntry = null }) {
+                            Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
+                        }
+                    }
+                    Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
                         Box(Modifier.size(29.dp).clip(RoundedCornerShape(9.dp)).background(Color(0xFFA99BFF)), contentAlignment = Alignment.Center) {
                             Text("R", color = Color(0xFF101010), fontWeight = FontWeight.Black)
                         }
                         Spacer(Modifier.width(9.dp))
-                        Text("RYKOCOLLECTION", fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.7.sp)
+                        Text("RYKOCOLLECTION", color = Color(0xFFF7F7FB), fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.7.sp)
                     }
-                },
-                navigationIcon = {
-                    if (selectedEntry != null) IconButton(onClick = { selectedEntry = null }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    IconButton(onClick = { selectedEntry = null; tab = MainTab.BROWSE; extraPage = null }) {
+                        Icon(Icons.Default.Search, contentDescription = "Search", tint = Color.White)
                     }
-                },
-                actions = {
-                    IconButton(onClick = { selectedEntry = null; tab = MainTab.BROWSE; extraPage = null }) { Icon(Icons.Default.Search, contentDescription = "Search") }
                     Box {
-                        IconButton(onClick = { menuOpen = true }) { Icon(Icons.Default.Menu, contentDescription = "Ryko menu") }
+                        IconButton(onClick = { menuOpen = true }) { Icon(Icons.Default.Menu, contentDescription = "Ryko menu", tint = Color.White) }
                         DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                             DropdownMenuItem(text = { Text(if (mangaMode) "Switch to Anime" else "Switch to Manga") }, onClick = { mangaMode = !mangaMode; menuOpen = false; selectedEntry = null })
                             DropdownMenuItem(text = { Text("Ryko Top Trending") }, onClick = { extraPage = ExtraPage.TRENDING; selectedEntry = null; menuOpen = false })
@@ -150,9 +155,8 @@ fun RykoApp() {
                             DropdownMenuItem(text = { Text("Settings") }, onClick = { extraPage = ExtraPage.SETTINGS; selectedEntry = null; menuOpen = false })
                         }
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent, titleContentColor = Color(0xFFF7F7FB), actionIconContentColor = Color(0xFFE8E8E8))
-            )
+                }
+            }
         },
         containerColor = Color.Black
     ) { inner ->
@@ -460,7 +464,12 @@ private fun NativeHome(mangaMode: Boolean, onEntry: (Int) -> Unit) {
                         items(videos, key = { it.id }) { media ->
                             Column(Modifier.width(190.dp).height(164.dp).clickable {
                                 val trailerId = media.trailer?.id ?: return@clickable
-                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.youtube.com/watch?v=$trailerId"))
+                                val intent = Intent(context, TubePlayerActivity::class.java).apply {
+                                    putExtra(TubePlayerActivity.EXTRA_VIDEO_ID, trailerId)
+                                    putExtra(TubePlayerActivity.EXTRA_TITLE, media.title.display + " — Official Trailer")
+                                    putExtra(TubePlayerActivity.EXTRA_CREATOR, "Official trailer")
+                                    putExtra(TubePlayerActivity.EXTRA_THUMB, media.trailer?.thumbnail ?: media.coverImage?.imageUrl.orEmpty())
+                                }
                                 context.startActivity(intent)
                             }) {
                                 Box {
