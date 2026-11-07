@@ -147,9 +147,11 @@ fun RykoApp() {
             )
         },
         bottomBar = {
-            // Keep the neutral surface painted through Android's transparent navigation inset.
-            Box(Modifier.fillMaxWidth().background(Color(0xFF111113))) {
-            NavigationBar(containerColor = Color.Transparent, contentColor = Color(0xFFA99BFF), tonalElevation = 0.dp, modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 5.dp).rykoGlass(24.dp, Color(0x9918181B), 0.38f)) {
+            // Extend the frosted surface through the transparent Android system navigation inset.
+            // NavigationBar applies its own bottom window inset; the parent glass surface therefore
+            // paints behind both the app tabs and the system navigation area.
+            Box(Modifier.fillMaxWidth().rykoGlass(24.dp, Color(0x9918181B), 0.38f)) {
+            NavigationBar(containerColor = Color.Transparent, contentColor = Color(0xFFA99BFF), tonalElevation = 0.dp, modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 5.dp)) {
                 MainTab.entries.forEach { item ->
                     val icon = when (item) {
                         MainTab.HOME -> Icons.Default.Home
