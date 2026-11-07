@@ -12,11 +12,9 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.WindowInsets.Companion.navigationBars
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
@@ -149,7 +147,7 @@ fun RykoApp() {
             )
         },
         bottomBar = {
-            NavigationBar(containerColor = Color.Transparent, contentColor = Color(0xFFA99BFF), tonalElevation = 0.dp, modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp).rykoGlass(24.dp, Color(0x9918181B), 0.38f).windowInsetsPadding(WindowInsets.navigationBars)) {
+            NavigationBar(containerColor = Color.Transparent, contentColor = Color(0xFFA99BFF), tonalElevation = 0.dp, modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp).rykoGlass(24.dp, Color(0x9918181B), 0.38f)) {
                 MainTab.entries.forEach { item ->
                     val icon = when (item) {
                         MainTab.HOME -> Icons.Default.Home
