@@ -59,6 +59,7 @@ import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -88,6 +89,8 @@ import coil.compose.AsyncImage
 import com.rykocollection.app.data.AniListMedia
 import com.rykocollection.app.data.AniListDetail
 import com.rykocollection.app.data.AniListRepository
+import dev.chrisbanes.haze.hazeSource
+import dev.chrisbanes.haze.rememberHazeState
 
 private enum class MainTab(val label: String) { HOME("Home"), BROWSE("Browse"), VIDEO("Video"), LIBRARY("Library"), ACCOUNT("Account") }
 private enum class ExtraPage(val label: String) { TRENDING("Ryko Top Trending"), NEWS("Newsroom"), SETTINGS("Settings") }
@@ -113,7 +116,10 @@ fun RykoApp() {
         }
     }
 
+    val hazeState = rememberHazeState()
+    CompositionLocalProvider(LocalRykoHazeState provides hazeState) {
     Scaffold(
+        modifier = Modifier.hazeSource(hazeState),
         contentWindowInsets = WindowInsets(0),
         topBar = {
             if (!(tab == MainTab.VIDEO && selectedEntry == null && extraPage == null)) TopAppBar(
@@ -167,7 +173,7 @@ fun RykoApp() {
         },
         containerColor = Color.Black
     ) { inner ->
-        Box(Modifier.padding(inner).fillMaxSize().background(Color.Black)) {
+        Box(Modifier.padding(inner).fillMaxSize().background(Color.Black).hazeSource(hazeState)) {
             // Keep visited tabs composed while hidden so their data and scroll state survive tab changes.
             if (visitedTabs.contains(MainTab.HOME)) {
                 Box(Modifier.fillMaxSize().graphicsLayer { alpha = if (tab == MainTab.HOME && selectedEntry == null && extraPage == null) 1f else 0f }.zIndex(if (tab == MainTab.HOME && selectedEntry == null && extraPage == null) 1f else -1f).then(if (tab == MainTab.HOME && selectedEntry == null && extraPage == null) Modifier else Modifier.offset(x = 10000.dp))) {
@@ -712,6 +718,7 @@ private fun NativePlaceholder(title: String, subtitle: String) {
                 }
             }
         }
+    }
     }
 }
 
