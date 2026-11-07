@@ -153,7 +153,7 @@ fun RykoApp() {
             }
             if (visitedTabs.contains(MainTab.ACCOUNT)) {
                 Box(Modifier.fillMaxSize().hazeSource(hazeState).graphicsLayer { alpha = if (tab == MainTab.ACCOUNT && selectedEntry == null && extraPage == null) 1f else 0f }.zIndex(if (tab == MainTab.ACCOUNT && selectedEntry == null && extraPage == null) 1f else -1f).then(if (tab == MainTab.ACCOUNT && selectedEntry == null && extraPage == null) Modifier else Modifier.offset(x = 10000.dp))) {
-                    Box(Modifier.fillMaxSize().padding(top = 88.dp)) { NativePlaceholder("Account", "Sign in, profile, avatar, banner and account settings.")
+                    Box(Modifier.fillMaxSize().padding(top = 88.dp)) { NativePlaceholder("Account", "Sign in, profile, avatar, banner and account settings.") }
                 }
             }
 
