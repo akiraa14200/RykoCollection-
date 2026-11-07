@@ -27,7 +27,7 @@ import coil.compose.AsyncImage
 import com.rykocollection.app.data.*
 import kotlinx.coroutines.launch
 
-private val EBg=Color(0xFF090910)
+private val EBg=Color(0xFF080808)
 private val ESurface=Color(0xB31B1B1F)
 private val EAccent=Color(0xFFA99BFF)
 private val EMuted=Color(0xFFAAA8B5)
@@ -76,7 +76,7 @@ fun NativeEntryPage(id:Int,mangaMode:Boolean) {
             }
             context.startActivity(Intent.createChooser(share,"Share entry"))
         }
-        TabRow(selectedTabIndex=tab,modifier=Modifier.padding(horizontal=10.dp).rykoGlass(18.dp, Color(0xD91A1728), 0.34f),containerColor=Color.Transparent,contentColor=EAccent) {
+        TabRow(selectedTabIndex=tab,modifier=Modifier.padding(horizontal=10.dp).rykoGlass(18.dp, Color(0xD91B1B1F), 0.34f),containerColor=Color.Transparent,contentColor=EAccent) {
             listOf("Overview","Characters","Details","Comments").forEachIndexed { i,label ->
                 Tab(selected=tab==i,onClick={tab=i},text={Text(label,fontSize=11.sp,maxLines=1)})
             }
@@ -138,14 +138,14 @@ private fun EntryHero(m:AniListDetail,manga:Boolean,onShare:()->Unit) {
         AsyncImage(m.bannerImage ?: m.coverImage?.imageUrl,m.title.display,Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0x44000000),Color(0xFF08080C)))))
         val context=LocalContext.current
-    Row(Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(12.dp).rykoGlass(18.dp, Color(0xD91A1728), 0.28f).padding(7.dp),verticalAlignment=Alignment.Bottom){
+    Row(Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(12.dp).rykoGlass(18.dp, Color(0xD91B1B1F), 0.28f).padding(7.dp),verticalAlignment=Alignment.Bottom){
             AsyncImage(m.coverImage?.imageUrl,m.title.display,Modifier.width(105.dp).height(148.dp).clip(RoundedCornerShape(12.dp)),contentScale=ContentScale.Crop)
             Column(Modifier.weight(1f).padding(start=12.dp),verticalArrangement=Arrangement.spacedBy(5.dp)){
                 Text("${m.format ?: if(manga) "MANGA" else "ANIME"} · ${m.seasonYear ?: m.startDate?.year ?: "YEAR N/A"}",color=EAccent,fontSize=9.sp,fontWeight=FontWeight.Bold)
                 Text(m.title.display,color=Color.White,fontSize=19.sp,fontWeight=FontWeight.ExtraBold,maxLines=3,overflow=TextOverflow.Ellipsis,lineHeight=22.sp)
                 m.title.native?.takeIf{it.isNotBlank() && it!=m.title.display}?.let{Text(it,color=Color.LightGray,fontSize=10.sp,maxLines=1,overflow=TextOverflow.Ellipsis)}
                 Text(listOfNotNull(m.averageScore?.let{"★ ${it/10.0}/10"},m.status?.replace('_',' '),m.popularity?.let{"Popularity $it"}).joinToString(" · "),color=Color.White,fontSize=9.sp,maxLines=2)
-                Text(m.genres.take(3).joinToString(" • "),color=Color(0xFFD6CFFF),fontSize=9.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
+                Text(m.genres.take(3).joinToString(" • "),color=Color(0xFFD6D6D6),fontSize=9.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
                 Row(verticalAlignment=Alignment.CenterVertically){
                     IconButton(onClick=onShare,modifier=Modifier.size(34.dp)){Icon(Icons.Default.Share,"Share",tint=Color.White)}
                     TextButton(onClick={
@@ -166,13 +166,13 @@ private fun ColumnScope.EntryOverview(m:AniListDetail,manga:Boolean) {
     LazyColumn(Modifier.weight(1f).fillMaxWidth(),contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(14.dp)){
         item {
             Text("STORY",color=EAccent,fontSize=10.sp,fontWeight=FontWeight.Bold,letterSpacing=1.4.sp)
-            Text(clean(m.description).ifBlank{"No synopsis has been provided by AniList."},color=Color(0xFFE0DEE7),fontSize=13.sp,lineHeight=20.sp,modifier=Modifier.fillMaxWidth().rykoGlass(16.dp, Color(0xD91B1A2B), 0.20f).padding(14.dp).padding(top=7.dp))
+            Text(clean(m.description).ifBlank{"No synopsis has been provided by AniList."},color=Color(0xFFE0E0E0),fontSize=13.sp,lineHeight=20.sp,modifier=Modifier.fillMaxWidth().rykoGlass(16.dp, Color(0xD91B1B1F), 0.20f).padding(14.dp).padding(top=7.dp))
         }
         item {
             Text("OFFICIAL TRAILER",color=EAccent,fontSize=10.sp,fontWeight=FontWeight.Bold,letterSpacing=1.4.sp)
             val t=m.trailer
             if(!t?.id.isNullOrBlank() && t?.site.equals("youtube",true)){
-                Box(Modifier.fillMaxWidth().padding(top=8.dp).height(194.dp).rykoGlass(16.dp, Color(0xD91B1A2B), 0.24f).clickable{
+                Box(Modifier.fillMaxWidth().padding(top=8.dp).height(194.dp).rykoGlass(16.dp, Color(0xD91B1B1F), 0.24f).clickable{
                     context.startActivity(Intent(Intent.ACTION_VIEW,Uri.parse("https://www.youtube.com/watch?v=${t!!.id}")))
                 }){
                     AsyncImage(t?.thumbnail ?: m.coverImage?.imageUrl,"Official trailer",Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
@@ -250,7 +250,7 @@ private fun ColumnScope.EntryCommentsPlaceholder(){
 private fun CharacterDialog(edge:AniListCharacterEdge,onClose:()->Unit){
     val c=edge.node
     Dialog(onDismissRequest=onClose){
-        Column(Modifier.fillMaxWidth().heightIn(max=580.dp).rykoGlass(22.dp, Color(0xF01A1728), 0.42f)){
+        Column(Modifier.fillMaxWidth().heightIn(max=580.dp).rykoGlass(22.dp, Color(0xF01A1A1D), 0.42f)){
             Box(Modifier.fillMaxWidth().height(205.dp)){
                 AsyncImage(c.image?.large ?: c.image?.medium,c.name.full,Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
                 Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent,Color(0xFF111117)))))
@@ -264,7 +264,7 @@ private fun CharacterDialog(edge:AniListCharacterEdge,onClose:()->Unit){
                 item{EInfo("Birthday",c.dateOfBirth?.display())}
                 item{EInfo("Favourites",c.favourites?.toString())}
                 val bio=clean(c.description)
-                if(bio.isNotBlank()) item{Text("BIOGRAPHY",color=EAccent,fontSize=10.sp,fontWeight=FontWeight.Bold);Text(bio,color=Color(0xFFE0DEE7),fontSize=12.sp,lineHeight=18.sp)}
+                if(bio.isNotBlank()) item{Text("BIOGRAPHY",color=EAccent,fontSize=10.sp,fontWeight=FontWeight.Bold);Text(bio,color=Color(0xFFE0E0E0),fontSize=12.sp,lineHeight=18.sp)}
                 item{Text("Character information supplied by AniList.",color=EMuted,fontSize=10.sp)}
             }
         }

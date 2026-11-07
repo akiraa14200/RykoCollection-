@@ -27,6 +27,7 @@ import android.animation.ValueAnimator
 import android.view.animation.LinearInterpolator
 import android.util.Log
 import androidx.activity.ComponentActivity
+import androidx.core.view.WindowCompat
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.YouTubePlayer
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.PlayerConstants
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.AbstractYouTubePlayerListener
@@ -115,6 +116,13 @@ class TubePlayerActivity : ComponentActivity() {
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        window.navigationBarColor = Color.TRANSPARENT
+        window.statusBarColor = Color.TRANSPARENT
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+            window.isNavigationBarContrastEnforced = false
+            window.isStatusBarContrastEnforced = false
+        }
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         originalSystemUi = window.decorView.systemUiVisibility
         currentVideoId = intent.getStringExtra(EXTRA_VIDEO_ID).orEmpty()
@@ -142,7 +150,9 @@ class TubePlayerActivity : ComponentActivity() {
             if (!isShort) {
                 val resourceId = resources.getIdentifier("status_bar_height", "dimen", "android")
                 val statusInset = if (resourceId > 0) resources.getDimensionPixelSize(resourceId) else dp(24)
-                setPadding(0, statusInset, 0, 0)
+                val navResourceId = resources.getIdentifier("navigation_bar_height", "dimen", "android")
+                val navInset = if (navResourceId > 0) resources.getDimensionPixelSize(navResourceId) else dp(24)
+                setPadding(0, statusInset, 0, navInset)
                 clipToPadding = false
             }
         }
@@ -248,7 +258,7 @@ class TubePlayerActivity : ComponentActivity() {
         details.addView(ambientLayer, FrameLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, dp(220), Gravity.TOP
         ))
-        startAmbientPreviewCycle(ambientLayer)
+        // Keep the player backdrop neutral instead of sampling thumbnail colours.
         val content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(18), dp(18), dp(18), 0)
@@ -264,7 +274,7 @@ class TubePlayerActivity : ComponentActivity() {
         })
         content.addView(TextView(this).apply {
             text = "@${currentCreator.ifBlank { "RykoCollection" }}   •   YouTube   •   more"
-            setTextColor(Color.rgb(224, 211, 232))
+            setTextColor(Color.rgb(224, 224, 224))
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
             setPadding(0, dp(7), 0, dp(14))
         })
@@ -345,7 +355,7 @@ class TubePlayerActivity : ComponentActivity() {
             setPadding(dp(12), dp(10), dp(12), dp(10))
             background = android.graphics.drawable.GradientDrawable().apply {
                 cornerRadius = dp(15).toFloat()
-                setColor(Color.rgb(43, 34, 49))
+                setColor(Color.rgb(28, 28, 30))
             }
         }
         val commentsHeading = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL }
@@ -357,13 +367,13 @@ class TubePlayerActivity : ComponentActivity() {
         })
         commentsHeading.addView(TextView(this).apply {
             text = "   •   Join the conversation"
-            setTextColor(Color.rgb(190, 178, 198))
+            setTextColor(Color.rgb(190, 190, 194))
             textSize = 12f
         })
         commentsCard.addView(commentsHeading)
         commentsCard.addView(TextView(this).apply {
             text = "Share your thoughts about this video"
-            setTextColor(Color.rgb(225, 218, 231))
+            setTextColor(Color.rgb(225, 225, 228))
             textSize = 13f
             setPadding(0, dp(8), 0, dp(2))
             maxLines = 1

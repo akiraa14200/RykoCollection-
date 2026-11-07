@@ -120,7 +120,7 @@ fun RykoApp() {
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(Modifier.size(29.dp).clip(RoundedCornerShape(9.dp)).background(Color(0xFFA99BFF)), contentAlignment = Alignment.Center) {
-                            Text("R", color = Color(0xFF100D1D), fontWeight = FontWeight.Black)
+                            Text("R", color = Color(0xFF101010), fontWeight = FontWeight.Black)
                         }
                         Spacer(Modifier.width(9.dp))
                         Text("RYKOCOLLECTION", fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.7.sp)
@@ -143,11 +143,13 @@ fun RykoApp() {
                         }
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent, titleContentColor = Color(0xFFF7F7FB), actionIconContentColor = Color(0xFFE8E5FF))
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent, titleContentColor = Color(0xFFF7F7FB), actionIconContentColor = Color(0xFFE8E8E8))
             )
         },
         bottomBar = {
-            NavigationBar(containerColor = Color.Transparent, contentColor = Color(0xFFA99BFF), tonalElevation = 0.dp, modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp).rykoGlass(24.dp, Color(0x9918181B), 0.38f)) {
+            // Keep the neutral surface painted through Android's transparent navigation inset.
+            Box(Modifier.fillMaxWidth().background(Color(0xFF111113))) {
+            NavigationBar(containerColor = Color.Transparent, contentColor = Color(0xFFA99BFF), tonalElevation = 0.dp, modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 5.dp).rykoGlass(24.dp, Color(0x9918181B), 0.38f)) {
                 MainTab.entries.forEach { item ->
                     val icon = when (item) {
                         MainTab.HOME -> Icons.Default.Home
@@ -158,6 +160,7 @@ fun RykoApp() {
                     }
                     NavigationBarItem(selected = tab == item && extraPage == null && selectedEntry == null, onClick = { tab = item; if (!visitedTabs.contains(item)) visitedTabs.add(item); extraPage = null; selectedEntry = null }, icon = { Icon(icon, contentDescription = item.label) }, label = { Text(item.label, fontSize = 10.sp, fontWeight = if (tab == item) FontWeight.SemiBold else FontWeight.Normal) })
                 }
+            }
             }
         },
         containerColor = Color.Black
@@ -273,9 +276,9 @@ private fun NativeHome(mangaMode: Boolean, onEntry: (Int) -> Unit) {
                     ) { page ->
                         val media = slides[page]
                         Card(
-                            Modifier.fillMaxWidth().height(252.dp).rykoGlass(18.dp, Color(0xD91A1728), 0.30f).clickable { onEntry(media.id) },
+                            Modifier.fillMaxWidth().height(252.dp).rykoGlass(18.dp, Color(0xD91B1B1F), 0.30f).clickable { onEntry(media.id) },
                             shape = RoundedCornerShape(18.dp),
-                            colors = CardDefaults.cardColors(containerColor = Color(0xB31A1927))
+                            colors = CardDefaults.cardColors(containerColor = Color(0xB31B1B1F))
                         ) {
                             Box(Modifier.fillMaxSize()) {
                                 AsyncImage(
@@ -291,8 +294,8 @@ private fun NativeHome(mangaMode: Boolean, onEntry: (Int) -> Unit) {
                                 ) {
                                     Text("RYKO SPOTLIGHT", color = Violet, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.6.sp)
                                     Text(media.title.display, color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                    Text(listOfNotNull(media.format, media.seasonYear?.toString(), media.averageScore?.let { "★ $it%" }).joinToString("  ·  "), color = Color(0xFFE0DCEB), fontSize = 10.sp)
-                                    Text(media.description?.replace(Regex("<[^>]*>"), "")?.replace("&mdash;", "—").orEmpty(), color = Color(0xFFE2E0E8), fontSize = 10.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, lineHeight = 14.sp, modifier = Modifier.padding(top = 5.dp))
+                                    Text(listOfNotNull(media.format, media.seasonYear?.toString(), media.averageScore?.let { "★ $it%" }).joinToString("  ·  "), color = Color(0xFFE0E0E0), fontSize = 10.sp)
+                                    Text(media.description?.replace(Regex("<[^>]*>"), "")?.replace("&mdash;", "—").orEmpty(), color = Color(0xFFE2E2E2), fontSize = 10.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, lineHeight = 14.sp, modifier = Modifier.padding(top = 5.dp))
                                     Text("VIEW DETAILS  ›", color = Color(0xFFBDF56A), fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 7.dp))
                                 }
                             }
@@ -308,7 +311,7 @@ private fun NativeHome(mangaMode: Boolean, onEntry: (Int) -> Unit) {
                                 Modifier.padding(horizontal = 3.dp)
                                     .size(if (pagerState.currentPage == index) 16.dp else 6.dp, 6.dp)
                                     .clip(RoundedCornerShape(50))
-                                    .background(if (pagerState.currentPage == index) Violet else Color(0xFF55515F))
+                                    .background(if (pagerState.currentPage == index) Violet else Color(0xFF55555A))
                             )
                         }
                     }
@@ -533,7 +536,7 @@ private fun BrowsePage(mangaMode: Boolean, onEntry: (Int) -> Unit) {
     Column(Modifier.fillMaxSize().background(Color.Black).padding(horizontal = 16.dp)) {
         Spacer(Modifier.height(8.dp))
         Text(if (mangaMode) "Explore Manga" else "Explore Anime", color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.ExtraBold)
-        OutlinedTextField(value = search, onValueChange = { search = it }, modifier = Modifier.fillMaxWidth().padding(top = 12.dp).rykoGlass(16.dp, Color(0xD91B1A2B), 0.22f),
+        OutlinedTextField(value = search, onValueChange = { search = it }, modifier = Modifier.fillMaxWidth().padding(top = 12.dp).rykoGlass(16.dp, Color(0xD91B1B1F), 0.22f),
             placeholder = { Text("Search titles, series, stories...") }, singleLine = true,
             leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Violet) },
             trailingIcon = { if (search.isNotBlank()) IconButton(onClick = { search = "" }) { Text("×", color = Color.White, fontSize = 20.sp) } })
@@ -555,7 +558,7 @@ private fun BrowsePage(mangaMode: Boolean, onEntry: (Int) -> Unit) {
             }
         }
         if (filtersExpanded) {
-            Column(Modifier.fillMaxWidth().rykoGlass(16.dp, Color(0xE0181726), 0.22f).padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(Modifier.fillMaxWidth().rykoGlass(16.dp, Color(0xE018181B), 0.22f).padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("GENRE", color = Muted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     genres.forEach { value -> FilterChip(selected = genre == value, onClick = { genre = value }, label = { Text(value) }) }
@@ -590,8 +593,8 @@ private fun BrowsePage(mangaMode: Boolean, onEntry: (Int) -> Unit) {
                             Column(Modifier.weight(1f).clickable { onEntry(media.id) }) {
                                 Box(Modifier.fillMaxWidth().height(190.dp).rykoGlass(16.dp).clip(RoundedCornerShape(16.dp))) {
                                     AsyncImage(media.coverImage?.imageUrl, media.title.display, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-                                    Text(media.format?.replace("_", " ") ?: "TITLE", Modifier.align(Alignment.TopStart).padding(7.dp).clip(RoundedCornerShape(8.dp)).background(Color(0xE6101018)).padding(horizontal = 8.dp, vertical = 5.dp), color = Color(0xFFDCD4FF), fontSize = 9.sp, fontWeight = FontWeight.Bold, maxLines = 1)
-                                    if (media.averageScore != null) Row(Modifier.align(Alignment.TopEnd).padding(7.dp).clip(RoundedCornerShape(8.dp)).background(Color(0xE6101018)).padding(horizontal = 7.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Text(media.format?.replace("_", " ") ?: "TITLE", Modifier.align(Alignment.TopStart).padding(7.dp).clip(RoundedCornerShape(8.dp)).background(Color(0xE6101012)).padding(horizontal = 8.dp, vertical = 5.dp), color = Color(0xFFE0E0E0), fontSize = 9.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                                    if (media.averageScore != null) Row(Modifier.align(Alignment.TopEnd).padding(7.dp).clip(RoundedCornerShape(8.dp)).background(Color(0xE6101012)).padding(horizontal = 7.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
                                         Icon(Icons.Default.Star, null, tint = Color(0xFFFFD36B), modifier = Modifier.size(12.dp))
                                         Text(" ${media.averageScore / 10.0}", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                                     }
@@ -692,7 +695,7 @@ private fun NativePlaceholder(title: String, subtitle: String) {
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Box(
-                    Modifier.size(72.dp).clip(RoundedCornerShape(22.dp)).background(Color(0x22A99BFF)),
+                    Modifier.size(72.dp).clip(RoundedCornerShape(22.dp)).background(Color(0x22FFFFFF)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(icon, contentDescription = null, tint = Violet, modifier = Modifier.size(32.dp))
@@ -702,7 +705,7 @@ private fun NativePlaceholder(title: String, subtitle: String) {
                     "This area is being prepared for RykoCollection.",
                     color = Muted, fontSize = 12.sp, lineHeight = 18.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center
                 )
-                Box(Modifier.clip(RoundedCornerShape(50)).background(Color(0x1FA99BFF)).padding(horizontal = 13.dp, vertical = 7.dp)) {
+                Box(Modifier.clip(RoundedCornerShape(50)).background(Color(0x1FFFFFFF)).padding(horizontal = 13.dp, vertical = 7.dp)) {
                     Text("COMING SOON", color = Violet, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
                 }
             }

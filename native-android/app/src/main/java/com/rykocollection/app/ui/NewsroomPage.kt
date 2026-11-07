@@ -133,9 +133,9 @@ fun NativeNewsroomPage() {
                 Text("Anime and manga headlines, releases, studio announcements and events.",color=NewsMuted,fontSize=12.sp,modifier=Modifier.padding(top=6.dp))
             }
             item {
-                OutlinedTextField(value=search,onValueChange={search=it},modifier=Modifier.fillMaxWidth().rykoGlass(16.dp, Color(0xD91B1A2B), 0.22f),singleLine=true,placeholder={Text("Search news, releases, events…",color=NewsMuted)},leadingIcon={Icon(Icons.Default.Search,null,tint=NewsAccent)},colors=OutlinedTextFieldDefaults.colors(focusedTextColor=Color.White,unfocusedTextColor=Color.White,focusedBorderColor=NewsAccent,unfocusedBorderColor=Color(0xFF29292F),cursorColor=NewsAccent),shape=RoundedCornerShape(15.dp))
+                OutlinedTextField(value=search,onValueChange={search=it},modifier=Modifier.fillMaxWidth().rykoGlass(16.dp, Color(0xD91B1B1F), 0.22f),singleLine=true,placeholder={Text("Search news, releases, events…",color=NewsMuted)},leadingIcon={Icon(Icons.Default.Search,null,tint=NewsAccent)},colors=OutlinedTextFieldDefaults.colors(focusedTextColor=Color.White,unfocusedTextColor=Color.White,focusedBorderColor=NewsAccent,unfocusedBorderColor=Color(0xFF29292F),cursorColor=NewsAccent),shape=RoundedCornerShape(15.dp))
             }
-            item { Row(Modifier.fillMaxWidth().rykoGlass(14.dp, Color(0xB31B1A2B), 0.18f).padding(7.dp),horizontalArrangement=Arrangement.spacedBy(6.dp)){categories.forEach{c->FilterChip(selected=category==c,onClick={category=c},label={Text(c,fontSize=10.sp)})}} }
+            item { Row(Modifier.fillMaxWidth().rykoGlass(14.dp, Color(0xB31B1B1F), 0.18f).padding(7.dp),horizontalArrangement=Arrangement.spacedBy(6.dp)){categories.forEach{c->FilterChip(selected=category==c,onClick={category=c},label={Text(c,fontSize=10.sp)})}} }
             item {
                 Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)){Text("Latest updates",color=Color.White,fontSize=19.sp,fontWeight=FontWeight.Bold);Text(if(loading)"Collecting headlines…" else filtered.size.toString()+" stories",color=NewsMuted,fontSize=11.sp)}

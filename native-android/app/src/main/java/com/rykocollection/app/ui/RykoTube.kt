@@ -287,7 +287,7 @@ fun NativeRykoTube() {
 
     Column(Modifier.fillMaxSize().background(Color.Black).windowInsetsPadding(WindowInsets.statusBars)) {
         Row(
-            Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 9.dp).rykoGlass(22.dp, Color(0xD91A1728), 0.38f).padding(horizontal = 5.dp),
+            Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 9.dp).rykoGlass(22.dp, Color(0xD91B1B1F), 0.38f).padding(horizontal = 5.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
@@ -309,7 +309,7 @@ fun NativeRykoTube() {
                 )
             )
         }
-        Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 5.dp).rykoGlass(18.dp, Color(0x991A1728), 0.22f).padding(horizontal = 5.dp, vertical = 2.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 5.dp).rykoGlass(18.dp, Color(0x9918181B), 0.22f).padding(horizontal = 5.dp, vertical = 2.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf("All", "Videos", "Shorts").forEach { format ->
                 FilterChip(selected = selectedFormat == format, onClick = { selectedFormat = format }, label = { Text(format) })
             }
@@ -322,7 +322,7 @@ fun NativeRykoTube() {
             }
         }
         if (search.trim().length >= 2) {
-            Column(Modifier.fillMaxWidth().padding(top = 8.dp).rykoGlass(18.dp, Color(0x771A1728), 0.18f).padding(vertical = 8.dp)) {
+            Column(Modifier.fillMaxWidth().padding(top = 8.dp).rykoGlass(18.dp, Color(0x7718181B), 0.18f).padding(vertical = 8.dp)) {
                 Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text("ANIME & MANGA ON ANILIST", color = Color(0xFFA99BFF), fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
                     if (catalogueLoading) CircularProgressIndicator(color = Color(0xFFA99BFF), modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
@@ -524,15 +524,15 @@ private fun TubeVideoCard(video: TubeVideo, onClick: () -> Unit) {
             if (video.creatorAvatar.isNotBlank()) {
                 AsyncImage(video.creatorAvatar, video.creator, Modifier.size(42.dp).clip(RoundedCornerShape(50)), contentScale = ContentScale.Crop)
             } else {
-                Box(Modifier.size(42.dp).clip(RoundedCornerShape(50)).background(Color(0xFF25232D)), contentAlignment = Alignment.Center) {
+                Box(Modifier.size(42.dp).clip(RoundedCornerShape(50)).background(Color(0xFF252529)), contentAlignment = Alignment.Center) {
                     Text(video.creator.firstOrNull()?.uppercase() ?: "R", color = Color.White, fontWeight = FontWeight.Bold)
                 }
             }
             Column(Modifier.weight(1f).padding(start = 11.dp, end = 5.dp).clickable(onClick = onClick), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(video.title, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, lineHeight = 20.sp)
                 Text(video.creator.ifBlank { video.platform }, color = Color(0xFF9A9AA2), fontSize = 12.sp, maxLines = 1)
-                if (video.titleName.isNotBlank()) Text(video.titleName, color = Color(0xFFB6A5FF), fontSize = 12.sp, maxLines = 1)
-                Text("Related link  ↗", color = Color(0xFFB6A5FF), fontSize = 11.sp, modifier = Modifier.clickable {
+                if (video.titleName.isNotBlank()) Text(video.titleName, color = Color(0xFFD0D0D0), fontSize = 12.sp, maxLines = 1)
+                Text("Related link  ↗", color = Color(0xFFD0D0D0), fontSize = 11.sp, modifier = Modifier.clickable {
                     runCatching { context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(video.url))) }
                 }.padding(top = 2.dp))
             }
