@@ -143,25 +143,25 @@ fun RykoApp() {
             }
             if (visitedTabs.contains(MainTab.VIDEO)) {
                 Box(Modifier.fillMaxSize().hazeSource(hazeState).graphicsLayer { alpha = if (tab == MainTab.VIDEO && selectedEntry == null && extraPage == null) 1f else 0f }.zIndex(if (tab == MainTab.VIDEO && selectedEntry == null && extraPage == null) 1f else -1f).then(if (tab == MainTab.VIDEO && selectedEntry == null && extraPage == null) Modifier else Modifier.offset(x = 10000.dp))) {
-                    Box(Modifier.fillMaxSize()) { NativeRykoTube() }
+                    Column(Modifier.fillMaxSize()) { Spacer(Modifier.height(145.dp)); NativeRykoTube() }
                 }
             }
             if (visitedTabs.contains(MainTab.LIBRARY)) {
                 Box(Modifier.fillMaxSize().hazeSource(hazeState).graphicsLayer { alpha = if (tab == MainTab.LIBRARY && selectedEntry == null && extraPage == null) 1f else 0f }.zIndex(if (tab == MainTab.LIBRARY && selectedEntry == null && extraPage == null) 1f else -1f).then(if (tab == MainTab.LIBRARY && selectedEntry == null && extraPage == null) Modifier else Modifier.offset(x = 10000.dp))) {
-                    Box(Modifier.fillMaxSize()) { NativePlaceholder("My Library", "Watching, plan-to-watch, completed and saved entries.") }
+                    Column(Modifier.fillMaxSize()) { Spacer(Modifier.height(145.dp)); NativePlaceholder("My Library", "Watching, plan-to-watch, completed and saved entries.") }
                 }
             }
             if (visitedTabs.contains(MainTab.ACCOUNT)) {
                 Box(Modifier.fillMaxSize().hazeSource(hazeState).graphicsLayer { alpha = if (tab == MainTab.ACCOUNT && selectedEntry == null && extraPage == null) 1f else 0f }.zIndex(if (tab == MainTab.ACCOUNT && selectedEntry == null && extraPage == null) 1f else -1f).then(if (tab == MainTab.ACCOUNT && selectedEntry == null && extraPage == null) Modifier else Modifier.offset(x = 10000.dp))) {
-                    Box(Modifier.fillMaxSize()) { NativePlaceholder("Account", "Sign in, profile, avatar, banner and account settings.") }
+                    Column(Modifier.fillMaxSize()) { Spacer(Modifier.height(145.dp)); NativePlaceholder("Account", "Sign in, profile, avatar, banner and account settings.") }
                 }
             }
 
-            if (selectedEntry != null) Box(Modifier.fillMaxSize().hazeSource(hazeState)) { Box(Modifier.fillMaxSize()) { EntryDetails(selectedEntry!!, mangaMode) } }
+            if (selectedEntry != null) Box(Modifier.fillMaxSize().hazeSource(hazeState)) { Column(Modifier.fillMaxSize()) { Spacer(Modifier.height(145.dp)); EntryDetails(selectedEntry!!, mangaMode) } }
             else when (extraPage) {
-                ExtraPage.TRENDING -> Box(Modifier.fillMaxSize()) { NativePlaceholder("Ryko Top Trending", "Entry ranking will use real community likes once account services are configured.") }
-                ExtraPage.NEWS -> Box(Modifier.fillMaxSize()) { NativeNewsroomPage() }
-                ExtraPage.SETTINGS -> Box(Modifier.fillMaxSize()) { NativePlaceholder("Settings", "Appearance, language, notifications and app preferences.") }
+                ExtraPage.TRENDING -> Box(Modifier.fillMaxSize()) { Column(Modifier.fillMaxSize()) { Spacer(Modifier.height(145.dp)); NativePlaceholder("Ryko Top Trending", "Entry ranking will use real community likes once account services are configured.") } }
+                ExtraPage.NEWS -> Box(Modifier.fillMaxSize()) { Column(Modifier.fillMaxSize()) { Spacer(Modifier.height(145.dp)); NativeNewsroomPage() } }
+                ExtraPage.SETTINGS -> Box(Modifier.fillMaxSize()) { Column(Modifier.fillMaxSize()) { Spacer(Modifier.height(145.dp)); NativePlaceholder("Settings", "Appearance, language, notifications and app preferences.") } }
                 null -> Unit
             }
 
