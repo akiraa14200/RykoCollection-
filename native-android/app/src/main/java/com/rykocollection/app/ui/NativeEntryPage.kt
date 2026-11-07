@@ -28,7 +28,7 @@ import com.rykocollection.app.data.*
 import kotlinx.coroutines.launch
 
 private val EBg=Color(0xFF090910)
-private val ESurface=Color(0xB31B1A2B)
+private val ESurface=Color(0xB31B1B1F)
 private val EAccent=Color(0xFFA99BFF)
 private val EMuted=Color(0xFFAAA8B5)
 
