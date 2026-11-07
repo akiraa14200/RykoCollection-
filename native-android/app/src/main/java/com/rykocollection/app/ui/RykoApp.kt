@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Star
@@ -609,18 +610,36 @@ private fun BrowsePage(mangaMode: Boolean, onEntry: (Int) -> Unit) {
         else -> list.sortedByDescending { it.averageScore ?: 0 }
     } }
     LazyColumn(
-        Modifier.fillMaxSize().background(Color.Black).padding(horizontal = 16.dp),
-        contentPadding = PaddingValues(top = 14.dp, bottom = 144.dp)
+        Modifier.fillMaxSize().background(Color.Black).statusBarsPadding().padding(horizontal = 16.dp),
+        contentPadding = PaddingValues(top = 8.dp, bottom = 144.dp)
     ) {
         item { Text(if (mangaMode) "Explore Manga" else "Explore Anime", color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(bottom = 12.dp)) }
         stickyHeader {
-            OutlinedTextField(
-                value = search, onValueChange = { search = it },
-                modifier = Modifier.fillMaxWidth().rykoGlass(16.dp, Color(0x331B1B1F), 0.32f, 38.dp).padding(bottom = 8.dp),
-                placeholder = { Text("Search titles, series, stories...") }, singleLine = true,
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Violet) },
-                trailingIcon = { if (search.isNotBlank()) IconButton(onClick = { search = "" }) { Text("×", color = Color.White, fontSize = 20.sp) } }
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth()
+                    .rykoGlass(24.dp, Color(0x33191A20), 0.42f, 34.dp)
+                    .padding(horizontal = 16.dp, vertical = 13.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(Icons.Default.Search, contentDescription = "Search anime", tint = Violet, modifier = Modifier.size(21.dp))
+                Spacer(Modifier.width(12.dp))
+                Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
+                    if (search.isEmpty()) Text("Search anime, manga, titles...", color = Muted, fontSize = 14.sp)
+                    BasicTextField(
+                        value = search,
+                        onValueChange = { search = it },
+                        singleLine = true,
+                        textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 14.sp),
+                        cursorBrush = androidx.compose.ui.graphics.SolidColor(Violet),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+                if (search.isNotBlank()) {
+                    IconButton(onClick = { search = "" }, modifier = Modifier.size(28.dp)) {
+                        Text("×", color = Color.White, fontSize = 21.sp)
+                    }
+                }
+            }
         }
         if (search.isBlank() && history.isNotEmpty()) item {
             Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
