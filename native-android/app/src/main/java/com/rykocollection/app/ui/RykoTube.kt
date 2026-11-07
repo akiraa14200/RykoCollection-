@@ -562,85 +562,122 @@ fun NativeRykoTube() {
 private fun TubeVideoCard(video: TubeVideo, onClick: () -> Unit) {
     val context = LocalContext.current
     var menuExpanded by remember(video.id) { mutableStateOf(false) }
-    val saved = remember(video.id) {
-        context.getSharedPreferences("ryko_saved_videos", android.content.Context.MODE_PRIVATE)
-            .getStringSet("ids", emptySet()).orEmpty().contains(video.id)
+    var saved by remember(video.id) {
+        mutableStateOf(
+            context.getSharedPreferences("ryko_saved_videos", android.content.Context.MODE_PRIVATE)
+                .getStringSet("ids", emptySet()).orEmpty().contains(video.id)
+        )
     }
     Column(
         (if (video.short) Modifier.width(170.dp) else Modifier.fillMaxWidth())
-            .rykoGlass(18.dp)
+            .clip(RoundedCornerShape(18.dp))
+            .background(Color(0xFF101012))
     ) {
         Box(
             Modifier.fillMaxWidth()
                 .then(if (video.short) Modifier.height(300.dp) else Modifier.aspectRatio(16f / 9f))
-                .rykoGlass(18.dp).clickable(onClick = onClick),
+                .clickable(onClick = onClick),
             contentAlignment = Alignment.Center
         ) {
-            if (video.thumb.isNotBlank()) AsyncImage(
-                model = video.thumb, contentDescription = video.title,
-                modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop
-            )
-            Box(Modifier.align(Alignment.Center).size(52.dp).clip(RoundedCornerShape(50)).background(Color(0x55000000)), contentAlignment = Alignment.Center) {
-                Icon(Icons.Default.PlayArrow, "Play", Modifier.size(36.dp), tint = Color.White)
-            }
-            if (video.short) Text("SHORT", Modifier.align(Alignment.BottomEnd).padding(8.dp).background(Color.Black).padding(5.dp), color = Color.White, fontSize = 10.sp)
-        }
-        Row(Modifier.fillMaxWidth().padding(start = 13.dp, end = 6.dp, top = 12.dp, bottom = 14.dp), verticalAlignment = Alignment.Top) {
-            if (video.creatorAvatar.isNotBlank()) {
-                AsyncImage(video.creatorAvatar, video.creator, Modifier.size(42.dp).clip(RoundedCornerShape(50)), contentScale = ContentScale.Crop)
+            if (video.thumb.isNotBlank()) {
+                AsyncImage(
+                    model = video.thumb,
+                    contentDescription = video.title,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
             } else {
-                Box(Modifier.size(42.dp).clip(RoundedCornerShape(50)).background(Color(0xFF252529)), contentAlignment = Alignment.Center) {
-                    Text(video.creator.firstOrNull()?.uppercase() ?: "R", color = Color.White, fontWeight = FontWeight.Bold)
+                Box(Modifier.fillMaxSize().background(Color(0xFF252529)))
+            }
+            Box(Modifier.align(Alignment.Center).size(54.dp).clip(RoundedCornerShape(50)).background(Color(0x55000000)), contentAlignment = Alignment.Center) {
+                Icon(Icons.Default.PlayArrow, "Play video", Modifier.size(38.dp), tint = Color.White)
+            }
+            if (video.short) {
+                Text("SHORT", Modifier.align(Alignment.BottomEnd).padding(8.dp).background(Color.Black.copy(alpha = 0.75f), RoundedCornerShape(5.dp)).padding(horizontal = 7.dp, vertical = 4.dp), color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+            }
+        }
+        Row(
+            Modifier.fillMaxWidth().padding(start = 13.dp, end = 7.dp, top = 12.dp, bottom = 14.dp),
+            verticalAlignment = Alignment.Top
+        ) {
+            if (video.creatorAvatar.isNotBlank()) {
+                AsyncImage(
+                    model = video.creatorAvatar,
+                    contentDescription = "${video.creator} channel avatar",
+                    modifier = Modifier.size(44.dp).clip(RoundedCornerShape(50)),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Box(Modifier.size(44.dp).clip(RoundedCornerShape(50)).background(Color(0xFF29292E)), contentAlignment = Alignment.Center) {
+                    Text(video.creator.firstOrNull()?.uppercase() ?: "R", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
                 }
             }
-            Column(Modifier.weight(1f).padding(start = 11.dp, end = 5.dp).clickable(onClick = onClick), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(video.title, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, lineHeight = 20.sp)
-                Text(video.creator.ifBlank { video.platform }, color = Color(0xFF9A9AA2), fontSize = 12.sp, maxLines = 1)
-                if (video.titleName.isNotBlank()) Text(video.titleName, color = Color(0xFFD0D0D0), fontSize = 12.sp, maxLines = 1)
-                Text("Related link  ↗", color = Color(0xFFD0D0D0), fontSize = 11.sp, modifier = Modifier.clickable {
-                    runCatching { context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(video.url))) }
-                }.padding(top = 2.dp))
+            Column(
+                Modifier.weight(1f).padding(start = 11.dp, end = 5.dp).clickable(onClick = onClick),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text(video.title, color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 16.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, lineHeight = 21.sp)
+                Text(video.creator.ifBlank { video.platform.ifBlank { "RykoCollection" } }, color = Color(0xFFB7B7BC), fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                val details = listOfNotNull(
+                    video.titleName.takeIf { it.isNotBlank() },
+                    video.platform.takeIf { it.isNotBlank() }?.replaceFirstChar { it.uppercase() }
+                ).distinct().joinToString("  ·  ")
+                if (details.isNotBlank()) Text(details, color = Color(0xFF8F8F96), fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             Box {
-                IconButton(onClick = { menuExpanded = true }, modifier = Modifier.size(36.dp)) {
-                    Icon(Icons.Default.MoreVert, "Video options", tint = Color.LightGray)
+                IconButton(onClick = { menuExpanded = true }, modifier = Modifier.size(38.dp)) {
+                    Icon(Icons.Default.MoreVert, "Video options", tint = Color.White)
                 }
                 DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
                     DropdownMenuItem(
-                        text = { Text(if (saved) "Saved" else "Save") },
+                        text = { Text(if (saved) "Remove from Library" else "Save to Library") },
                         leadingIcon = { Icon(if (saved) Icons.Default.Bookmark else Icons.Default.BookmarkBorder, null) },
                         onClick = {
                             val prefs = context.getSharedPreferences("ryko_saved_videos", android.content.Context.MODE_PRIVATE)
                             val ids = prefs.getStringSet("ids", emptySet()).orEmpty().toMutableSet()
-                            if (video.id in ids) ids.remove(video.id) else ids.add(video.id)
+                            saved = if (video.id in ids) { ids.remove(video.id); false } else { ids.add(video.id); true }
                             prefs.edit().putStringSet("ids", ids).apply()
-                            Toast.makeText(context, if (video.id in ids) "Saved to Library" else "Removed from saved videos", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, if (saved) "Saved to Library" else "Removed from Library", Toast.LENGTH_SHORT).show()
                             menuExpanded = false
                         }
                     )
-                    DropdownMenuItem(text = { Text("Share") }, leadingIcon = { Icon(Icons.Default.Share, null) }, onClick = {
-                        val send = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
-                            type = "text/plain"; putExtra(android.content.Intent.EXTRA_TEXT, "${video.title}\n${video.url}")
+                    DropdownMenuItem(
+                        text = { Text("Share") },
+                        leadingIcon = { Icon(Icons.Default.Share, null) },
+                        onClick = {
+                            val send = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                                type = "text/plain"
+                                putExtra(android.content.Intent.EXTRA_TEXT, "${video.title}\n${video.url}")
+                            }
+                            context.startActivity(android.content.Intent.createChooser(send, "Share video"))
+                            menuExpanded = false
                         }
-                        context.startActivity(android.content.Intent.createChooser(send, "Share video")); menuExpanded = false
-                    })
-                    DropdownMenuItem(text = { Text("Copy link") }, leadingIcon = { Icon(Icons.Default.ContentCopy, null) }, onClick = {
-                        val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                        clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Video link", video.url))
-                        Toast.makeText(context, "Link copied", Toast.LENGTH_SHORT).show(); menuExpanded = false
-                    })
-                    DropdownMenuItem(text = { Text("Download") }, onClick = {
-                        Toast.makeText(context, "Downloads aren't available for this source. Use the original link.", Toast.LENGTH_LONG).show()
-                        menuExpanded = false
-                    })
-                    DropdownMenuItem(text = { Text("Report") }, leadingIcon = { Icon(Icons.Default.Flag, null) }, onClick = {
-                        val send = android.content.Intent(android.content.Intent.ACTION_SENDTO, android.net.Uri.parse("mailto:rykocollection@gmail.com")).apply {
-                            putExtra(android.content.Intent.EXTRA_SUBJECT, "RykoTube video report")
-                            putExtra(android.content.Intent.EXTRA_TEXT, "Please review this video:\n${video.title}\n${video.url}")
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Download") },
+                        leadingIcon = { Icon(Icons.Default.Download, null) },
+                        onClick = {
+                            val path = runCatching { android.net.Uri.parse(video.url).lastPathSegment.orEmpty().lowercase(Locale.ROOT) }.getOrDefault("")
+                            val directFile = path.endsWith(".mp4") || path.endsWith(".webm") || path.endsWith(".m4v") || path.endsWith(".mov")
+                            if (directFile) {
+                                runCatching {
+                                    val request = android.app.DownloadManager.Request(android.net.Uri.parse(video.url))
+                                        .setTitle(video.title)
+                                        .setDescription("Downloading from RykoTube")
+                                        .setNotificationVisibility(android.app.DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+                                        .setDestinationInExternalPublicDir(android.os.Environment.DIRECTORY_DOWNLOADS, "${video.title.replace(Regex("[^A-Za-z0-9._-]"), "_").take(70)}.${path.substringAfterLast('.')}")
+                                    val manager = context.getSystemService(android.content.Context.DOWNLOAD_SERVICE) as android.app.DownloadManager
+                                    manager.enqueue(request)
+                                    Toast.makeText(context, "Download started", Toast.LENGTH_SHORT).show()
+                                }.onFailure {
+                                    Toast.makeText(context, "Could not start this download", Toast.LENGTH_LONG).show()
+                                }
+                            } else {
+                                Toast.makeText(context, "This source does not provide a direct downloadable video file.", Toast.LENGTH_LONG).show()
+                            }
+                            menuExpanded = false
                         }
-                        runCatching { context.startActivity(send) }
-                        menuExpanded = false
-                    })
+                    )
                 }
             }
         }
