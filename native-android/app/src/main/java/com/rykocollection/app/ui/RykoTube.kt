@@ -255,8 +255,8 @@ fun NativeRykoTube() {
     var selected by remember { mutableStateOf<TubeVideo?>(null) }
     var sources by remember { mutableStateOf<List<TubeSource>>(emptyList()) }
     var selectedSource by remember { mutableStateOf("") }
-    var channelsExpanded by remember { mutableStateOf(false) }
-    var playlistsExpanded by remember { mutableStateOf(false) }
+    var channelsExpanded by remember { mutableStateOf(true) }
+    var playlistsExpanded by remember { mutableStateOf(true) }
     var sourceError by remember { mutableStateOf<String?>(null) }
     var page by remember { mutableIntStateOf(1) }
     var hasMore by remember { mutableStateOf(true) }
@@ -357,6 +357,36 @@ fun NativeRykoTube() {
                 contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 116.dp, bottom = 24.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
+                                if (sources.isNotEmpty()) {
+                                    item(key = "tube-discovery-sources") {
+                                        val channels = sources.filterNot { it.type.contains("playlist", true) }
+                                        val playlists = sources.filter { it.type.contains("playlist", true) }
+                                        Column(Modifier.fillMaxWidth().rykoGlass(20.dp, Color(0x6618181B), 0.24f).padding(vertical = 5.dp)) {
+                                            Row(Modifier.fillMaxWidth().clickable { channelsExpanded = !channelsExpanded }.padding(horizontal = 13.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                                                Text("Channels", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                                                Text("${channels.size}", color = Color.Gray, fontSize = 11.sp)
+                                                Icon(if (channelsExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore, "Toggle channels", tint = Color.LightGray)
+                                            }
+                                            if (channelsExpanded) LazyRow(contentPadding = PaddingValues(horizontal = 12.dp, vertical = 3.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                                item { FilterChip(selected = selectedSource.isBlank(), onClick = { selectedSource = "" }, label = { Text("All channels") }) }
+                                                items(channels, key = { it.id }) { source -> FilterChip(selected = selectedSource == source.id, onClick = { selectedSource = if (selectedSource == source.id) "" else source.id }, label = { Text(source.label, maxLines = 1) }) }
+                                            }
+                                            if (playlists.isNotEmpty()) {
+                                                Divider(color = Color.White.copy(alpha = 0.08f), modifier = Modifier.padding(horizontal = 12.dp))
+                                                Row(Modifier.fillMaxWidth().clickable { playlistsExpanded = !playlistsExpanded }.padding(horizontal = 13.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                                                    Text("Playlists", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                                                    Text("${playlists.size}", color = Color.Gray, fontSize = 11.sp)
+                                                    Icon(if (playlistsExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore, "Toggle playlists", tint = Color.LightGray)
+                                                }
+                                                if (playlistsExpanded) LazyRow(contentPadding = PaddingValues(horizontal = 12.dp, vertical = 3.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                                    items(playlists, key = { it.id }) { source -> FilterChip(selected = selectedSource == source.id, onClick = { selectedSource = if (selectedSource == source.id) "" else source.id }, label = { Text(source.label, maxLines = 1) }) }
+                                                }
+                                            }
+                                        }
+                                    }
+                                } else if (sourceError != null) {
+                                    item(key = "tube-source-error") { Text("Channel and playlist filters unavailable", color = Color.Gray, fontSize = 11.sp) }
+                                }
                                 if (search.isBlank() && tubeHistory.isNotEmpty()) {
                                     item(key = "tube-search-history") {
                                         LazyRow(contentPadding = PaddingValues(horizontal = 2.dp), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
@@ -392,36 +422,7 @@ fun NativeRykoTube() {
                                         }
                                     }
                                 }
-                                if (sources.isNotEmpty()) {
-                                    item(key = "tube-discovery-sources") {
-                                        val channels = sources.filterNot { it.type.contains("playlist", true) }
-                                        val playlists = sources.filter { it.type.contains("playlist", true) }
-                                        Column(Modifier.fillMaxWidth().rykoGlass(20.dp, Color(0x6618181B), 0.24f).padding(vertical = 5.dp)) {
-                                            Row(Modifier.fillMaxWidth().clickable { channelsExpanded = !channelsExpanded }.padding(horizontal = 13.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                                                Text("Channels", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-                                                Text("${channels.size}", color = Color.Gray, fontSize = 11.sp)
-                                                Icon(if (channelsExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore, "Toggle channels", tint = Color.LightGray)
-                                            }
-                                            if (channelsExpanded) LazyRow(contentPadding = PaddingValues(horizontal = 12.dp, vertical = 3.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                                item { FilterChip(selected = selectedSource.isBlank(), onClick = { selectedSource = "" }, label = { Text("All channels") }) }
-                                                items(channels, key = { it.id }) { source -> FilterChip(selected = selectedSource == source.id, onClick = { selectedSource = if (selectedSource == source.id) "" else source.id }, label = { Text(source.label, maxLines = 1) }) }
-                                            }
-                                            if (playlists.isNotEmpty()) {
-                                                Divider(color = Color.White.copy(alpha = 0.08f), modifier = Modifier.padding(horizontal = 12.dp))
-                                                Row(Modifier.fillMaxWidth().clickable { playlistsExpanded = !playlistsExpanded }.padding(horizontal = 13.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                                                    Text("Playlists", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-                                                    Text("${playlists.size}", color = Color.Gray, fontSize = 11.sp)
-                                                    Icon(if (playlistsExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore, "Toggle playlists", tint = Color.LightGray)
-                                                }
-                                                if (playlistsExpanded) LazyRow(contentPadding = PaddingValues(horizontal = 12.dp, vertical = 3.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                                    items(playlists, key = { it.id }) { source -> FilterChip(selected = selectedSource == source.id, onClick = { selectedSource = if (selectedSource == source.id) "" else source.id }, label = { Text(source.label, maxLines = 1) }) }
-                                                }
-                                            }
-                                        }
-                                    }
-                                } else if (sourceError != null) {
-                                    item(key = "tube-source-error") { Text("Channel and playlist filters unavailable", color = Color.Gray, fontSize = 11.sp) }
-                                }
+
                 
                                 when {
                                     loading && videos.isEmpty() -> item(key = "tube-loading") {
@@ -507,7 +508,7 @@ fun NativeRykoTube() {
                 .background(Color.Transparent)
         ) {
                     Row(
-                        Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 9.dp).rykoGlass(22.dp, Color(0xD91B1B1F), 0.38f).padding(horizontal = 5.dp),
+                        Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 9.dp).rykoGlass(22.dp, Color(0x661B1B1F), 0.38f).padding(horizontal = 5.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
@@ -535,7 +536,7 @@ fun NativeRykoTube() {
                             )
                         )
                     }
-                    Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 5.dp).rykoGlass(18.dp, Color(0x9918181B), 0.22f).padding(horizontal = 5.dp, vertical = 2.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 5.dp).rykoGlass(18.dp, Color(0x5518181B), 0.22f).padding(horizontal = 5.dp, vertical = 2.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         listOf("All", "Videos", "Shorts").forEach { format ->
                             FilterChip(selected = selectedFormat == format, onClick = { selectedFormat = format }, label = { Text(format) })
                         }
