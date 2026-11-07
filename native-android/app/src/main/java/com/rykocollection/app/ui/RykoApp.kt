@@ -220,6 +220,7 @@ fun RykoApp() {
         }
     }
 }
+}
 
 @Composable
 private fun NativeHome(mangaMode: Boolean, onEntry: (Int) -> Unit) {
