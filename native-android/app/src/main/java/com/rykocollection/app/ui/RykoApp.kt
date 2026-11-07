@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -152,28 +153,22 @@ fun RykoApp() {
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent, titleContentColor = Color(0xFFF7F7FB), actionIconContentColor = Color(0xFFE8E8E8))
             )
         },
-        bottomBar = {
-            // Extend the frosted surface through the transparent Android system navigation inset.
-            // NavigationBar applies its own bottom window inset; the parent glass surface therefore
-            // paints behind both the app tabs and the system navigation area.
-            Box(Modifier.fillMaxWidth().rykoGlass(24.dp, Color(0x9918181B), 0.38f)) {
-            NavigationBar(containerColor = Color.Transparent, contentColor = Color(0xFFA99BFF), tonalElevation = 0.dp, modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 5.dp)) {
-                MainTab.entries.forEach { item ->
-                    val icon = when (item) {
-                        MainTab.HOME -> Icons.Default.Home
-                        MainTab.BROWSE -> Icons.Default.Explore
-                        MainTab.VIDEO -> Icons.Default.PlayCircle
-                        MainTab.LIBRARY -> Icons.Default.BookmarkBorder
-                        MainTab.ACCOUNT -> Icons.Default.Person
-                    }
-                    NavigationBarItem(selected = tab == item && extraPage == null && selectedEntry == null, onClick = { tab = item; if (!visitedTabs.contains(item)) visitedTabs.add(item); extraPage = null; selectedEntry = null }, icon = { Icon(icon, contentDescription = item.label) }, label = { Text(item.label, fontSize = 10.sp, fontWeight = if (tab == item) FontWeight.SemiBold else FontWeight.Normal) })
-                }
-            }
-            }
-        },
         containerColor = Color.Black
     ) { inner ->
         Box(Modifier.padding(inner).fillMaxSize().background(Color.Black).hazeSource(hazeState)) {
+            // Pages occupy the full area to the bottom; the floating glass navigation overlays them.
+            RykoBottomNavigation(
+                selectedTab = tab,
+                visible = selectedEntry == null && extraPage == null,
+                onSelect = { item ->
+                    tab = item
+                    if (!visitedTabs.contains(item)) visitedTabs.add(item)
+                    extraPage = null
+                    selectedEntry = null
+                },
+                modifier = Modifier.align(Alignment.BottomCenter)
+            )
+
             // Keep visited tabs composed while hidden so their data and scroll state survive tab changes.
             if (visitedTabs.contains(MainTab.HOME)) {
                 Box(Modifier.fillMaxSize().graphicsLayer { alpha = if (tab == MainTab.HOME && selectedEntry == null && extraPage == null) 1f else 0f }.zIndex(if (tab == MainTab.HOME && selectedEntry == null && extraPage == null) 1f else -1f).then(if (tab == MainTab.HOME && selectedEntry == null && extraPage == null) Modifier else Modifier.offset(x = 10000.dp))) {
@@ -220,6 +215,74 @@ fun RykoApp() {
         }
     }
 }
+}
+
+
+@Composable
+private fun RykoBottomNavigation(
+    selectedTab: MainTab,
+    visible: Boolean,
+    onSelect: (MainTab) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    if (!visible) return
+    val hazeState = LocalRykoHazeState.current
+    val shape = RoundedCornerShape(28.dp)
+    Row(
+        modifier
+            .fillMaxWidth()
+            .padding(horizontal = 10.dp, vertical = 6.dp)
+            .navigationBarsPadding()
+            .clip(shape)
+            .then(
+                if (hazeState != null) Modifier.hazeEffect(
+                    state = hazeState,
+                    style = dev.chrisbanes.haze.HazeStyle(
+                        backgroundColor = Color.Transparent,
+                        tints = emptyList(),
+                        blurRadius = 34.dp,
+                        noiseFactor = 0.10f
+                    )
+                ) else Modifier
+            )
+            .background(Color(0xC9101013), shape)
+            .border(1.dp, Color.White.copy(alpha = 0.15f), shape)
+            .padding(horizontal = 7.dp, vertical = 7.dp),
+        horizontalArrangement = Arrangement.SpaceAround,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        MainTab.entries.forEach { item ->
+            val icon = when (item) {
+                MainTab.HOME -> Icons.Default.Home
+                MainTab.BROWSE -> Icons.Default.Explore
+                MainTab.VIDEO -> Icons.Default.PlayCircle
+                MainTab.LIBRARY -> Icons.Default.BookmarkBorder
+                MainTab.ACCOUNT -> Icons.Default.Person
+            }
+            val selected = selectedTab == item
+            Column(
+                Modifier.weight(1f)
+                    .clip(RoundedCornerShape(22.dp))
+                    .clickable { onSelect(item) }
+                    .padding(vertical = 5.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(3.dp)
+            ) {
+                Box(
+                    Modifier.clip(RoundedCornerShape(50))
+                        .background(if (selected) Color(0x32FFFFFF) else Color.Transparent)
+                        .padding(horizontal = 16.dp, vertical = 5.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(icon, contentDescription = item.label,
+                        tint = if (selected) Color.White else Color(0xFFB9B9C0),
+                        modifier = Modifier.size(23.dp))
+                }
+                Text(item.label, color = if (selected) Color.White else Color(0xFFB9B9C0),
+                    fontSize = 10.sp, fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal)
+            }
+        }
+    }
 }
 
 @Composable
