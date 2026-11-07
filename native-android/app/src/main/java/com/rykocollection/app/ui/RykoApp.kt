@@ -660,7 +660,7 @@ private fun BrowsePage(mangaMode: Boolean, onEntry: (Int) -> Unit) {
         }
         error?.let { Text(it, color = Color(0xFFFF9C9C), fontSize = 11.sp, modifier = Modifier.padding(vertical = 8.dp)) }
         if (visible.isEmpty() && !loading) Text("No titles match these filters.", color = Muted, modifier = Modifier.padding(20.dp).fillMaxWidth().rykoGlass(16.dp).padding(16.dp))
-        LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(top = 10.dp, bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
+        LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(top = 10.dp, bottom = 144.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
             visible.chunked(3).forEachIndexed { rowIndex, row ->
                 item(key = "catalogue-row-$rowIndex") {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
