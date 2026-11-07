@@ -285,9 +285,9 @@ fun NativeRykoTube() {
         if (query.isBlank()) matches else matches.sortedByDescending(::relevance)
     }
 
-    Column(Modifier.fillMaxSize().background(Brush.radialGradient(listOf(Color(0xFF242039), Color(0xFF10101B), Color(0xFF07070C))))) {
+    Column(Modifier.fillMaxSize().background(Brush.radialGradient(listOf(Color(0xFF30264D), Color(0xFF151322), Color(0xFF080810))))) {
         Row(
-            Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+            Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 9.dp).rykoGlass(22.dp, Color(0xD91A1728), 0.38f).padding(horizontal = 5.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
@@ -309,7 +309,7 @@ fun NativeRykoTube() {
                 )
             )
         }
-        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 3.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 5.dp).rykoGlass(18.dp, Color(0x991A1728), 0.22f).padding(horizontal = 5.dp, vertical = 2.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf("All", "Videos", "Shorts").forEach { format ->
                 FilterChip(selected = selectedFormat == format, onClick = { selectedFormat = format }, label = { Text(format) })
             }
@@ -322,7 +322,7 @@ fun NativeRykoTube() {
             }
         }
         if (search.trim().length >= 2) {
-            Column(Modifier.fillMaxWidth().padding(top = 8.dp)) {
+            Column(Modifier.fillMaxWidth().padding(top = 8.dp).rykoGlass(18.dp, Color(0x771A1728), 0.18f).padding(vertical = 8.dp)) {
                 Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text("ANIME & MANGA ON ANILIST", color = Color(0xFFA99BFF), fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
                     if (catalogueLoading) CircularProgressIndicator(color = Color(0xFFA99BFF), modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
@@ -330,7 +330,7 @@ fun NativeRykoTube() {
                 if (catalogueResults.isEmpty() && !catalogueLoading) Text("No matching AniList titles.", color = Color.Gray, fontSize = 11.sp, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
                 LazyRow(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     items(catalogueResults, key = { "anilist-${it.id}" }) { media ->
-                        Column(Modifier.width(112.dp).rykoGlass(12.dp)) {
+                        Column(Modifier.width(112.dp).rykoGlass(14.dp)) {
                             Box(Modifier.fillMaxWidth().height(142.dp).clickable {
                                 val trailer = media.trailer
                                 if (!trailer?.id.isNullOrBlank() && trailer?.site.equals("youtube", true)) {
@@ -508,7 +508,7 @@ private fun TubeVideoCard(video: TubeVideo, onClick: () -> Unit) {
         Box(
             Modifier.fillMaxWidth()
                 .then(if (video.short) Modifier.height(300.dp) else Modifier.aspectRatio(16f / 9f))
-                .background(Color(0xFF202020)).clickable(onClick = onClick),
+                .rykoGlass(18.dp).clickable(onClick = onClick),
             contentAlignment = Alignment.Center
         ) {
             if (video.thumb.isNotBlank()) AsyncImage(
