@@ -162,7 +162,7 @@ fun RykoApp() {
         },
         containerColor = Color.Black
     ) { inner ->
-        Box(Modifier.padding(inner).fillMaxSize().background(Brush.radialGradient(listOf(Color(0xFF30264D), Color(0xFF151322), Color(0xFF080810))))) {
+        Box(Modifier.padding(inner).fillMaxSize().background(Color.Black)) {
             // Keep visited tabs composed while hidden so their data and scroll state survive tab changes.
             if (visitedTabs.contains(MainTab.HOME)) {
                 Box(Modifier.fillMaxSize().graphicsLayer { alpha = if (tab == MainTab.HOME && selectedEntry == null && extraPage == null) 1f else 0f }.zIndex(if (tab == MainTab.HOME && selectedEntry == null && extraPage == null) 1f else -1f).then(if (tab == MainTab.HOME && selectedEntry == null && extraPage == null) Modifier else Modifier.offset(x = 10000.dp))) {
@@ -248,7 +248,7 @@ private fun NativeHome(mangaMode: Boolean, onEntry: (Int) -> Unit) {
     }
 
     LazyColumn(
-        Modifier.fillMaxSize().background(Brush.radialGradient(listOf(Color(0xFF211A37), Color(0xFF11101C), Color(0xFF080810)))),
+        Modifier.fillMaxSize().background(Color.Black),
         contentPadding = PaddingValues(top = 6.dp, bottom = 30.dp),
         verticalArrangement = Arrangement.spacedBy(22.dp)
     ) {
@@ -530,7 +530,7 @@ private fun BrowsePage(mangaMode: Boolean, onEntry: (Int) -> Unit) {
         "Title" -> list.sortedBy { it.title.display.lowercase() }
         else -> list.sortedByDescending { it.averageScore ?: 0 }
     } }
-    Column(Modifier.fillMaxSize().background(Brush.radialGradient(listOf(Color(0xFF29213F), Color(0xFF11101B), Color(0xFF080810)))).padding(horizontal = 16.dp)) {
+    Column(Modifier.fillMaxSize().background(Color.Black).padding(horizontal = 16.dp)) {
         Spacer(Modifier.height(8.dp))
         Text(if (mangaMode) "Explore Manga" else "Explore Anime", color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.ExtraBold)
         OutlinedTextField(value = search, onValueChange = { search = it }, modifier = Modifier.fillMaxWidth().padding(top = 12.dp).rykoGlass(16.dp, Color(0xD91B1A2B), 0.22f),
@@ -677,7 +677,7 @@ private fun NativePlaceholder(title: String, subtitle: String) {
         else -> "COMMUNITY RANKING"
     }
     Column(
-        Modifier.fillMaxSize().background(Brush.radialGradient(listOf(Color(0xFF211A37), Color(0xFF11101C), Color(0xFF080810)))).padding(horizontal = 20.dp, vertical = 18.dp),
+        Modifier.fillMaxSize().background(Color.Black).padding(horizontal = 20.dp, vertical = 18.dp),
         verticalArrangement = Arrangement.spacedBy(18.dp)
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
