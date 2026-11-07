@@ -165,8 +165,7 @@ fun RykoApp() {
                 null -> Unit
             }
 
-            {
-                Row(
+            Row(
                     modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth()
                         .statusBarsPadding().padding(horizontal = 12.dp, vertical = 7.dp)
                         .rykoGlass(22.dp, Color(0xF01A1A1D), 0.42f)
@@ -199,7 +198,6 @@ fun RykoApp() {
                         }
                     }
                 }
-            }
 
             // Draw last so it floats above every page instead of being covered by page content.
             RykoBottomNavigation(
