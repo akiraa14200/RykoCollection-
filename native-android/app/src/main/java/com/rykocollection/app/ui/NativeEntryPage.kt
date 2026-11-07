@@ -2,7 +2,6 @@ package com.rykocollection.app.ui
 
 import android.content.Intent
 import android.net.Uri
-import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
