@@ -23,10 +23,10 @@ import androidx.compose.ui.unit.dp
  * treatment stays inexpensive while lists scroll and videos play.
  */
 enum class RykoGlassLevel(val fill: Color, val highlight: Float, val radius: Dp) {
-    Primary(Color(0xE61A1728), 0.30f, 24.dp),
-    Secondary(Color(0xD91B1A2B), 0.24f, 20.dp),
-    Floating(Color(0xF0221E33), 0.36f, 22.dp),
-    Subtle(Color(0xB31B1A2B), 0.17f, 14.dp)
+    Primary(Color(0xE61A1A1D), 0.30f, 24.dp),
+    Secondary(Color(0xD91B1B1F), 0.24f, 20.dp),
+    Floating(Color(0xF0202024), 0.36f, 22.dp),
+    Subtle(Color(0xB31B1B1F), 0.17f, 14.dp)
 }
 
 /**
@@ -45,18 +45,18 @@ fun Modifier.rykoGlass(
             elevation = 14.dp,
             shape = shape,
             clip = false,
-            ambientColor = Color(0x55211A3D),
-            spotColor = Color(0x77211A3D)
+            ambientColor = Color(0x55000000),
+            spotColor = Color(0x77000000)
         )
         .clip(shape)
         // A cloudy base keeps text readable over both dark and image-heavy content.
         .background(
             Brush.linearGradient(
                 colorStops = arrayOf(
-                    0.0f to Color(0xF02B293A),
-                    0.18f to tint,
-                    0.62f to Color(0xE3151421),
-                    1.0f to Color(0xF00B0A12)
+                    0.0f to Color(0xF02B2B2F),
+                    0.18f to Color(0xE61B1B1F),
+                    0.62f to Color(0xE3151518),
+                    1.0f to Color(0xF00A0A0C)
                 )
             )
         )
@@ -65,8 +65,8 @@ fun Modifier.rykoGlass(
         .background(
             Brush.radialGradient(
                 colors = listOf(
-                    Color(0x26D9D0FF),
-                    Color(0x12A99BFF),
+                    Color(0x20FFFFFF),
+                    Color(0x08FFFFFF),
                     Color.Transparent
                 ),
                 center = Offset.Zero,
@@ -90,7 +90,7 @@ fun Modifier.rykoGlass(
             brush = Brush.linearGradient(
                 colorStops = arrayOf(
                     0.0f to Color.White.copy(alpha = safeHighlight * 0.72f),
-                    0.28f to Color(0x35D8D0FF),
+                    0.28f to Color(0x24FFFFFF),
                     0.72f to Color(0x1EFFFFFF),
                     1.0f to Color(0x30FFFFFF)
                 )
