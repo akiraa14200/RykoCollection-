@@ -52,7 +52,7 @@ dependencies {
     androidTestImplementation(composeBom)
 
     implementation("androidx.core:core-ktx:1.17.0")
-    implementation("androidx.activity:activity-compose:1.12.1")
+    implementation("androidx.activity:activity-compose:1.10.1")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.10.0")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.10.0")
     implementation("androidx.compose.ui:ui")
@@ -61,9 +61,8 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")
 
-    // Live backdrop capture and refractive glass surfaces.
-    implementation("dev.chrisbanes.haze:haze:2.1.0")
-    implementation("dev.chrisbanes.haze:haze-glass:2.1.0")
+    // Source-backed backdrop blur, compatible with the current Android build toolchain.
+    implementation("dev.chrisbanes.haze:haze:1.7.2")
     debugImplementation("androidx.compose.ui:ui-tooling")
 
     implementation("io.coil-kt:coil-compose:2.7.0")
