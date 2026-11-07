@@ -165,7 +165,7 @@ fun RykoApp() {
                 null -> Unit
             }
 
-            if (tab != MainTab.VIDEO) {
+            if (tab != MainTab.VIDEO && tab != MainTab.BROWSE) {
                 Row(
                         modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth()
                             .statusBarsPadding().padding(horizontal = 12.dp, vertical = 7.dp)
@@ -608,78 +608,69 @@ private fun BrowsePage(mangaMode: Boolean, onEntry: (Int) -> Unit) {
         "Title" -> list.sortedBy { it.title.display.lowercase() }
         else -> list.sortedByDescending { it.averageScore ?: 0 }
     } }
-    Column(Modifier.fillMaxSize().background(Color.Black).padding(horizontal = 16.dp)) {
-        Spacer(Modifier.height(109.dp))
-        Text(if (mangaMode) "Explore Manga" else "Explore Anime", color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.ExtraBold)
-        OutlinedTextField(value = search, onValueChange = { search = it }, modifier = Modifier.fillMaxWidth().padding(top = 12.dp).rykoGlass(16.dp, Color(0xD91B1B1F), 0.22f),
-            placeholder = { Text("Search titles, series, stories...") }, singleLine = true,
-            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Violet) },
-            trailingIcon = { if (search.isNotBlank()) IconButton(onClick = { search = "" }) { Text("×", color = Color.White, fontSize = 20.sp) } })
-        if (search.isBlank() && history.isNotEmpty()) {
+    LazyColumn(
+        Modifier.fillMaxSize().background(Color.Black).padding(horizontal = 16.dp),
+        contentPadding = PaddingValues(top = 14.dp, bottom = 144.dp)
+    ) {
+        item { Text(if (mangaMode) "Explore Manga" else "Explore Anime", color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(bottom = 12.dp)) }
+        stickyHeader {
+            OutlinedTextField(
+                value = search, onValueChange = { search = it },
+                modifier = Modifier.fillMaxWidth().rykoGlass(16.dp, Color(0x331B1B1F), 0.32f, 38.dp).padding(bottom = 8.dp),
+                placeholder = { Text("Search titles, series, stories...") }, singleLine = true,
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Violet) },
+                trailingIcon = { if (search.isNotBlank()) IconButton(onClick = { search = "" }) { Text("×", color = Color.White, fontSize = 20.sp) } }
+            )
+        }
+        if (search.isBlank() && history.isNotEmpty()) item {
             Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                 history.take(3).forEach { term -> FilterChip(selected = false, onClick = { search = term }, label = { Text(term, maxLines = 1) }) }
             }
         }
-        Row(Modifier.fillMaxWidth().padding(top = 10.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text("${visible.size} AniList titles loaded", color = Muted, fontSize = 12.sp)
-                if (loading) Text("Updating catalogue…", color = Violet, fontSize = 10.sp)
-            }
-            androidx.compose.material3.OutlinedButton(onClick = { filtersExpanded = !filtersExpanded }) {
-                Icon(Icons.Default.Tune, contentDescription = null, modifier = Modifier.size(17.dp))
-                Spacer(Modifier.width(6.dp))
-                Text("Filters")
-                Icon(if (filtersExpanded) Icons.Default.KeyboardArrowDown else Icons.Default.KeyboardArrowDown, contentDescription = null)
+        item {
+            Row(Modifier.fillMaxWidth().padding(top = 10.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("${visible.size} AniList titles loaded", color = Muted, fontSize = 12.sp)
+                    if (loading) Text("Updating catalogue…", color = Violet, fontSize = 10.sp)
+                }
+                androidx.compose.material3.OutlinedButton(onClick = { filtersExpanded = !filtersExpanded }) {
+                    Icon(Icons.Default.Tune, contentDescription = null, modifier = Modifier.size(17.dp))
+                    Spacer(Modifier.width(6.dp)); Text("Filters"); Icon(Icons.Default.KeyboardArrowDown, contentDescription = null)
+                }
             }
         }
-        if (filtersExpanded) {
+        if (filtersExpanded) item {
             Column(Modifier.fillMaxWidth().rykoGlass(16.dp, Color(0xE018181B), 0.22f).padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("GENRE", color = Muted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    genres.forEach { value -> FilterChip(selected = genre == value, onClick = { genre = value }, label = { Text(value) }) }
-                }
+                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) { genres.forEach { value -> FilterChip(selected = genre == value, onClick = { genre = value }, label = { Text(value) }) } }
                 Text("STATUS", color = Muted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    listOf("All", "RELEASING", "FINISHED", "NOT_YET_RELEASED", "CANCELLED").forEach { value ->
-                        FilterChip(selected = status == value, onClick = { status = value }, label = { Text(value.replace("_", " ")) })
-                    }
-                }
+                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) { listOf("All", "RELEASING", "FINISHED", "NOT_YET_RELEASED", "CANCELLED").forEach { value -> FilterChip(selected = status == value, onClick = { status = value }, label = { Text(value.replace("_", " ")) }) } }
                 Text("FORMAT", color = Muted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    listOf("All", "TV", "TV_SHORT", "MOVIE", "OVA", "ONA", "SPECIAL", "MANGA", "NOVEL", "ONE_SHOT").forEach { value ->
-                        FilterChip(selected = format == value, onClick = { format = value }, label = { Text(value.replace("_", " ")) })
-                    }
-                }
+                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) { listOf("All", "TV", "TV_SHORT", "MOVIE", "OVA", "ONA", "SPECIAL", "MANGA", "NOVEL", "ONE_SHOT").forEach { value -> FilterChip(selected = format == value, onClick = { format = value }, label = { Text(value.replace("_", " ")) }) } }
                 Text("SORT", color = Muted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    listOf("Popular", "Score", "Newest", "Title").forEach { value ->
-                        FilterChip(selected = sort == value, onClick = { sort = value }, label = { Text(value) })
-                    }
-                }
+                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) { listOf("Popular", "Score", "Newest", "Title").forEach { value -> FilterChip(selected = sort == value, onClick = { sort = value }, label = { Text(value) }) } }
             }
         }
-        error?.let { Text(it, color = Color(0xFFFF9C9C), fontSize = 11.sp, modifier = Modifier.padding(vertical = 8.dp)) }
-        if (visible.isEmpty() && !loading) Text("No titles match these filters.", color = Muted, modifier = Modifier.padding(20.dp).fillMaxWidth().rykoGlass(16.dp).padding(16.dp))
-        LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(top = 10.dp, bottom = 144.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
-            visible.chunked(3).forEachIndexed { rowIndex, row ->
-                item(key = "catalogue-row-$rowIndex") {
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        row.forEach { media ->
-                            Column(Modifier.weight(1f).clickable { onEntry(media.id) }) {
-                                Box(Modifier.fillMaxWidth().height(190.dp).rykoGlass(16.dp).clip(RoundedCornerShape(16.dp))) {
-                                    AsyncImage(media.coverImage?.imageUrl, media.title.display, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-                                    Text(media.format?.replace("_", " ") ?: "TITLE", Modifier.align(Alignment.TopStart).padding(7.dp).clip(RoundedCornerShape(8.dp)).background(Color(0xE6101012)).padding(horizontal = 8.dp, vertical = 5.dp), color = Color(0xFFE0E0E0), fontSize = 9.sp, fontWeight = FontWeight.Bold, maxLines = 1)
-                                    if (media.averageScore != null) Row(Modifier.align(Alignment.TopEnd).padding(7.dp).clip(RoundedCornerShape(8.dp)).background(Color(0xE6101012)).padding(horizontal = 7.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(Icons.Default.Star, null, tint = Color(0xFFFFD36B), modifier = Modifier.size(12.dp))
-                                        Text(" ${media.averageScore / 10.0}", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                                    }
+        error?.let { message -> item { Text(message, color = Color(0xFFFF9C9C), fontSize = 11.sp, modifier = Modifier.padding(vertical = 8.dp)) } }
+        if (visible.isEmpty() && !loading) item { Text("No titles match these filters.", color = Muted, modifier = Modifier.padding(20.dp).fillMaxWidth().rykoGlass(16.dp).padding(16.dp)) }
+        visible.chunked(3).forEachIndexed { rowIndex, row ->
+            item(key = "catalogue-row-$rowIndex") {
+                Row(Modifier.fillMaxWidth().padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    row.forEach { media ->
+                        Column(Modifier.weight(1f).clickable { onEntry(media.id) }) {
+                            Box(Modifier.fillMaxWidth().height(190.dp).rykoGlass(16.dp).clip(RoundedCornerShape(16.dp))) {
+                                AsyncImage(media.coverImage?.imageUrl, media.title.display, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                                Text(media.format?.replace("_", " ") ?: "TITLE", Modifier.align(Alignment.TopStart).padding(7.dp).clip(RoundedCornerShape(8.dp)).background(Color(0xE6101012)).padding(horizontal = 8.dp, vertical = 5.dp), color = Color(0xFFE0E0E0), fontSize = 9.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                                if (media.averageScore != null) Row(Modifier.align(Alignment.TopEnd).padding(7.dp).clip(RoundedCornerShape(8.dp)).background(Color(0xE6101012)).padding(horizontal = 7.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.Star, null, tint = Color(0xFFFFD36B), modifier = Modifier.size(12.dp))
+                                    Text(" ${media.averageScore / 10.0}", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                                 }
-                                Text(media.title.display, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 2, minLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 8.dp))
-                                Text(listOfNotNull(media.seasonYear?.toString(), media.episodes?.let { "$it eps" }, media.chapters?.let { "$it ch" }).joinToString("  ·  "), color = Muted, fontSize = 10.sp, maxLines = 1, modifier = Modifier.padding(top = 3.dp))
                             }
+                            Text(media.title.display, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 2, minLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 8.dp))
+                            Text(listOfNotNull(media.seasonYear?.toString(), media.episodes?.let { "$it eps" }, media.chapters?.let { "$it ch" }).joinToString("  ·  "), color = Muted, fontSize = 10.sp, maxLines = 1, modifier = Modifier.padding(top = 3.dp))
                         }
-                        repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
                     }
+                    repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
                 }
             }
         }
