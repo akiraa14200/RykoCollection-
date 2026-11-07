@@ -143,11 +143,11 @@ fun RykoApp() {
                         }
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xB310101A), titleContentColor = Color(0xFFF7F7FB), actionIconContentColor = Color(0xFFE8E5FF))
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent, titleContentColor = Color(0xFFF7F7FB), actionIconContentColor = Color(0xFFE8E5FF))
             )
         },
         bottomBar = {
-            NavigationBar(containerColor = Color(0xCC12121E), contentColor = Color(0xFFA99BFF), tonalElevation = 0.dp, modifier = Modifier.border(1.dp, Color(0x33FFFFFF), RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp))) {
+            NavigationBar(containerColor = Color.Transparent, contentColor = Color(0xFFA99BFF), tonalElevation = 0.dp, modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp).rykoGlass(24.dp, Color(0xE0181628), 0.38f)) {
                 MainTab.entries.forEach { item ->
                     val icon = when (item) {
                         MainTab.HOME -> Icons.Default.Home
@@ -162,7 +162,7 @@ fun RykoApp() {
         },
         containerColor = Color.Black
     ) { inner ->
-        Box(Modifier.padding(inner).fillMaxSize().background(Brush.radialGradient(listOf(Color(0xFF242039), Color(0xFF10101B), Color(0xFF07070C))))) {
+        Box(Modifier.padding(inner).fillMaxSize().background(Brush.radialGradient(listOf(Color(0xFF30264D), Color(0xFF151322), Color(0xFF080810))))) {
             // Keep visited tabs composed while hidden so their data and scroll state survive tab changes.
             if (visitedTabs.contains(MainTab.HOME)) {
                 Box(Modifier.fillMaxSize().graphicsLayer { alpha = if (tab == MainTab.HOME && selectedEntry == null && extraPage == null) 1f else 0f }.zIndex(if (tab == MainTab.HOME && selectedEntry == null && extraPage == null) 1f else -1f).then(if (tab == MainTab.HOME && selectedEntry == null && extraPage == null) Modifier else Modifier.offset(x = 10000.dp))) {
@@ -248,7 +248,7 @@ private fun NativeHome(mangaMode: Boolean, onEntry: (Int) -> Unit) {
     }
 
     LazyColumn(
-        Modifier.fillMaxSize().background(Color.Black),
+        Modifier.fillMaxSize().background(Brush.radialGradient(listOf(Color(0xFF211A37), Color(0xFF11101C), Color(0xFF080810)))),
         contentPadding = PaddingValues(top = 6.dp, bottom = 30.dp),
         verticalArrangement = Arrangement.spacedBy(22.dp)
     ) {
@@ -346,7 +346,7 @@ private fun NativeHome(mangaMode: Boolean, onEntry: (Int) -> Unit) {
                     else LazyRow(contentPadding = PaddingValues(horizontal = 18.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         items(updatedManga, key = { it.id }) { media ->
                             Row(
-                                Modifier.width(260.dp).clip(RoundedCornerShape(14.dp)).background(Surface)
+                                Modifier.width(260.dp).rykoGlass(16.dp).clip(RoundedCornerShape(16.dp))
                                     .clickable { onEntry(media.id) }.padding(9.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
@@ -624,9 +624,9 @@ private fun DetailLine(label: String, value: String?) {
 @Composable
 private fun NativeMediaCard(media: AniListMedia, onClick: () -> Unit) {
     Card(
-        Modifier.width(132.dp).height(270.dp).clickable(onClick = onClick),
+        Modifier.width(132.dp).height(270.dp).rykoGlass(16.dp).clickable(onClick = onClick),
         shape = RoundedCornerShape(13.dp),
-        colors = CardDefaults.cardColors(containerColor = Surface)
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {
         Column(Modifier.fillMaxSize()) {
             AsyncImage(
@@ -677,7 +677,7 @@ private fun NativePlaceholder(title: String, subtitle: String) {
         else -> "COMMUNITY RANKING"
     }
     Column(
-        Modifier.fillMaxSize().background(Color(0xFF050507)).padding(horizontal = 20.dp, vertical = 18.dp),
+        Modifier.fillMaxSize().background(Brush.radialGradient(listOf(Color(0xFF211A37), Color(0xFF11101C), Color(0xFF080810)))).padding(horizontal = 20.dp, vertical = 18.dp),
         verticalArrangement = Arrangement.spacedBy(18.dp)
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
