@@ -121,7 +121,7 @@ fun RykoApp() {
     val hazeState = rememberHazeState()
     CompositionLocalProvider(LocalRykoHazeState provides hazeState) {
     Scaffold(
-        modifier = Modifier.hazeSource(hazeState),
+        modifier = Modifier,
         contentWindowInsets = WindowInsets(0),
         topBar = {
             if (!(tab == MainTab.VIDEO && selectedEntry == null && extraPage == null)) TopAppBar(
@@ -236,7 +236,7 @@ private fun RykoBottomNavigation(
             .padding(horizontal = 10.dp, vertical = 6.dp)
             .navigationBarsPadding()
             // Match the character detail dialog's exact shared frosted-glass treatment.
-            .rykoGlass(22.dp, Color(0x661A1A1D), 0.42f)
+            .rykoGlass(22.dp, Color(0xF01A1A1D), 0.42f)
             .padding(horizontal = 7.dp, vertical = 7.dp),
         horizontalArrangement = Arrangement.SpaceAround,
         verticalAlignment = Alignment.CenterVertically
