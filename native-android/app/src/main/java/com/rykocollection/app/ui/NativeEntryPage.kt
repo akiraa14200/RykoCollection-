@@ -57,7 +57,7 @@ fun NativeEntryPage(id:Int,mangaMode:Boolean) {
         finally { api.close(); loading=false }
     }
     if(loading && media==null) {
-        Box(Modifier.fillMaxSize().background(EBg),contentAlignment=Alignment.Center){CircularProgressIndicator(color=EAccent)}
+        Box(Modifier.fillMaxSize().background(Brush.radialGradient(listOf(Color(0xFF261E40), Color(0xFF11101D), EBg))),contentAlignment=Alignment.Center){CircularProgressIndicator(color=EAccent)}
         return
     }
     val item=media
@@ -76,7 +76,7 @@ fun NativeEntryPage(id:Int,mangaMode:Boolean) {
             }
             context.startActivity(Intent.createChooser(share,"Share entry"))
         }
-        TabRow(selectedTabIndex=tab,containerColor=EBg,contentColor=EAccent) {
+        TabRow(selectedTabIndex=tab,modifier=Modifier.padding(horizontal=10.dp).rykoGlass(18.dp, Color(0xD91A1728), 0.34f),containerColor=Color.Transparent,contentColor=EAccent) {
             listOf("Overview","Characters","Details","Comments").forEachIndexed { i,label ->
                 Tab(selected=tab==i,onClick={tab=i},text={Text(label,fontSize=11.sp,maxLines=1)})
             }
@@ -218,7 +218,7 @@ private fun ColumnScope.EntryMetadata(m:AniListDetail,manga:Boolean) {
         }
         val titles=(listOfNotNull(m.title.english,m.title.romaji,m.title.native)+m.synonyms).filter{it.isNotBlank()}.distinct()
         if(titles.isNotEmpty()) item {
-            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(ESurface).padding(12.dp),verticalArrangement=Arrangement.spacedBy(6.dp)){
+            Column(Modifier.fillMaxWidth().rykoGlass(12.dp).padding(12.dp),verticalArrangement=Arrangement.spacedBy(6.dp)){
                 Text("ALTERNATIVE TITLES",color=EAccent,fontSize=10.sp,fontWeight=FontWeight.Bold)
                 titles.forEach{Text(it,color=Color.White,fontSize=12.sp)}
             }
@@ -250,7 +250,7 @@ private fun ColumnScope.EntryCommentsPlaceholder(){
 private fun CharacterDialog(edge:AniListCharacterEdge,onClose:()->Unit){
     val c=edge.node
     Dialog(onDismissRequest=onClose){
-        Column(Modifier.fillMaxWidth().heightIn(max=580.dp).clip(RoundedCornerShape(22.dp)).background(Color(0xFF111117))){
+        Column(Modifier.fillMaxWidth().heightIn(max=580.dp).rykoGlass(22.dp, Color(0xF01A1728), 0.42f)){
             Box(Modifier.fillMaxWidth().height(205.dp)){
                 AsyncImage(c.image?.large ?: c.image?.medium,c.name.full,Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
                 Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent,Color(0xFF111117)))))
@@ -272,16 +272,16 @@ private fun CharacterDialog(edge:AniListCharacterEdge,onClose:()->Unit){
 }
 
 @Composable private fun EMetric(label:String,value:String,modifier:Modifier=Modifier){
-    Column(modifier.clip(RoundedCornerShape(12.dp)).background(ESurface).padding(9.dp)){
+    Column(modifier.rykoGlass(12.dp).padding(9.dp)){
         Text(label,color=EMuted,fontSize=8.sp,maxLines=1);Text(value,color=Color.White,fontSize=13.sp,fontWeight=FontWeight.Bold,maxLines=1)
     }
 }
 @Composable private fun EInfo(label:String,value:String?){
-    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(ESurface).padding(11.dp),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.Top){
+    Row(Modifier.fillMaxWidth().rykoGlass(10.dp).padding(11.dp),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.Top){
         Text(label,color=EMuted,fontSize=11.sp,modifier=Modifier.weight(.9f))
         Text(value?.takeIf{it.isNotBlank()} ?: "—",color=Color.White,fontSize=11.sp,modifier=Modifier.weight(1.1f),textAlign=androidx.compose.ui.text.style.TextAlign.End)
     }
 }
-@Composable private fun EEmpty(text:String){Text(text,color=EMuted,fontSize=12.sp,modifier=Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(ESurface).padding(14.dp))}
+@Composable private fun EEmpty(text:String){Text(text,color=EMuted,fontSize=12.sp,modifier=Modifier.fillMaxWidth().rykoGlass(12.dp).padding(14.dp))}
 private fun clean(v:String?)=v.orEmpty().replace(Regex("<[^>]*>")," ").replace("&mdash;","—").replace("&amp;","&").replace(Regex("\\s+")," ").trim()
 private fun countdown(s:Long):String{if(s<=0)return "Soon";val d=s/86400;val h=s%86400/3600;val m=s%3600/60;return if(d>0)"${d}d ${h}h" else if(h>0)"${h}h ${m}m" else "${m}m"}
