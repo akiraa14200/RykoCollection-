@@ -119,7 +119,7 @@ fun NativeNewsroomPage() {
         }
         match && (search.isBlank() || text.contains(search.trim(),true))
     }
-    Column(Modifier.fillMaxSize().background(Brush.radialGradient(listOf(Color(0xFF242039), Color(0xFF10101B), Color(0xFF07070C))))) {
+    Column(Modifier.fillMaxSize().background(Color.Black)) {
         LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(13.dp)) {
             item {
                 Row(verticalAlignment=Alignment.CenterVertically) {
