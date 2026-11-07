@@ -5,53 +5,94 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 /**
- * Lightweight native glass material for Compose.
+ * Ryko's shared frosted material.
  *
- * Uses layered translucent gradients, a specular top edge and a soft lower
- * edge instead of continuously blurring the screen. This keeps scrolling and
- * video playback responsive on mid/low-end Android devices.
+ * Compose's Modifier.blur blurs the composable it is applied to, not the
+ * pixels behind it. This material therefore uses a deliberately cloudy,
+ * high-opacity base, soft colour diffusion, layered edge reflections and
+ * depth shadows instead of pretending to provide backdrop blur. The static
+ * treatment stays inexpensive while lists scroll and videos play.
  */
 enum class RykoGlassLevel(val fill: Color, val highlight: Float, val radius: Dp) {
-    Primary(Color(0xD91A1728), 0.34f, 24.dp),
-    Secondary(Color(0xB31B1A2B), 0.25f, 20.dp),
-    Floating(Color(0xED211D32), 0.42f, 22.dp),
-    Subtle(Color(0x801B1A2B), 0.18f, 14.dp)
+    Primary(Color(0xE61A1728), 0.30f, 24.dp),
+    Secondary(Color(0xD91B1A2B), 0.24f, 20.dp),
+    Floating(Color(0xF0221E33), 0.36f, 22.dp),
+    Subtle(Color(0xB31B1A2B), 0.17f, 14.dp)
 }
 
+/**
+ * Apply consistently to interactive surfaces, cards, panels and overlays.
+ * Keep artwork and thumbnails outside this modifier so source images remain sharp.
+ */
 fun Modifier.rykoGlass(
     cornerRadius: Dp = 20.dp,
     tint: Color = RykoGlassLevel.Secondary.fill,
     highlight: Float = 0.25f
 ): Modifier {
     val shape = RoundedCornerShape(cornerRadius)
+    val safeHighlight = highlight.coerceIn(0.08f, 0.5f)
     return this
-        .shadow(12.dp, shape, clip = false, ambientColor = Color(0x55211A3D), spotColor = Color(0x77211A3D))
+        .shadow(
+            elevation = 14.dp,
+            shape = shape,
+            clip = false,
+            ambientColor = Color(0x55211A3D),
+            spotColor = Color(0x77211A3D)
+        )
         .clip(shape)
+        // A cloudy base keeps text readable over both dark and image-heavy content.
         .background(
             Brush.linearGradient(
-                colors = listOf(
-                    Color.White.copy(alpha = highlight * 0.22f),
-                    tint,
-                    Color(0xA6100F1B),
-                    Color(0xC50C0B13)
+                colorStops = arrayOf(
+                    0.0f to Color(0xF02B293A),
+                    0.18f to tint,
+                    0.62f to Color(0xE3151421),
+                    1.0f to Color(0xF00B0A12)
                 )
             )
         )
+        // Soft, static diffusion gives the surface a frosted-light appearance
+        // without continuously rendering a costly animated blur.
+        .background(
+            Brush.radialGradient(
+                colors = listOf(
+                    Color(0x26D9D0FF),
+                    Color(0x12A99BFF),
+                    Color.Transparent
+                ),
+                center = Offset.Zero,
+                radius = 520f
+            )
+        )
+        .drawBehind {
+            // Inner top-edge reflection and a subtle lower shadow tint.
+            drawRoundRect(
+                brush = Brush.verticalGradient(
+                    colors = listOf(
+                        Color.White.copy(alpha = safeHighlight * 0.24f),
+                        Color.Transparent,
+                        Color(0x16000000)
+                    )
+                )
+            )
+        }
         .border(
             width = 1.dp,
             brush = Brush.linearGradient(
-                colors = listOf(
-                    Color.White.copy(alpha = highlight),
-                    Color(0x35C9BEFF),
-                    Color(0x14FFFFFF),
-                    Color(0x24FFFFFF)
+                colorStops = arrayOf(
+                    0.0f to Color.White.copy(alpha = safeHighlight * 0.72f),
+                    0.28f to Color(0x35D8D0FF),
+                    0.72f to Color(0x1EFFFFFF),
+                    1.0f to Color(0x30FFFFFF)
                 )
             ),
             shape = shape
