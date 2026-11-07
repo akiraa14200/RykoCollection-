@@ -170,6 +170,7 @@ fun RykoApp() {
                     modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth()
                         .statusBarsPadding().padding(horizontal = 12.dp, vertical = 7.dp)
                         .rykoGlass(22.dp, Color(0xF01A1A1D), 0.42f)
+                        .zIndex(30f)
                         .padding(horizontal = 8.dp, vertical = 3.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
