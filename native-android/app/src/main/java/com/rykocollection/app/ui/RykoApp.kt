@@ -138,30 +138,30 @@ fun RykoApp() {
             }
             if (visitedTabs.contains(MainTab.BROWSE)) {
                 Box(Modifier.fillMaxSize().hazeSource(hazeState).graphicsLayer { alpha = if (tab == MainTab.BROWSE && selectedEntry == null && extraPage == null) 1f else 0f }.zIndex(if (tab == MainTab.BROWSE && selectedEntry == null && extraPage == null) 1f else -1f).then(if (tab == MainTab.BROWSE && selectedEntry == null && extraPage == null) Modifier else Modifier.offset(x = 10000.dp))) {
-                    Box(Modifier.fillMaxSize().padding(top = 94.dp)) { BrowsePage(mangaMode, onEntry = { selectedEntry = it }) }
+                    Box(Modifier.fillMaxSize()) { BrowsePage(mangaMode, onEntry = { selectedEntry = it }) }
                 }
             }
             if (visitedTabs.contains(MainTab.VIDEO)) {
                 Box(Modifier.fillMaxSize().hazeSource(hazeState).graphicsLayer { alpha = if (tab == MainTab.VIDEO && selectedEntry == null && extraPage == null) 1f else 0f }.zIndex(if (tab == MainTab.VIDEO && selectedEntry == null && extraPage == null) 1f else -1f).then(if (tab == MainTab.VIDEO && selectedEntry == null && extraPage == null) Modifier else Modifier.offset(x = 10000.dp))) {
-                    Box(Modifier.fillMaxSize().padding(top = 94.dp)) { NativeRykoTube() }
+                    Box(Modifier.fillMaxSize()) { NativeRykoTube() }
                 }
             }
             if (visitedTabs.contains(MainTab.LIBRARY)) {
                 Box(Modifier.fillMaxSize().hazeSource(hazeState).graphicsLayer { alpha = if (tab == MainTab.LIBRARY && selectedEntry == null && extraPage == null) 1f else 0f }.zIndex(if (tab == MainTab.LIBRARY && selectedEntry == null && extraPage == null) 1f else -1f).then(if (tab == MainTab.LIBRARY && selectedEntry == null && extraPage == null) Modifier else Modifier.offset(x = 10000.dp))) {
-                    Box(Modifier.fillMaxSize().padding(top = 94.dp)) { NativePlaceholder("My Library", "Watching, plan-to-watch, completed and saved entries.") }
+                    Box(Modifier.fillMaxSize()) { NativePlaceholder("My Library", "Watching, plan-to-watch, completed and saved entries.") }
                 }
             }
             if (visitedTabs.contains(MainTab.ACCOUNT)) {
                 Box(Modifier.fillMaxSize().hazeSource(hazeState).graphicsLayer { alpha = if (tab == MainTab.ACCOUNT && selectedEntry == null && extraPage == null) 1f else 0f }.zIndex(if (tab == MainTab.ACCOUNT && selectedEntry == null && extraPage == null) 1f else -1f).then(if (tab == MainTab.ACCOUNT && selectedEntry == null && extraPage == null) Modifier else Modifier.offset(x = 10000.dp))) {
-                    Box(Modifier.fillMaxSize().padding(top = 94.dp)) { NativePlaceholder("Account", "Sign in, profile, avatar, banner and account settings.") }
+                    Box(Modifier.fillMaxSize()) { NativePlaceholder("Account", "Sign in, profile, avatar, banner and account settings.") }
                 }
             }
 
-            if (selectedEntry != null) Box(Modifier.fillMaxSize().padding(top = 94.dp).hazeSource(hazeState)) { Box(Modifier.fillMaxSize()) { EntryDetails(selectedEntry!!, mangaMode) } }
+            if (selectedEntry != null) Box(Modifier.fillMaxSize().hazeSource(hazeState)) { Box(Modifier.fillMaxSize()) { EntryDetails(selectedEntry!!, mangaMode) } }
             else when (extraPage) {
-                ExtraPage.TRENDING -> Box(Modifier.fillMaxSize().padding(top = 94.dp)) { NativePlaceholder("Ryko Top Trending", "Entry ranking will use real community likes once account services are configured.") }
-                ExtraPage.NEWS -> Box(Modifier.fillMaxSize().padding(top = 94.dp)) { NativeNewsroomPage() }
-                ExtraPage.SETTINGS -> Box(Modifier.fillMaxSize().padding(top = 94.dp)) { NativePlaceholder("Settings", "Appearance, language, notifications and app preferences.") }
+                ExtraPage.TRENDING -> Box(Modifier.fillMaxSize()) { NativePlaceholder("Ryko Top Trending", "Entry ranking will use real community likes once account services are configured.") }
+                ExtraPage.NEWS -> Box(Modifier.fillMaxSize()) { NativeNewsroomPage() }
+                ExtraPage.SETTINGS -> Box(Modifier.fillMaxSize()) { NativePlaceholder("Settings", "Appearance, language, notifications and app preferences.") }
                 null -> Unit
             }
 
@@ -319,7 +319,7 @@ private fun NativeHome(mangaMode: Boolean, onEntry: (Int) -> Unit) {
 
     LazyColumn(
         Modifier.fillMaxSize().background(Color.Black),
-        contentPadding = PaddingValues(top = 94.dp, bottom = 30.dp),
+        contentPadding = PaddingValues(top = 145.dp, bottom = 30.dp),
         verticalArrangement = Arrangement.spacedBy(22.dp)
     ) {
         if (featured.isNotEmpty()) {
@@ -606,7 +606,7 @@ private fun BrowsePage(mangaMode: Boolean, onEntry: (Int) -> Unit) {
         else -> list.sortedByDescending { it.averageScore ?: 0 }
     } }
     Column(Modifier.fillMaxSize().background(Color.Black).padding(horizontal = 16.dp)) {
-        Spacer(Modifier.height(94.dp))
+        Spacer(Modifier.height(145.dp))
         Text(if (mangaMode) "Explore Manga" else "Explore Anime", color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.ExtraBold)
         OutlinedTextField(value = search, onValueChange = { search = it }, modifier = Modifier.fillMaxWidth().padding(top = 12.dp).rykoGlass(16.dp, Color(0xD91B1B1F), 0.22f),
             placeholder = { Text("Search titles, series, stories...") }, singleLine = true,
