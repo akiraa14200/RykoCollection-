@@ -57,7 +57,7 @@ fun NativeEntryPage(id:Int,mangaMode:Boolean) {
         finally { api.close(); loading=false }
     }
     if(loading && media==null) {
-        Box(Modifier.fillMaxSize().background(Brush.radialGradient(listOf(Color(0xFF261E40), Color(0xFF11101D), EBg))),contentAlignment=Alignment.Center){CircularProgressIndicator(color=EAccent)}
+        Box(Modifier.fillMaxSize().background(Color.Black),contentAlignment=Alignment.Center){CircularProgressIndicator(color=EAccent)}
         return
     }
     val item=media
@@ -68,7 +68,7 @@ fun NativeEntryPage(id:Int,mangaMode:Boolean) {
         }
         return
     }
-    Column(Modifier.fillMaxSize().background(Brush.radialGradient(listOf(Color(0xFF242039), Color(0xFF10101B), EBg)))) {
+    Column(Modifier.fillMaxSize().background(Color.Black)) {
         EntryHero(item,mangaMode) {
             val share=Intent(Intent.ACTION_SEND).apply {
                 type="text/plain"
