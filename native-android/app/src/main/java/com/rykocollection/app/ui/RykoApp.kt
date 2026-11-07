@@ -621,7 +621,6 @@ private fun BrowsePage(mangaMode: Boolean, onEntry: (Int) -> Unit) {
             Row(
                 modifier = Modifier.fillMaxWidth()
                     .rykoGlass(24.dp, Color(0x22191A20), 0.52f, 42.dp)
-                    .then(if (hazeState != null) Modifier.hazeEffect(state = hazeState, style = HazeStyle(backgroundColor = Color.Transparent, tints = emptyList(), blurRadius = 42.dp, noiseFactor = 0.10f)) else Modifier)
                     .padding(horizontal = 16.dp, vertical = 13.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -774,60 +773,57 @@ private fun NativePlaceholder(title: String, subtitle: String) {
         "Ryko Newsroom" -> "THE LATEST"
         else -> "COMMUNITY RANKING"
     }
-    Column(
-        Modifier.fillMaxSize().background(Color.Black).padding(horizontal = 20.dp, vertical = 18.dp),
-        verticalArrangement = Arrangement.spacedBy(18.dp)
-    ) {
+    Column(Modifier.fillMaxSize().background(Color.Black).padding(horizontal = 20.dp, vertical = 18.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text(eyebrow, color = Violet, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
             Text(title, color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = (-0.7).sp)
             Text(subtitle, color = Muted, fontSize = 13.sp, lineHeight = 19.sp)
         }
-        Box(
-            Modifier.fillMaxWidth().wrapContentHeight().clip(RoundedCornerShape(24.dp))
-                .rykoGlass(24.dp, Color(0x3318181D), 0.38f, 28.dp).padding(22.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Box(
-                    Modifier.size(72.dp).clip(RoundedCornerShape(22.dp)).background(Color(0x22FFFFFF)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(icon, contentDescription = null, tint = Violet, modifier = Modifier.size(32.dp))
+        when (title) {
+            "My Library" -> Column(Modifier.fillMaxWidth().rykoGlass(22.dp).padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    listOf("Watching", "Plan to watch", "Completed", "On hold").forEach { value ->
+                        FilterChip(selected = libraryCategory == value, onClick = { libraryCategory = value }, label = { Text(value, fontSize = 10.sp) })
+                    }
                 }
-                Text(title, color = Color.White, fontSize = 19.sp, fontWeight = FontWeight.Bold)
-                Text(
-                    "This area is being prepared for RykoCollection.",
-                    color = Muted, fontSize = 12.sp, lineHeight = 18.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                )
-                Box(Modifier.clip(RoundedCornerShape(50)).background(Color(0x1FFFFFFF)).padding(horizontal = 13.dp, vertical = 7.dp)) {
+                Box(Modifier.fillMaxWidth().padding(vertical = 28.dp), contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Icon(Icons.Default.BookmarkBorder, contentDescription = null, tint = Violet, modifier = Modifier.size(32.dp))
+                        Text("Your library is empty", color = Color.White, fontWeight = FontWeight.SemiBold)
+                        Text("Save anime and manga to see them here.", color = Muted, fontSize = 12.sp)
+                    }
+                }
+            }
+            "Account" -> Column(Modifier.fillMaxWidth().rykoGlass(22.dp).padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Box(Modifier.size(64.dp).clip(CircleShape).background(Color(0x22A99BFF)), contentAlignment = Alignment.Center) {
+                    Icon(Icons.Default.Person, contentDescription = null, tint = Violet, modifier = Modifier.size(30.dp))
+                }
+                Text("PROFILE NAME", color = Violet, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                BasicTextField(value = profileName, onValueChange = { profileName = it }, singleLine = true, textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 16.sp), modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Color(0x221FFFFFFF)).padding(13.dp))
+                Text("Guest profile · Changes are temporary in this starter build. Sign-in and cloud sync are not connected yet.", color = Muted, fontSize = 11.sp, lineHeight = 16.sp)
+            }
+            "Settings" -> Column(Modifier.fillMaxWidth().rykoGlass(22.dp).padding(18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                Text("APPEARANCE", color = Violet, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { listOf("Dark", "Light", "System").forEach { value -> FilterChip(selected = appearance == value, onClick = { appearance = value }, label = { Text(value) }) } }
+                Divider(color = Color.White.copy(alpha = 0.10f))
+                Text("LANGUAGE", color = Violet, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { listOf("English", "Hindi", "Japanese").forEach { value -> FilterChip(selected = language == value, onClick = { language = value }, label = { Text(value) }) } }
+                Divider(color = Color.White.copy(alpha = 0.10f))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) { Text("Notifications", color = Color.White); Switch(checked = notifications, onCheckedChange = { notifications = it }) }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) { Text("Autoplay videos", color = Color.White); Switch(checked = autoPlay, onCheckedChange = { autoPlay = it }) }
+                Text("Preferences are session-only and do not yet control system services or app-wide theme.", color = Muted, fontSize = 10.sp, lineHeight = 15.sp)
+            }
+            else -> Box(Modifier.fillMaxWidth().rykoGlass(22.dp).padding(22.dp), contentAlignment = Alignment.Center) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Icon(icon, contentDescription = null, tint = Violet, modifier = Modifier.size(32.dp))
+                    Text(title, color = Color.White, fontSize = 19.sp, fontWeight = FontWeight.Bold)
+                    Text("This area is being prepared for RykoCollection.", color = Muted, fontSize = 12.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                     Text("COMING SOON", color = Violet, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
                 }
             }
         }
     }
-        when (title) {
-            "My Library" -> Column(Modifier.fillMaxWidth().rykoGlass(20.dp).padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { listOf("Watching", "Plan to watch", "Completed", "On hold").forEach { v -> FilterChip(selected = libraryCategory == v, onClick = { libraryCategory = v }, label = { Text(v, fontSize = 10.sp) }) } }
-                Text("Your saved titles will appear here. Open a title to add it to your library.", color = Muted, fontSize = 12.sp)
-            }
-            "Account" -> Column(Modifier.fillMaxWidth().rykoGlass(20.dp).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text("PROFILE NAME", color = Violet, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                BasicTextField(profileName, { profileName = it }, singleLine = true, textStyle = androidx.compose.ui.text.TextStyle(color = Color.White), modifier = Modifier.fillMaxWidth().padding(10.dp))
-                Text("Guest profile · Stored on this device. Google sign-in is not connected yet.", color = Muted, fontSize = 11.sp)
-            }
-            "Settings" -> Column(Modifier.fillMaxWidth().rykoGlass(20.dp).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("APPEARANCE", color = Violet, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                Row { listOf("Dark", "Light", "System").forEach { v -> FilterChip(selected = appearance == v, onClick = { appearance = v }, label = { Text(v) }) } }
-                Text("LANGUAGE", color = Violet, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                Row { listOf("English", "Hindi", "Japanese").forEach { v -> FilterChip(selected = language == v, onClick = { language = v }, label = { Text(v) }) } }
-                FilterChip(selected = notifications, onClick = { notifications = !notifications }, label = { Text(if (notifications) "Notifications: On" else "Notifications: Off") })
-                FilterChip(selected = autoPlay, onClick = { autoPlay = !autoPlay }, label = { Text(if (autoPlay) "Autoplay: On" else "Autoplay: Off") })
-                Text("These starter preferences are session-only.", color = Muted, fontSize = 10.sp)
-            }
-        }
 }
-
 private val Violet = Color(0xFFA99BFF)
 private val Muted = Color(0xFF9999A5)
 private val Surface = Color(0xFF111111)
