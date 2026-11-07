@@ -83,7 +83,7 @@ fun NativeEntryPage(id:Int,mangaMode:Boolean) {
         }
         when(tab) {
             0 -> EntryOverview(item,mangaMode)
-            1 -> LazyColumn(Modifier.weight(1f).fillMaxWidth(),contentPadding=PaddingValues(14.dp),verticalArrangement=Arrangement.spacedBy(11.dp)) {
+            1 -> LazyColumn(Modifier.weight(1f).fillMaxWidth(),contentPadding=PaddingValues(start=14.dp, top=14.dp, end=14.dp, bottom=144.dp),verticalArrangement=Arrangement.spacedBy(11.dp)) {
                 item {
                     Row(verticalAlignment=Alignment.CenterVertically){
                         Column(Modifier.weight(1f)){Text("Characters",color=Color.White,fontSize=20.sp,fontWeight=FontWeight.Bold);Text("Profiles and roles from AniList",color=EMuted,fontSize=11.sp)}
@@ -163,7 +163,7 @@ private fun EntryHero(m:AniListDetail,manga:Boolean,onShare:()->Unit) {
 @Composable
 private fun ColumnScope.EntryOverview(m:AniListDetail,manga:Boolean) {
     val context=LocalContext.current
-    LazyColumn(Modifier.weight(1f).fillMaxWidth(),contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(14.dp)){
+    LazyColumn(Modifier.weight(1f).fillMaxWidth(),contentPadding=PaddingValues(start=16.dp, top=16.dp, end=16.dp, bottom=144.dp),verticalArrangement=Arrangement.spacedBy(14.dp)){
         item {
             Text("STORY",color=EAccent,fontSize=10.sp,fontWeight=FontWeight.Bold,letterSpacing=1.4.sp)
             Text(clean(m.description).ifBlank{"No synopsis has been provided by AniList."},color=Color(0xFFE0E0E0),fontSize=13.sp,lineHeight=20.sp,modifier=Modifier.fillMaxWidth().rykoGlass(16.dp, Color(0xD91B1B1F), 0.20f).padding(14.dp).padding(top=7.dp))
@@ -200,7 +200,7 @@ private fun ColumnScope.EntryOverview(m:AniListDetail,manga:Boolean) {
 
 @Composable
 private fun ColumnScope.EntryMetadata(m:AniListDetail,manga:Boolean) {
-    LazyColumn(Modifier.weight(1f).fillMaxWidth(),contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
+    LazyColumn(Modifier.weight(1f).fillMaxWidth(),contentPadding=PaddingValues(start=16.dp, top=16.dp, end=16.dp, bottom=144.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
         item{Text("METADATA",color=EAccent,fontSize=10.sp,fontWeight=FontWeight.Bold,letterSpacing=1.4.sp)}
         item{EInfo("Type",m.format)}
         item{EInfo("Status",m.status?.replace('_',' '))}
@@ -263,7 +263,7 @@ private fun CharacterDialog(edge:AniListCharacterEdge,onClose:()->Unit){
                 Text("×",color=Color.White,fontSize=27.sp,modifier=Modifier.align(Alignment.TopEnd).clickable(onClick=onClose).padding(12.dp))
                 Text(c.name.full,color=Color.White,fontSize=21.sp,fontWeight=FontWeight.Bold,modifier=Modifier.align(Alignment.BottomStart).padding(14.dp))
             }
-            LazyColumn(contentPadding=PaddingValues(14.dp),verticalArrangement=Arrangement.spacedBy(7.dp)){
+            LazyColumn(contentPadding=PaddingValues(start=14.dp, top=14.dp, end=14.dp, bottom=144.dp),verticalArrangement=Arrangement.spacedBy(7.dp)){
                 item{Text("ROLE IN THIS ENTRY · ${edge.role}",color=EAccent,fontSize=10.sp,fontWeight=FontWeight.Bold)}
                 item{EInfo("Age",c.age)}
                 item{EInfo("Gender",c.gender)}
