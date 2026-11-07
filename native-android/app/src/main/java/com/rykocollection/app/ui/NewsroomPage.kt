@@ -120,7 +120,7 @@ fun NativeNewsroomPage() {
         match && (search.isBlank() || text.contains(search.trim(),true))
     }
     Column(Modifier.fillMaxSize().background(Color.Black)) {
-        LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(13.dp)) {
+        LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(start=16.dp, top=16.dp, end=16.dp, bottom=144.dp),verticalArrangement=Arrangement.spacedBy(13.dp)) {
             item {
                 Row(verticalAlignment=Alignment.CenterVertically) {
                     Icon(Icons.Default.Newspaper,null,tint=NewsAccent,modifier=Modifier.size(30.dp))
