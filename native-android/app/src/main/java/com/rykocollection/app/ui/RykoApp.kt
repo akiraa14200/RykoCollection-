@@ -588,7 +588,7 @@ private fun BrowsePage(mangaMode: Boolean, onEntry: (Int) -> Unit) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         row.forEach { media ->
                             Column(Modifier.weight(1f).clickable { onEntry(media.id) }) {
-                                Box(Modifier.fillMaxWidth().height(190.dp).clip(RoundedCornerShape(16.dp)).background(Color(0xFF17171D))) {
+                                Box(Modifier.fillMaxWidth().height(190.dp).rykoGlass(16.dp).clip(RoundedCornerShape(16.dp))) {
                                     AsyncImage(media.coverImage?.imageUrl, media.title.display, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
                                     Text(media.format?.replace("_", " ") ?: "TITLE", Modifier.align(Alignment.TopStart).padding(7.dp).clip(RoundedCornerShape(8.dp)).background(Color(0xE6101018)).padding(horizontal = 8.dp, vertical = 5.dp), color = Color(0xFFDCD4FF), fontSize = 9.sp, fontWeight = FontWeight.Bold, maxLines = 1)
                                     if (media.averageScore != null) Row(Modifier.align(Alignment.TopEnd).padding(7.dp).clip(RoundedCornerShape(8.dp)).background(Color(0xE6101018)).padding(horizontal = 7.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
