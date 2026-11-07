@@ -38,7 +38,7 @@ fun Modifier.rykoGlass(
             Brush.linearGradient(
                 colors = listOf(
                     Color.White.copy(alpha = highlight * 0.22f),
-                    tint.copy(alpha = 0.96f),
+                    tint,
                     Color(0xA6100F1B),
                     Color(0xC50C0B13)
                 )
