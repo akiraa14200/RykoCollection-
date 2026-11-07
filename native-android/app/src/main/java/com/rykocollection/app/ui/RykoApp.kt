@@ -147,7 +147,7 @@ fun RykoApp() {
             )
         },
         bottomBar = {
-            NavigationBar(containerColor = Color.Transparent, contentColor = Color(0xFFA99BFF), tonalElevation = 0.dp, modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp).rykoGlass(24.dp, Color(0x99181628), 0.38f)) {
+            NavigationBar(containerColor = Color.Transparent, contentColor = Color(0xFFA99BFF), tonalElevation = 0.dp, modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp).rykoGlass(24.dp, Color(0x9918181B), 0.38f).windowInsetsPadding(WindowInsets.navigationBars)) {
                 MainTab.entries.forEach { item ->
                     val icon = when (item) {
                         MainTab.HOME -> Icons.Default.Home
