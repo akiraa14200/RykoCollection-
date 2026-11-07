@@ -273,7 +273,7 @@ private fun NativeHome(mangaMode: Boolean, onEntry: (Int) -> Unit) {
                     ) { page ->
                         val media = slides[page]
                         Card(
-                            Modifier.fillMaxWidth().height(252.dp).clickable { onEntry(media.id) },
+                            Modifier.fillMaxWidth().height(252.dp).rykoGlass(18.dp, Color(0xD91A1728), 0.30f).clickable { onEntry(media.id) },
                             shape = RoundedCornerShape(18.dp),
                             colors = CardDefaults.cardColors(containerColor = Color(0xB31A1927))
                         ) {
@@ -530,10 +530,10 @@ private fun BrowsePage(mangaMode: Boolean, onEntry: (Int) -> Unit) {
         "Title" -> list.sortedBy { it.title.display.lowercase() }
         else -> list.sortedByDescending { it.averageScore ?: 0 }
     } }
-    Column(Modifier.fillMaxSize().background(Color.Black).padding(horizontal = 16.dp)) {
+    Column(Modifier.fillMaxSize().background(Brush.radialGradient(listOf(Color(0xFF29213F), Color(0xFF11101B), Color(0xFF080810)))).padding(horizontal = 16.dp)) {
         Spacer(Modifier.height(8.dp))
         Text(if (mangaMode) "Explore Manga" else "Explore Anime", color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.ExtraBold)
-        OutlinedTextField(value = search, onValueChange = { search = it }, modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+        OutlinedTextField(value = search, onValueChange = { search = it }, modifier = Modifier.fillMaxWidth().padding(top = 12.dp).rykoGlass(16.dp, Color(0xD91B1A2B), 0.22f),
             placeholder = { Text("Search titles, series, stories...") }, singleLine = true,
             leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Violet) },
             trailingIcon = { if (search.isNotBlank()) IconButton(onClick = { search = "" }) { Text("×", color = Color.White, fontSize = 20.sp) } })
@@ -555,7 +555,7 @@ private fun BrowsePage(mangaMode: Boolean, onEntry: (Int) -> Unit) {
             }
         }
         if (filtersExpanded) {
-            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Color(0xFF101014)).padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(Modifier.fillMaxWidth().rykoGlass(16.dp, Color(0xE0181726), 0.22f).padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("GENRE", color = Muted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     genres.forEach { value -> FilterChip(selected = genre == value, onClick = { genre = value }, label = { Text(value) }) }
@@ -581,7 +581,7 @@ private fun BrowsePage(mangaMode: Boolean, onEntry: (Int) -> Unit) {
             }
         }
         error?.let { Text(it, color = Color(0xFFFF9C9C), fontSize = 11.sp, modifier = Modifier.padding(vertical = 8.dp)) }
-        if (visible.isEmpty() && !loading) Text("No titles match these filters.", color = Muted, modifier = Modifier.padding(20.dp))
+        if (visible.isEmpty() && !loading) Text("No titles match these filters.", color = Muted, modifier = Modifier.padding(20.dp).fillMaxWidth().rykoGlass(16.dp).padding(16.dp))
         LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(top = 10.dp, bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
             visible.chunked(3).forEachIndexed { rowIndex, row ->
                 item(key = "catalogue-row-$rowIndex") {
