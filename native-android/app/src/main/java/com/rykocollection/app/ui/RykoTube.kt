@@ -37,6 +37,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import dev.chrisbanes.haze.hazeSource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Brush
@@ -255,6 +256,7 @@ fun NativeRykoTube() {
     var selected by remember { mutableStateOf<TubeVideo?>(null) }
     var sources by remember { mutableStateOf<List<TubeSource>>(emptyList()) }
     var selectedSource by remember { mutableStateOf("") }
+    val tubeHazeState = LocalRykoHazeState.current
     var channelsExpanded by remember { mutableStateOf(true) }
     var playlistsExpanded by remember { mutableStateOf(true) }
     var sourceError by remember { mutableStateOf<String?>(null) }
@@ -353,7 +355,7 @@ fun NativeRykoTube() {
             TubePlayer(selected!!, rankRelatedVideos(selected!!, filtered, context), filtered.filter { it.short }) { selected = null }
         } else {
             LazyColumn(
-                modifier = Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.statusBars),
+                modifier = Modifier.fillMaxSize().then(if (tubeHazeState != null) Modifier.hazeSource(tubeHazeState) else Modifier),
                 contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 116.dp, bottom = 24.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
@@ -508,7 +510,7 @@ fun NativeRykoTube() {
                 .background(Color.Transparent)
         ) {
                     Row(
-                        Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 9.dp).rykoGlass(22.dp, Color(0x661B1B1F), 0.38f).padding(horizontal = 5.dp),
+                        Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 9.dp).rykoGlass(22.dp, Color(0x221B1B1F), 0.52f, 42.dp).padding(horizontal = 5.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
@@ -536,7 +538,7 @@ fun NativeRykoTube() {
                             )
                         )
                     }
-                    Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 5.dp).rykoGlass(18.dp, Color(0x5518181B), 0.22f).padding(horizontal = 5.dp, vertical = 2.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 5.dp).rykoGlass(18.dp, Color(0x2218181B), 0.42f, 36.dp).padding(horizontal = 5.dp, vertical = 2.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         listOf("All", "Videos", "Shorts").forEach { format ->
                             FilterChip(selected = selectedFormat == format, onClick = { selectedFormat = format }, label = { Text(format) })
                         }
