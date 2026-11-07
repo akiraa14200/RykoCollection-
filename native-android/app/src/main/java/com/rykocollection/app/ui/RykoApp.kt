@@ -143,7 +143,7 @@ fun RykoApp() {
             }
             if (visitedTabs.contains(MainTab.VIDEO)) {
                 Box(Modifier.fillMaxSize().hazeSource(hazeState).graphicsLayer { alpha = if (tab == MainTab.VIDEO && selectedEntry == null && extraPage == null) 1f else 0f }.zIndex(if (tab == MainTab.VIDEO && selectedEntry == null && extraPage == null) 1f else -1f).then(if (tab == MainTab.VIDEO && selectedEntry == null && extraPage == null) Modifier else Modifier.offset(x = 10000.dp))) {
-                    Column(Modifier.fillMaxSize()) { Spacer(Modifier.height(109.dp)); NativeRykoTube() }
+                    NativeRykoTube()
                 }
             }
             if (visitedTabs.contains(MainTab.LIBRARY)) {
@@ -165,39 +165,42 @@ fun RykoApp() {
                 null -> Unit
             }
 
-            Row(
-                    modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth()
-                        .statusBarsPadding().padding(horizontal = 12.dp, vertical = 7.dp)
-                        .rykoGlass(22.dp, Color(0xF01A1A1D), 0.42f)
-                        .zIndex(30f)
-                        .padding(horizontal = 8.dp, vertical = 3.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    if (selectedEntry != null) {
-                        IconButton(onClick = { selectedEntry = null }) {
-                            Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
+            if (tab != MainTab.VIDEO) {
+                Row(
+                        modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth()
+                            .statusBarsPadding().padding(horizontal = 12.dp, vertical = 7.dp)
+                            .rykoGlass(22.dp, Color(0xF01A1A1D), 0.42f)
+                            .zIndex(30f)
+                            .padding(horizontal = 8.dp, vertical = 3.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        if (selectedEntry != null) {
+                            IconButton(onClick = { selectedEntry = null }) {
+                                Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
+                            }
+                        }
+                        Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+                            Box(Modifier.size(29.dp).clip(RoundedCornerShape(9.dp)).background(Color(0xFFA99BFF)), contentAlignment = Alignment.Center) {
+                                Text("R", color = Color(0xFF101010), fontWeight = FontWeight.Black)
+                            }
+                            Spacer(Modifier.width(9.dp))
+                            Text("RYKOCOLLECTION", color = Color(0xFFF7F7FB), fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.7.sp)
+                        }
+                        IconButton(onClick = { selectedEntry = null; tab = MainTab.BROWSE; extraPage = null }) {
+                            Icon(Icons.Default.Search, contentDescription = "Search", tint = Color.White)
+                        }
+                        Box {
+                            IconButton(onClick = { menuOpen = true }) { Icon(Icons.Default.Menu, contentDescription = "Ryko menu", tint = Color.White) }
+                            DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                                DropdownMenuItem(text = { Text(if (mangaMode) "Switch to Anime" else "Switch to Manga") }, onClick = { mangaMode = !mangaMode; menuOpen = false; selectedEntry = null })
+                                DropdownMenuItem(text = { Text("Ryko Top Trending") }, onClick = { extraPage = ExtraPage.TRENDING; selectedEntry = null; menuOpen = false })
+                                DropdownMenuItem(text = { Text("Newsroom") }, onClick = { extraPage = ExtraPage.NEWS; selectedEntry = null; menuOpen = false })
+                                DropdownMenuItem(text = { Text("Settings") }, onClick = { extraPage = ExtraPage.SETTINGS; selectedEntry = null; menuOpen = false })
+                            }
                         }
                     }
-                    Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
-                        Box(Modifier.size(29.dp).clip(RoundedCornerShape(9.dp)).background(Color(0xFFA99BFF)), contentAlignment = Alignment.Center) {
-                            Text("R", color = Color(0xFF101010), fontWeight = FontWeight.Black)
-                        }
-                        Spacer(Modifier.width(9.dp))
-                        Text("RYKOCOLLECTION", color = Color(0xFFF7F7FB), fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.7.sp)
-                    }
-                    IconButton(onClick = { selectedEntry = null; tab = MainTab.BROWSE; extraPage = null }) {
-                        Icon(Icons.Default.Search, contentDescription = "Search", tint = Color.White)
-                    }
-                    Box {
-                        IconButton(onClick = { menuOpen = true }) { Icon(Icons.Default.Menu, contentDescription = "Ryko menu", tint = Color.White) }
-                        DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                            DropdownMenuItem(text = { Text(if (mangaMode) "Switch to Anime" else "Switch to Manga") }, onClick = { mangaMode = !mangaMode; menuOpen = false; selectedEntry = null })
-                            DropdownMenuItem(text = { Text("Ryko Top Trending") }, onClick = { extraPage = ExtraPage.TRENDING; selectedEntry = null; menuOpen = false })
-                            DropdownMenuItem(text = { Text("Newsroom") }, onClick = { extraPage = ExtraPage.NEWS; selectedEntry = null; menuOpen = false })
-                            DropdownMenuItem(text = { Text("Settings") }, onClick = { extraPage = ExtraPage.SETTINGS; selectedEntry = null; menuOpen = false })
-                        }
-                    }
-                }
+            }
+
 
             // Draw last so it floats above every page instead of being covered by page content.
             RykoBottomNavigation(
