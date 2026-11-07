@@ -501,8 +501,6 @@ fun NativeRykoTube() {
                                 }
                             }
                         }
-            }
-        }
         Column(
             Modifier.align(Alignment.TopCenter).fillMaxWidth()
                 .windowInsetsPadding(WindowInsets.statusBars)
