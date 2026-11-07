@@ -41,6 +41,7 @@ fun Modifier.rykoGlass(
     val safeHighlight = highlight.coerceIn(0.08f, 0.65f)
     val blurStyle = HazeStyle(
         backgroundColor = Color.Transparent,
+        tints = emptyList(),
         blurRadius = 26.dp,
         noiseFactor = 0.08f
     )
