@@ -37,7 +37,8 @@ fun Modifier.rykoGlass(
     highlight: Float = 0.28f
 ): Modifier {
     val hazeState = LocalRykoHazeState.current
-    val glassShape = RoundedCornerShape(cornerRadius)
+    // Keep every glass-backed card and control softly rounded; avoid sharp rectangular corners.
+    val glassShape = RoundedCornerShape(cornerRadius.coerceAtLeast(18.dp))
     val safeHighlight = highlight.coerceIn(0.08f, 0.65f)
     val blurStyle = HazeStyle(
         backgroundColor = Color.Transparent,
