@@ -13,8 +13,7 @@ function json(body: unknown, status = 200, headers: Record<string, string> = {})
   return Response.json(body, { status, headers: { ...corsHeaders, ...headers } });
 }
 function clientAddress(req: Request): string {
-  return (req.headers.get("cf-connecting-ip") || req.headers.get("x-real-ip")
-    || req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown").slice(0, 100);
+  return (req.headers.get("cf-connecting-ip") || req.headers.get("x-real-ip") || "unknown").slice(0, 100);
 }
 async function sha256(value: string): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
