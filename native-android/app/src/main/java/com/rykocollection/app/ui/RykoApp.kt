@@ -93,6 +93,7 @@ import com.rykocollection.app.data.AniListMedia
 import com.rykocollection.app.data.AniListDetail
 import com.rykocollection.app.data.AniListRepository
 import dev.chrisbanes.haze.hazeSource
+import dev.chrisbanes.haze.HazeStyle
 import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.rememberHazeState
 
@@ -192,7 +193,7 @@ fun RykoApp() {
                         }
                         Box {
                             IconButton(onClick = { menuOpen = true }) { Icon(Icons.Default.Menu, contentDescription = "Ryko menu", tint = Color.White) }
-                            DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                            DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }, modifier = Modifier.rykoGlass(22.dp, Color(0xDD17171B), 0.46f, 30.dp), shape = RoundedCornerShape(22.dp), containerColor = Color.Transparent, tonalElevation = 0.dp, shadowElevation = 0.dp) {
                                 DropdownMenuItem(text = { Text(if (mangaMode) "Switch to Anime" else "Switch to Manga") }, onClick = { mangaMode = !mangaMode; menuOpen = false; selectedEntry = null })
                                 DropdownMenuItem(text = { Text("Ryko Top Trending") }, onClick = { extraPage = ExtraPage.TRENDING; selectedEntry = null; menuOpen = false })
                                 DropdownMenuItem(text = { Text("Newsroom") }, onClick = { extraPage = ExtraPage.NEWS; selectedEntry = null; menuOpen = false })
@@ -617,7 +618,8 @@ private fun BrowsePage(mangaMode: Boolean, onEntry: (Int) -> Unit) {
         stickyHeader {
             Row(
                 modifier = Modifier.fillMaxWidth()
-                    .rykoGlass(24.dp, Color(0x33191A20), 0.42f, 34.dp)
+                    .rykoGlass(24.dp, Color(0x22191A20), 0.52f, 42.dp)
+                    .then(if (hazeState != null) Modifier.hazeEffect(state = hazeState, style = HazeStyle(backgroundColor = Color.Transparent, tints = emptyList(), blurRadius = 42.dp, noiseFactor = 0.10f)) else Modifier)
                     .padding(horizontal = 16.dp, vertical = 13.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
