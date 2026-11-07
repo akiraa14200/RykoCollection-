@@ -156,37 +156,37 @@ fun RykoApp() {
         },
         containerColor = Color.Black
     ) { inner ->
-        Box(Modifier.padding(inner).fillMaxSize().background(Color.Black).hazeSource(hazeState)) {
+        Box(Modifier.padding(inner).fillMaxSize().background(Color.Black)) {
 
 
             // Keep visited tabs composed while hidden so their data and scroll state survive tab changes.
             if (visitedTabs.contains(MainTab.HOME)) {
-                Box(Modifier.fillMaxSize().graphicsLayer { alpha = if (tab == MainTab.HOME && selectedEntry == null && extraPage == null) 1f else 0f }.zIndex(if (tab == MainTab.HOME && selectedEntry == null && extraPage == null) 1f else -1f).then(if (tab == MainTab.HOME && selectedEntry == null && extraPage == null) Modifier else Modifier.offset(x = 10000.dp))) {
+                Box(Modifier.fillMaxSize().hazeSource(hazeState).graphicsLayer { alpha = if (tab == MainTab.HOME && selectedEntry == null && extraPage == null) 1f else 0f }.zIndex(if (tab == MainTab.HOME && selectedEntry == null && extraPage == null) 1f else -1f).then(if (tab == MainTab.HOME && selectedEntry == null && extraPage == null) Modifier else Modifier.offset(x = 10000.dp))) {
                     NativeHome(mangaMode, onEntry = { selectedEntry = it })
                 }
             }
             if (visitedTabs.contains(MainTab.BROWSE)) {
-                Box(Modifier.fillMaxSize().graphicsLayer { alpha = if (tab == MainTab.BROWSE && selectedEntry == null && extraPage == null) 1f else 0f }.zIndex(if (tab == MainTab.BROWSE && selectedEntry == null && extraPage == null) 1f else -1f).then(if (tab == MainTab.BROWSE && selectedEntry == null && extraPage == null) Modifier else Modifier.offset(x = 10000.dp))) {
+                Box(Modifier.fillMaxSize().hazeSource(hazeState).graphicsLayer { alpha = if (tab == MainTab.BROWSE && selectedEntry == null && extraPage == null) 1f else 0f }.zIndex(if (tab == MainTab.BROWSE && selectedEntry == null && extraPage == null) 1f else -1f).then(if (tab == MainTab.BROWSE && selectedEntry == null && extraPage == null) Modifier else Modifier.offset(x = 10000.dp))) {
                     BrowsePage(mangaMode, onEntry = { selectedEntry = it })
                 }
             }
             if (visitedTabs.contains(MainTab.VIDEO)) {
-                Box(Modifier.fillMaxSize().graphicsLayer { alpha = if (tab == MainTab.VIDEO && selectedEntry == null && extraPage == null) 1f else 0f }.zIndex(if (tab == MainTab.VIDEO && selectedEntry == null && extraPage == null) 1f else -1f).then(if (tab == MainTab.VIDEO && selectedEntry == null && extraPage == null) Modifier else Modifier.offset(x = 10000.dp))) {
+                Box(Modifier.fillMaxSize().hazeSource(hazeState).graphicsLayer { alpha = if (tab == MainTab.VIDEO && selectedEntry == null && extraPage == null) 1f else 0f }.zIndex(if (tab == MainTab.VIDEO && selectedEntry == null && extraPage == null) 1f else -1f).then(if (tab == MainTab.VIDEO && selectedEntry == null && extraPage == null) Modifier else Modifier.offset(x = 10000.dp))) {
                     NativeRykoTube()
                 }
             }
             if (visitedTabs.contains(MainTab.LIBRARY)) {
-                Box(Modifier.fillMaxSize().graphicsLayer { alpha = if (tab == MainTab.LIBRARY && selectedEntry == null && extraPage == null) 1f else 0f }.zIndex(if (tab == MainTab.LIBRARY && selectedEntry == null && extraPage == null) 1f else -1f).then(if (tab == MainTab.LIBRARY && selectedEntry == null && extraPage == null) Modifier else Modifier.offset(x = 10000.dp))) {
+                Box(Modifier.fillMaxSize().hazeSource(hazeState).graphicsLayer { alpha = if (tab == MainTab.LIBRARY && selectedEntry == null && extraPage == null) 1f else 0f }.zIndex(if (tab == MainTab.LIBRARY && selectedEntry == null && extraPage == null) 1f else -1f).then(if (tab == MainTab.LIBRARY && selectedEntry == null && extraPage == null) Modifier else Modifier.offset(x = 10000.dp))) {
                     NativePlaceholder("My Library", "Watching, plan-to-watch, completed and saved entries.")
                 }
             }
             if (visitedTabs.contains(MainTab.ACCOUNT)) {
-                Box(Modifier.fillMaxSize().graphicsLayer { alpha = if (tab == MainTab.ACCOUNT && selectedEntry == null && extraPage == null) 1f else 0f }.zIndex(if (tab == MainTab.ACCOUNT && selectedEntry == null && extraPage == null) 1f else -1f).then(if (tab == MainTab.ACCOUNT && selectedEntry == null && extraPage == null) Modifier else Modifier.offset(x = 10000.dp))) {
+                Box(Modifier.fillMaxSize().hazeSource(hazeState).graphicsLayer { alpha = if (tab == MainTab.ACCOUNT && selectedEntry == null && extraPage == null) 1f else 0f }.zIndex(if (tab == MainTab.ACCOUNT && selectedEntry == null && extraPage == null) 1f else -1f).then(if (tab == MainTab.ACCOUNT && selectedEntry == null && extraPage == null) Modifier else Modifier.offset(x = 10000.dp))) {
                     NativePlaceholder("Account", "Sign in, profile, avatar, banner and account settings.")
                 }
             }
 
-            if (selectedEntry != null) EntryDetails(selectedEntry!!, mangaMode)
+            if (selectedEntry != null) Box(Modifier.fillMaxSize().hazeSource(hazeState)) { EntryDetails(selectedEntry!!, mangaMode) }
             else when (extraPage) {
                 ExtraPage.TRENDING -> NativePlaceholder("Ryko Top Trending", "Entry ranking will use real community likes once account services are configured.")
                 ExtraPage.NEWS -> NativeNewsroomPage()
@@ -236,7 +236,7 @@ private fun RykoBottomNavigation(
             .padding(horizontal = 10.dp, vertical = 6.dp)
             .navigationBarsPadding()
             // Match the character detail dialog's exact shared frosted-glass treatment.
-            .rykoGlass(22.dp, Color(0xF01A1A1D), 0.42f)
+            .rykoGlass(22.dp, Color(0x661A1A1D), 0.42f)
             .padding(horizontal = 7.dp, vertical = 7.dp),
         horizontalArrangement = Arrangement.SpaceAround,
         verticalAlignment = Alignment.CenterVertically
