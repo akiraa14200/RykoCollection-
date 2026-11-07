@@ -752,6 +752,12 @@ private fun NativeMediaCard(media: AniListMedia, onClick: () -> Unit) {
 
 @Composable
 private fun NativePlaceholder(title: String, subtitle: String) {
+    var profileName by remember { mutableStateOf("Ryko User") }
+    var libraryCategory by remember { mutableStateOf("Watching") }
+    var appearance by remember { mutableStateOf("Dark") }
+    var language by remember { mutableStateOf("English") }
+    var notifications by remember { mutableStateOf(true) }
+    var autoPlay by remember { mutableStateOf(false) }
     val icon = when (title) {
         "My Library" -> Icons.Default.BookmarkBorder
         "Account" -> Icons.Default.Person
@@ -776,8 +782,8 @@ private fun NativePlaceholder(title: String, subtitle: String) {
             Text(subtitle, color = Muted, fontSize = 13.sp, lineHeight = 19.sp)
         }
         Box(
-            Modifier.fillMaxWidth().weight(1f).clip(RoundedCornerShape(24.dp))
-                .background(Color(0xFF101014)).padding(22.dp),
+            Modifier.fillMaxWidth().wrapContentHeight().clip(RoundedCornerShape(24.dp))
+                .rykoGlass(24.dp, Color(0x3318181D), 0.38f, 28.dp).padding(22.dp),
             contentAlignment = Alignment.Center
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -798,6 +804,26 @@ private fun NativePlaceholder(title: String, subtitle: String) {
             }
         }
     }
+        when (title) {
+            "My Library" -> Column(Modifier.fillMaxWidth().rykoGlass(20.dp).padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { listOf("Watching", "Plan to watch", "Completed", "On hold").forEach { v -> FilterChip(selected = libraryCategory == v, onClick = { libraryCategory = v }, label = { Text(v, fontSize = 10.sp) }) } }
+                Text("Your saved titles will appear here. Open a title to add it to your library.", color = Muted, fontSize = 12.sp)
+            }
+            "Account" -> Column(Modifier.fillMaxWidth().rykoGlass(20.dp).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text("PROFILE NAME", color = Violet, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                BasicTextField(profileName, { profileName = it }, singleLine = true, textStyle = androidx.compose.ui.text.TextStyle(color = Color.White), modifier = Modifier.fillMaxWidth().padding(10.dp))
+                Text("Guest profile · Stored on this device. Google sign-in is not connected yet.", color = Muted, fontSize = 11.sp)
+            }
+            "Settings" -> Column(Modifier.fillMaxWidth().rykoGlass(20.dp).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("APPEARANCE", color = Violet, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                Row { listOf("Dark", "Light", "System").forEach { v -> FilterChip(selected = appearance == v, onClick = { appearance = v }, label = { Text(v) }) } }
+                Text("LANGUAGE", color = Violet, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                Row { listOf("English", "Hindi", "Japanese").forEach { v -> FilterChip(selected = language == v, onClick = { language = v }, label = { Text(v) }) } }
+                FilterChip(selected = notifications, onClick = { notifications = !notifications }, label = { Text(if (notifications) "Notifications: On" else "Notifications: Off") })
+                FilterChip(selected = autoPlay, onClick = { autoPlay = !autoPlay }, label = { Text(if (autoPlay) "Autoplay: On" else "Autoplay: Off") })
+                Text("These starter preferences are session-only.", color = Muted, fontSize = 10.sp)
+            }
+        }
 }
 
 private val Violet = Color(0xFFA99BFF)
