@@ -194,6 +194,55 @@ private suspend fun fetchTubeSources(): List<TubeSource> = withContext(Dispatche
     }
 }
 
+
+/**
+ * Entirely on-device related ranking. It preserves the feed's source order for the
+ * main page; this score is only used for the "Up next" list around a playing video.
+ * Metadata fallbacks keep recommendations useful when a video has no linked title.
+ */
+private fun rankRelatedVideos(
+    current: TubeVideo,
+    candidates: List<TubeVideo>,
+    context: android.content.Context
+): List<TubeVideo> {
+    val prefs = context.getSharedPreferences("ryko_tube_saved", android.content.Context.MODE_PRIVATE)
+    val saved = prefs.getStringSet("ids", emptySet()).orEmpty()
+    val likedIds = candidates.filter { prefs.getBoolean("like_" + it.id, false) }.mapTo(mutableSetOf()) { it.id }
+    val currentWords = current.titleName.lowercase(Locale.ROOT)
+        .split(Regex("[^a-z0-9]+")).filter { it.length > 2 }.toSet()
+    val seenCreators = mutableSetOf<String>()
+    return candidates.asSequence()
+        .filter { it.id != current.id && youtubeVideoId(it.url) != null }
+        .map { candidate ->
+            val candidateWords = candidate.titleName.lowercase(Locale.ROOT)
+                .split(Regex("[^a-z0-9]+")).filter { it.length > 2 }.toSet()
+            val sharedWords = currentWords.intersect(candidateWords).size
+            var score = 0
+            if (current.titleName.isNotBlank() && candidate.titleName.equals(current.titleName, true)) score += 1200
+            score += sharedWords * 90
+            if (current.titleFormat.isNotBlank() && candidate.titleFormat.equals(current.titleFormat, true)) score += 110
+            if (current.sourceId.isNotBlank() && candidate.sourceId == current.sourceId) score += 55
+            if (current.creator.isNotBlank() && candidate.creator.equals(current.creator, true)) score += 45
+            if (current.short == candidate.short) score += 15
+            if (candidate.id in saved || candidate.id in likedIds) score += 35
+            candidate to score
+        }
+        .sortedWith(compareByDescending<Pair<TubeVideo, Int>> { it.second }.thenBy { it.first.id })
+        .map { it.first }
+        .toList()
+        .let { ranked ->
+            // Light creator diversification without disturbing the strongest relevance matches.
+            val diversified = mutableListOf<TubeVideo>()
+            val deferred = mutableListOf<TubeVideo>()
+            ranked.forEach { video ->
+                val creatorKey = video.creator.lowercase(Locale.ROOT)
+                if (creatorKey.isBlank() || seenCreators.add(creatorKey)) diversified.add(video)
+                else deferred.add(video)
+            }
+            (diversified + deferred).take(24)
+        }
+}
+
 @Composable
 fun NativeRykoTube() {
     var videos by remember { mutableStateOf(TubeFeedCache.videos) }
@@ -405,7 +454,7 @@ fun NativeRykoTube() {
         }
 
         if (selected != null) {
-            TubePlayer(selected!!, filtered, filtered.filter { it.short }) { selected = null }
+            TubePlayer(selected!!, rankRelatedVideos(selected!!, filtered, context), filtered.filter { it.short }) { selected = null }
         } else {
             when {
                 loading && videos.isEmpty() -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
