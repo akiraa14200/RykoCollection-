@@ -46,6 +46,7 @@ fun NativeEntryPage(id:Int,mangaMode:Boolean) {
     var loadingMore by remember{ mutableStateOf(false) }
     var selected by remember{ mutableStateOf<AniListCharacterEdge?>(null) }
     var isSaved by remember(id, mangaMode) { mutableStateOf(LibraryStore.contains(context, if (mangaMode) "Manga" else "Anime", id)) }
+    var showLibraryStatus by remember(id, mangaMode) { mutableStateOf(false) }
 
     LaunchedEffect(id) {
         val api=AniListRepository()
@@ -71,19 +72,7 @@ fun NativeEntryPage(id:Int,mangaMode:Boolean) {
     }
     Column(Modifier.fillMaxSize().background(Color.Black)) {
         EntryHero(item, mangaMode, saved = isSaved, onSave = {
-            if (isSaved) LibraryStore.remove(context, if (mangaMode) "Manga" else "Anime", item.id)
-            else LibraryStore.save(context, LibraryEntry(
-                id = item.id,
-                type = if (mangaMode) "Manga" else "Anime",
-                title = item.title.display,
-                cover = item.coverImage?.imageUrl.orEmpty(),
-                format = item.format.orEmpty(),
-                status = if (mangaMode) "Plan to Read" else "Plan to Watch",
-                progress = 0,
-                total = (if (mangaMode) item.chapters else item.episodes) ?: 0,
-                savedAt = System.currentTimeMillis()
-            ))
-            isSaved = !isSaved
+            showLibraryStatus = true
         }) {
             val share=Intent(Intent.ACTION_SEND).apply {
                 type="text/plain"
@@ -145,6 +134,35 @@ fun NativeEntryPage(id:Int,mangaMode:Boolean) {
         }
     }
     selected?.let { CharacterDialog(it){selected=null} }
+    if (showLibraryStatus) {
+        val type = if (mangaMode) "Manga" else "Anime"
+        val current = LibraryStore.entries(context, type).firstOrNull { it.id == item.id }
+        val statuses = if (mangaMode) listOf("Plan to Read", "Reading", "Completed", "On Hold", "Dropped")
+            else listOf("Plan to Watch", "Watching", "Completed", "On Hold", "Dropped")
+        LibraryStatusDialog(
+            title = item.title.display,
+            subtitle = if (mangaMode) "Choose your reading status" else "Choose your watching status",
+            statuses = statuses,
+            selectedStatus = current?.status,
+            onSelect = { status ->
+                LibraryStore.save(context, LibraryEntry(
+                    id = item.id, type = type, title = item.title.display,
+                    cover = item.coverImage?.imageUrl.orEmpty(), format = item.format.orEmpty(),
+                    status = status, progress = current?.progress ?: 0,
+                    total = (if (mangaMode) item.chapters else item.episodes) ?: current?.total ?: 0,
+                    savedAt = current?.savedAt ?: System.currentTimeMillis()
+                ))
+                isSaved = true
+                showLibraryStatus = false
+            },
+            onRemove = if (current != null) ({
+                LibraryStore.remove(context, type, item.id)
+                isSaved = false
+                showLibraryStatus = false
+            }) else null,
+            onDismiss = { showLibraryStatus = false }
+        )
+    }
 }
 
 @Composable
