@@ -26,6 +26,9 @@ import androidx.compose.ui.window.Dialog
 import coil.compose.AsyncImage
 import com.rykocollection.app.data.*
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+import io.github.jan.supabase.postgrest.rpc
 
 private val EBg=Color(0xFF080808)
 private val ESurface=Color(0xB31B1B1F)
@@ -47,6 +50,10 @@ fun NativeEntryPage(id:Int,mangaMode:Boolean) {
     var selected by remember{ mutableStateOf<AniListCharacterEdge?>(null) }
     var isSaved by remember(id, mangaMode) { mutableStateOf(LibraryStore.contains(context, if (mangaMode) "Manga" else "Anime", id)) }
     var showLibraryStatus by remember(id, mangaMode) { mutableStateOf(false) }
+    var showOpinionDialog by remember(id) { mutableStateOf(false) }
+    var selectedOpinion by remember(id) { mutableIntStateOf(0) }
+    var opinionMessage by remember { mutableStateOf<String?>(null) }
+    var savingOpinion by remember { mutableStateOf(false) }
 
     LaunchedEffect(id) {
         val api=AniListRepository()
@@ -73,7 +80,7 @@ fun NativeEntryPage(id:Int,mangaMode:Boolean) {
     Column(Modifier.fillMaxSize().background(Color.Black)) {
         EntryHero(item, mangaMode, saved = isSaved, onSave = {
             showLibraryStatus = true
-        }) {
+        }, onOpinion = { showOpinionDialog = true }) {
             val share=Intent(Intent.ACTION_SEND).apply {
                 type="text/plain"
                 putExtra(Intent.EXTRA_TEXT,"https://anilist.co/${if(mangaMode) "manga" else "anime"}/${item.id}")
@@ -134,6 +141,60 @@ fun NativeEntryPage(id:Int,mangaMode:Boolean) {
         }
     }
     selected?.let { CharacterDialog(it){selected=null} }
+
+    if (showOpinionDialog) {
+        AlertDialog(
+            onDismissRequest = { if (!savingOpinion) showOpinionDialog = false },
+            containerColor = Color(0xFF191820),
+            title = { Text("What's your opinion?", color = Color.White, fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                    Text(item.title.display, color = EMuted, fontSize = 12.sp)
+                    listOf("Bad", "Normal", "Good", "Very Good", "Peak").forEachIndexed { index, label ->
+                        val value = index + 1
+                        Row(
+                            Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
+                                .background(if (selectedOpinion == value) Color(0xFF393044) else Color(0xFF25242B))
+                                .clickable { selectedOpinion = value }.padding(11.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(listOf("😞", "😐", "🙂", "🤩", "🔥")[index], fontSize = 19.sp)
+                            Text(label, color = Color.White, fontSize = 13.sp, modifier = Modifier.weight(1f).padding(start = 11.dp))
+                            if (selectedOpinion == value) Text("✓", color = EAccent, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                    opinionMessage?.let { Text(it, color = Color(0xFFFFA6AE), fontSize = 11.sp) }
+                }
+            },
+            confirmButton = {
+                TextButton(enabled = selectedOpinion in 1..5 && !savingOpinion, onClick = {
+                    scope.launch {
+                        savingOpinion = true
+                        opinionMessage = null
+                        try {
+                            SupabaseProvider.client.postgrest.rpc(
+                                "submit_manhwa_opinion",
+                                buildJsonObject {
+                                    put("p_media_id", item.id)
+                                    put("p_media_title", item.title.display)
+                                    put("p_cover_url", item.coverImage?.imageUrl.orEmpty())
+                                    put("p_opinion", selectedOpinion)
+                                }
+                            )
+                            showOpinionDialog = false
+                            selectedOpinion = 0
+                        } catch (t: Throwable) {
+                            opinionMessage = if (t.message.orEmpty().contains("Sign in", true) || t.message.orEmpty().contains("JWT", true) || t.message.orEmpty().contains("auth", true))
+                                "Sign in to Ryko to submit an opinion."
+                            else t.message ?: "Your opinion could not be saved."
+                        } finally { savingOpinion = false }
+                    }
+                }) { if (savingOpinion) CircularProgressIndicator(Modifier.size(16.dp), color = EAccent, strokeWidth = 2.dp) else Text("Submit opinion", color = EAccent) }
+            },
+            dismissButton = { TextButton(onClick = { showOpinionDialog = false }) { Text("Cancel", color = EMuted) } }
+        )
+    }
+
     if (showLibraryStatus) {
         val type = if (mangaMode) "Manga" else "Anime"
         val current = LibraryStore.entries(context, type).firstOrNull { it.id == item.id }
@@ -166,7 +227,7 @@ fun NativeEntryPage(id:Int,mangaMode:Boolean) {
 }
 
 @Composable
-private fun EntryHero(m:AniListDetail,manga:Boolean,saved:Boolean,onSave:()->Unit,onShare:()->Unit) {
+private fun EntryHero(m:AniListDetail,manga:Boolean,saved:Boolean,onSave:()->Unit,onOpinion:()->Unit,onShare:()->Unit) {
     Box(Modifier.fillMaxWidth().height(276.dp).background(ESurface)){
         AsyncImage(m.bannerImage ?: m.coverImage?.imageUrl,m.title.display,Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0x44000000),Color(0xFF08080C)))))
@@ -180,7 +241,8 @@ private fun EntryHero(m:AniListDetail,manga:Boolean,saved:Boolean,onSave:()->Uni
                 Text(listOfNotNull(m.averageScore?.let{"★ ${it/10.0}/10"},m.status?.replace('_',' '),m.popularity?.let{"Popularity $it"}).joinToString(" · "),color=Color.White,fontSize=9.sp,maxLines=2)
                 Text(m.genres.take(3).joinToString(" • "),color=Color(0xFFD6D6D6),fontSize=9.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
                 Row(verticalAlignment=Alignment.CenterVertically){
-                    IconButton(onClick=onSave,modifier=Modifier.size(34.dp)){Icon(if(saved) Icons.Default.Bookmark else Icons.Default.BookmarkBorder, if(saved) "Remove from Library" else "Add to Library",tint=if(saved) EAccent else Color.White)}
+                    IconButton(onClick=onSave,modifier=Modifier.size(34.dp)){Icon(if(saved) Icons.Default.Bookmark else Icons.Default.BookmarkBorder, if(saved) "In Library" else "Add to Library",tint=if(saved) EAccent else Color.White)}
+                    if (manga) IconButton(onClick=onOpinion,modifier=Modifier.size(34.dp)){Icon(Icons.Default.FavoriteBorder,"Share your opinion",tint=Color(0xFFFF7C9C))}
                     IconButton(onClick=onShare,modifier=Modifier.size(34.dp)){Icon(Icons.Default.Share,"Share",tint=Color.White)}
                     TextButton(onClick={
                         context.startActivity(Intent(Intent.ACTION_VIEW,Uri.parse("https://anilist.co/" + (if(manga) "manga" else "anime") + "/" + m.id)))
