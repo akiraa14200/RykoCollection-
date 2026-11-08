@@ -32,7 +32,7 @@ private val LibraryAccent = Color(0xFFA99BFF)
 private val LibraryMuted = Color(0xFFAAA8B5)
 
 @Composable
-fun NativeLibraryPage() {
+fun NativeLibraryPage(refreshToken: Int = 0) {
     val context = LocalContext.current
     var selectedType by remember { mutableIntStateOf(0) }
     var selectedStatus by remember { mutableStateOf("All") }
@@ -46,7 +46,7 @@ fun NativeLibraryPage() {
         "Manga" -> listOf("All", "Reading", "Plan to Read", "Completed", "On Hold", "Dropped")
         else -> listOf("All", "Videos", "Shorts")
     }
-    val allEntries = remember(refreshKey, selectedType) {
+    val allEntries = remember(refreshKey, selectedType, refreshToken) {
         if (mediaType == "Videos") emptyList() else LibraryStore.entries(context, mediaType)
     }
     val filtered = allEntries
@@ -124,7 +124,7 @@ fun NativeLibraryPage() {
         }
 
         when (mediaType) {
-            "Videos" -> NativeLibraryVideos()
+            "Videos" -> NativeLibraryVideos(refreshToken)
             else -> {
                 val counts = allEntries.groupingBy(LibraryEntry::status).eachCount()
                 Row(
