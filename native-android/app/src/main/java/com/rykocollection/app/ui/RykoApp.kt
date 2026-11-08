@@ -143,7 +143,7 @@ fun RykoApp() {
                 }
             }
             if (visitedTabs.contains(MainTab.BROWSE)) {
-                Box(Modifier.fillMaxSize().graphicsLayer { alpha = if (tab == MainTab.BROWSE && selectedEntry == null && extraPage == null) 1f else 0f }.zIndex(if (tab == MainTab.BROWSE && selectedEntry == null && extraPage == null) 1f else -1f).then(if (tab == MainTab.BROWSE && selectedEntry == null && extraPage == null) Modifier else Modifier.offset(x = 10000.dp))) {
+                Box(Modifier.fillMaxSize().hazeSource(browseHazeState).graphicsLayer { alpha = if (tab == MainTab.BROWSE && selectedEntry == null && extraPage == null) 1f else 0f }.zIndex(if (tab == MainTab.BROWSE && selectedEntry == null && extraPage == null) 1f else -1f).then(if (tab == MainTab.BROWSE && selectedEntry == null && extraPage == null) Modifier else Modifier.offset(x = 10000.dp))) {
                     CompositionLocalProvider(LocalRykoHazeState provides browseHazeState) {
                         Box(Modifier.fillMaxSize()) { BrowsePage(mangaMode, onEntry = { selectedEntry = it }) }
                     }
@@ -254,7 +254,7 @@ private fun RykoBottomNavigation(
             .padding(horizontal = 10.dp, vertical = 6.dp)
             .navigationBarsPadding()
             // Match the character detail dialog's exact shared frosted-glass treatment.
-            .rykoGlass(22.dp, Color(0xD91A1A1D), 0.48f, 64.dp)
+            .rykoGlass(22.dp, Color(0xF01A1A1D), 0.42f)
             .padding(horizontal = 7.dp, vertical = 7.dp),
         horizontalArrangement = Arrangement.SpaceAround,
         verticalAlignment = Alignment.CenterVertically
@@ -621,7 +621,6 @@ private fun BrowsePage(mangaMode: Boolean, onEntry: (Int) -> Unit) {
     Box(Modifier.fillMaxSize()) {
             LazyColumn(
                 Modifier.fillMaxSize().background(Color.Black)
-                    .hazeSource(LocalRykoHazeState.current!!)
                     .padding(horizontal = 16.dp),
                 // Reserve space for the overlay search surface; list content scrolls beneath it.
                 contentPadding = PaddingValues(top = 84.dp, bottom = 144.dp)
@@ -687,7 +686,7 @@ private fun BrowsePage(mangaMode: Boolean, onEntry: (Int) -> Unit) {
                 modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth()
                     .statusBarsPadding().padding(horizontal = 12.dp, vertical = 7.dp)
                     // Use the same glass and inner spacing as the page's bottom navigation.
-                    .rykoGlass(22.dp, Color(0xD91A1A1D), 0.48f, 64.dp)
+                    .rykoGlass(22.dp, Color(0xF01A1A1D), 0.42f)
                     .zIndex(30f)
                     .padding(horizontal = 7.dp, vertical = 7.dp),
                 verticalAlignment = Alignment.CenterVertically
