@@ -45,6 +45,7 @@ fun NativeEntryPage(id:Int,mangaMode:Boolean) {
     var hasMore by remember(id){ mutableStateOf(false) }
     var loadingMore by remember{ mutableStateOf(false) }
     var selected by remember{ mutableStateOf<AniListCharacterEdge?>(null) }
+    var isSaved by remember(id, mangaMode) { mutableStateOf(LibraryStore.contains(context, if (mangaMode) "Manga" else "Anime", id)) }
 
     LaunchedEffect(id) {
         val api=AniListRepository()
@@ -69,7 +70,21 @@ fun NativeEntryPage(id:Int,mangaMode:Boolean) {
         return
     }
     Column(Modifier.fillMaxSize().background(Color.Black)) {
-        EntryHero(item,mangaMode) {
+        EntryHero(item, mangaMode, saved = isSaved, onSave = {
+            if (isSaved) LibraryStore.remove(context, if (mangaMode) "Manga" else "Anime", item.id)
+            else LibraryStore.save(context, LibraryEntry(
+                id = item.id,
+                type = if (mangaMode) "Manga" else "Anime",
+                title = item.title.display,
+                cover = item.coverImage?.imageUrl.orEmpty(),
+                format = item.format.orEmpty(),
+                status = if (mangaMode) "Plan to Read" else "Plan to Watch",
+                progress = 0,
+                total = (if (mangaMode) item.chapters else item.episodes) ?: 0,
+                savedAt = System.currentTimeMillis()
+            ))
+            isSaved = !isSaved
+        }) {
             val share=Intent(Intent.ACTION_SEND).apply {
                 type="text/plain"
                 putExtra(Intent.EXTRA_TEXT,"https://anilist.co/${if(mangaMode) "manga" else "anime"}/${item.id}")
@@ -133,7 +148,7 @@ fun NativeEntryPage(id:Int,mangaMode:Boolean) {
 }
 
 @Composable
-private fun EntryHero(m:AniListDetail,manga:Boolean,onShare:()->Unit) {
+private fun EntryHero(m:AniListDetail,manga:Boolean,saved:Boolean,onSave:()->Unit,onShare:()->Unit) {
     Box(Modifier.fillMaxWidth().height(276.dp).background(ESurface)){
         AsyncImage(m.bannerImage ?: m.coverImage?.imageUrl,m.title.display,Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0x44000000),Color(0xFF08080C)))))
@@ -147,6 +162,7 @@ private fun EntryHero(m:AniListDetail,manga:Boolean,onShare:()->Unit) {
                 Text(listOfNotNull(m.averageScore?.let{"★ ${it/10.0}/10"},m.status?.replace('_',' '),m.popularity?.let{"Popularity $it"}).joinToString(" · "),color=Color.White,fontSize=9.sp,maxLines=2)
                 Text(m.genres.take(3).joinToString(" • "),color=Color(0xFFD6D6D6),fontSize=9.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
                 Row(verticalAlignment=Alignment.CenterVertically){
+                    IconButton(onClick=onSave,modifier=Modifier.size(34.dp)){Icon(if(saved) Icons.Default.Bookmark else Icons.Default.BookmarkBorder, if(saved) "Remove from Library" else "Add to Library",tint=if(saved) EAccent else Color.White)}
                     IconButton(onClick=onShare,modifier=Modifier.size(34.dp)){Icon(Icons.Default.Share,"Share",tint=Color.White)}
                     TextButton(onClick={
                         context.startActivity(Intent(Intent.ACTION_VIEW,Uri.parse("https://anilist.co/" + (if(manga) "manga" else "anime") + "/" + m.id)))
