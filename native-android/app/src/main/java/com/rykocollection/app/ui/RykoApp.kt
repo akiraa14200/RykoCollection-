@@ -143,7 +143,7 @@ fun RykoApp() {
                 }
             }
             if (visitedTabs.contains(MainTab.BROWSE)) {
-                Box(Modifier.fillMaxSize().hazeSource(browseHazeState).graphicsLayer { alpha = if (tab == MainTab.BROWSE && selectedEntry == null && extraPage == null) 1f else 0f }.zIndex(if (tab == MainTab.BROWSE && selectedEntry == null && extraPage == null) 1f else -1f).then(if (tab == MainTab.BROWSE && selectedEntry == null && extraPage == null) Modifier else Modifier.offset(x = 10000.dp))) {
+                Box(Modifier.fillMaxSize().graphicsLayer { alpha = if (tab == MainTab.BROWSE && selectedEntry == null && extraPage == null) 1f else 0f }.zIndex(if (tab == MainTab.BROWSE && selectedEntry == null && extraPage == null) 1f else -1f).then(if (tab == MainTab.BROWSE && selectedEntry == null && extraPage == null) Modifier else Modifier.offset(x = 10000.dp))) {
                     CompositionLocalProvider(LocalRykoHazeState provides browseHazeState) {
                         Box(Modifier.fillMaxSize()) { BrowsePage(mangaMode, onEntry = { selectedEntry = it }) }
                     }
@@ -620,7 +620,7 @@ private fun BrowsePage(mangaMode: Boolean, onEntry: (Int) -> Unit) {
     } }
     Box(Modifier.fillMaxSize()) {
             LazyColumn(
-                Modifier.fillMaxSize().background(Color.Black)
+                Modifier.fillMaxSize().hazeSource(LocalRykoHazeState.current ?: error("Browse HazeState is missing")).background(Color.Black)
                     .padding(horizontal = 16.dp),
                 // Reserve space for the overlay search surface; list content scrolls beneath it.
                 contentPadding = PaddingValues(top = 84.dp, bottom = 144.dp)
