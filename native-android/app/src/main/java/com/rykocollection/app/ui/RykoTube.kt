@@ -723,3 +723,82 @@ private fun TubePlayer(video: TubeVideo, recommendations: List<TubeVideo>, short
         CircularProgressIndicator(color = Color(0xFFA99BFF))
     }
 }
+
+
+@Composable
+fun NativeLibraryVideos() {
+    val context = LocalContext.current
+    val prefs = remember { context.getSharedPreferences("ryko_saved_videos", android.content.Context.MODE_PRIVATE) }
+    var savedIds by remember {
+        mutableStateOf(prefs.getStringSet("ids", emptySet()).orEmpty().toSet())
+    }
+    var videos by remember { mutableStateOf<List<TubeVideo>>(emptyList()) }
+    var loading by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+    var selected by remember { mutableStateOf<TubeVideo?>(null) }
+
+    LaunchedEffect(savedIds) {
+        if (savedIds.isEmpty()) {
+            videos = emptyList()
+            loading = false
+            return@LaunchedEffect
+        }
+        loading = true
+        error = null
+        try {
+            val found = linkedMapOf<String, TubeVideo>()
+            TubeFeedCache.videos.filter { it.id in savedIds }.forEach { found[it.id] = it }
+            var page = 1
+            while (found.size < savedIds.size && page <= 10) {
+                val batch = fetchTubePage(page)
+                if (batch.isEmpty()) break
+                batch.filter { it.id in savedIds }.forEach { found[it.id] = it }
+                if (batch.size < TUBE_PAGE_SIZE) break
+                page++
+            }
+            videos = found.values.toList()
+            if (videos.isEmpty() && savedIds.isNotEmpty()) {
+                error = "Saved videos could not be found in the current feed."
+            }
+        } catch (t: Throwable) {
+            error = t.message ?: "Saved videos could not be loaded."
+        } finally {
+            loading = false
+        }
+    }
+
+    selected?.let { video ->
+        TubePlayer(video, videos, videos.filter { it.short }, onClose = { selected = null })
+        return
+    }
+
+    if (loading && videos.isEmpty()) {
+        Box(Modifier.fillMaxWidth().padding(36.dp), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator(color = Color(0xFFA99BFF))
+        }
+    } else if (videos.isEmpty()) {
+        Column(
+            Modifier.fillMaxWidth().padding(horizontal = 22.dp, vertical = 42.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(9.dp)
+        ) {
+            Icon(Icons.Default.BookmarkBorder, null, tint = Color(0xFFA99BFF), modifier = Modifier.size(38.dp))
+            Text("No saved videos yet", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            Text(error ?: "Save videos or Shorts from RykoTube and they will appear here.", color = Color(0xFFAAA8B5), fontSize = 12.sp)
+        }
+    } else {
+        LazyColumn(
+            Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 12.dp, bottom = 150.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            item {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Text("Saved videos", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Text("${videos.size} saved", color = Color(0xFFAAA8B5), fontSize = 11.sp)
+                }
+            }
+            items(videos, key = { it.id }) { video -> TubeVideoCard(video) { selected = video } }
+        }
+    }
+}
