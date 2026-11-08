@@ -683,9 +683,11 @@ private fun BrowsePage(mangaMode: Boolean, onEntry: (Int) -> Unit) {
             // the scrolling catalogue beneath it, just like the Home header does.
             Row(
                 modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth()
-                    .statusBarsPadding().padding(horizontal = 16.dp, vertical = 8.dp)
-                    .rykoGlass(22.dp, Color(0xF01A1A1D), 0.42f, blurRadius = 36.dp)
-                    .padding(horizontal = 16.dp, vertical = 13.dp),
+                    .statusBarsPadding().padding(horizontal = 12.dp, vertical = 7.dp)
+                    // Match the Home header's exact glass parameters and spacing.
+                    .rykoGlass(22.dp, Color(0xF01A1A1D), 0.42f)
+                    .zIndex(30f)
+                    .padding(horizontal = 8.dp, vertical = 3.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(Icons.Default.Search, contentDescription = "Search anime", tint = Violet, modifier = Modifier.size(21.dp))
