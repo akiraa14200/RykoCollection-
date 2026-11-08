@@ -13,6 +13,8 @@ import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material3.*
@@ -40,6 +42,7 @@ fun NativeLibraryPage(refreshToken: Int = 0) {
     var selectedStatus by remember { mutableStateOf("All") }
     var search by remember { mutableStateOf("") }
     var newestFirst by remember { mutableStateOf(true) }
+    var reorderMode by remember { mutableStateOf(false) }
     var refreshKey by remember { mutableIntStateOf(0) }
     val types = listOf("Anime", "Manga", "Videos")
     val mediaType = types[selectedType]
@@ -51,10 +54,15 @@ fun NativeLibraryPage(refreshToken: Int = 0) {
     val allEntries = remember(refreshKey, selectedType, refreshToken) {
         if (mediaType == "Videos") emptyList() else LibraryStore.entries(context, mediaType)
     }
+    val hasCustomOrder = mediaType != "Videos" && LibraryStore.hasCustomOrder(context, mediaType)
     val filtered = allEntries
         .filter { selectedStatus == "All" || it.status == selectedStatus }
         .filter { search.isBlank() || it.title.contains(search, ignoreCase = true) || it.format.contains(search, ignoreCase = true) }
-        .let { if (newestFirst) it.sortedByDescending(LibraryEntry::savedAt) else it.sortedBy { entry -> entry.title.lowercase() } }
+        .let {
+            if (hasCustomOrder || reorderMode) it
+            else if (newestFirst) it.sortedByDescending(LibraryEntry::savedAt)
+            else it.sortedBy { entry -> entry.title.lowercase() }
+        }
 
     Column(Modifier.fillMaxSize().background(LibraryBg)) {
         Column(
@@ -66,8 +74,10 @@ fun NativeLibraryPage(refreshToken: Int = 0) {
                     Text("My Library", color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.ExtraBold)
                     Text("Your personal anime, manga & video collection", color = LibraryMuted, fontSize = 11.sp)
                 }
-                IconButton(onClick = { newestFirst = !newestFirst }) {
-                    Icon(Icons.Default.Sort, contentDescription = "Change sorting", tint = LibraryAccent)
+                TextButton(onClick = { reorderMode = !reorderMode }) {
+                    Icon(Icons.Default.Sort, contentDescription = null, tint = LibraryAccent)
+                    Spacer(Modifier.width(4.dp))
+                    Text(if (reorderMode) "Done" else "Reorder", color = LibraryAccent, fontSize = 12.sp)
                 }
             }
             OutlinedTextField(
@@ -138,6 +148,10 @@ fun NativeLibraryPage(refreshToken: Int = 0) {
                     Text("${allEntries.size} titles", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                     Text("${counts.values.sum()} saved", color = LibraryMuted, fontSize = 11.sp)
                 }
+                if (reorderMode && (search.isNotBlank() || selectedStatus != "All")) {
+                    Text("Clear search and select All to rearrange your full list.",
+                        color = LibraryMuted, fontSize = 11.sp, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+                }
                 if (filtered.isEmpty()) {
                     Column(
                         Modifier.fillMaxWidth().padding(horizontal = 28.dp, vertical = 45.dp),
@@ -173,6 +187,18 @@ fun NativeLibraryPage(refreshToken: Int = 0) {
                                     val maximum = entry.total.takeIf { it > 0 } ?: Int.MAX_VALUE
                                     LibraryStore.update(context, entry.copy(progress = (entry.progress + delta).coerceIn(0, maximum)))
                                     refreshKey++
+                                },
+                                reorderMode = reorderMode && search.isBlank() && selectedStatus == "All",
+                                onMove = { direction ->
+                                    val current = LibraryStore.entries(context, mediaType).toMutableList()
+                                    val index = current.indexOfFirst { it.id == entry.id }
+                                    val target = index + direction
+                                    if (index >= 0 && target in current.indices) {
+                                        val moved = current.removeAt(index)
+                                        current.add(target, moved)
+                                        LibraryStore.saveOrder(context, mediaType, current.map(LibraryEntry::id))
+                                        refreshKey++
+                                    }
                                 }
                             )
                         }
@@ -184,8 +210,14 @@ fun NativeLibraryPage(refreshToken: Int = 0) {
 }
 
 @Composable
-private fun LibraryEntryRow(entry: LibraryEntry, onStatus: (String) -> Unit, onRemove: () -> Unit, onProgress: (Int) -> Unit) {
-    var menuOpen by remember(entry.id) { mutableStateOf(false) }
+private fun LibraryEntryRow(
+    entry: LibraryEntry,
+    onStatus: (String) -> Unit,
+    onRemove: () -> Unit,
+    onProgress: (Int) -> Unit,
+    reorderMode: Boolean,
+    onMove: (Int) -> Unit
+) {
     var statusDialogOpen by remember(entry.id) { mutableStateOf(false) }
     val statuses = if (entry.type == "Manga") listOf("Plan to Read", "Reading", "Completed", "On Hold", "Dropped")
         else listOf("Plan to Watch", "Watching", "Completed", "On Hold", "Dropped")
@@ -219,12 +251,18 @@ private fun LibraryEntryRow(entry: LibraryEntry, onStatus: (String) -> Unit, onR
                 modifier = Modifier.fillMaxWidth().height(4.dp).clip(RoundedCornerShape(50)),
                 color = LibraryAccent, trackColor = Color(0xFF34343A))
         }
-        Box {
-            IconButton(onClick = { menuOpen = true }) { Icon(Icons.Default.Sort, "Entry options", tint = LibraryMuted) }
-            DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                DropdownMenuItem(text = { Text("Change status") }, onClick = { statusDialogOpen = true; menuOpen = false })
-                Divider()
-                DropdownMenuItem(text = { Text("Remove from Library", color = Color(0xFFFF8D8D)) }, onClick = { onRemove(); menuOpen = false })
+        if (reorderMode) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                IconButton(onClick = { onMove(-1) }, modifier = Modifier.size(30.dp)) {
+                    Icon(Icons.Default.ArrowUpward, "Move entry up", tint = LibraryAccent, modifier = Modifier.size(17.dp))
+                }
+                IconButton(onClick = { onMove(1) }, modifier = Modifier.size(30.dp)) {
+                    Icon(Icons.Default.ArrowDownward, "Move entry down", tint = LibraryAccent, modifier = Modifier.size(17.dp))
+                }
+            }
+        } else {
+            IconButton(onClick = { statusDialogOpen = true }) {
+                Icon(Icons.Default.Sort, "Change status and library options", tint = LibraryMuted)
             }
         }
     }
