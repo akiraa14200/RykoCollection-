@@ -171,7 +171,7 @@ fun RykoApp() {
 
             if (selectedEntry != null) Box(Modifier.fillMaxSize().hazeSource(hazeState)) { Column(Modifier.fillMaxSize()) { Spacer(Modifier.height(109.dp)); EntryDetails(selectedEntry!!, mangaMode) } }
             else when (extraPage) {
-                ExtraPage.TRENDING -> Box(Modifier.fillMaxSize().hazeSource(hazeState)) { Column(Modifier.fillMaxSize()) { Spacer(Modifier.height(109.dp)); NativePlaceholder("Ryko Top Trending", "Entry ranking will use real community likes once account services are configured.") } }
+                ExtraPage.TRENDING -> Box(Modifier.fillMaxSize().hazeSource(hazeState)) { Column(Modifier.fillMaxSize()) { Spacer(Modifier.height(109.dp)); NativeRankingPage() } }
                 ExtraPage.NEWS -> Box(Modifier.fillMaxSize().hazeSource(hazeState)) { Column(Modifier.fillMaxSize()) { Spacer(Modifier.height(109.dp)); NativeNewsroomPage() } }
                 ExtraPage.SETTINGS -> Box(Modifier.fillMaxSize().hazeSource(hazeState)) { Column(Modifier.fillMaxSize()) { Spacer(Modifier.height(109.dp)); NativePlaceholder("Settings", "Appearance, language, notifications and app preferences.") } }
                 null -> Unit
