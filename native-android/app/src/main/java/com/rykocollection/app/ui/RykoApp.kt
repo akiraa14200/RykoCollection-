@@ -582,8 +582,6 @@ private fun BrowsePage(mangaMode: Boolean, onEntry: (Int) -> Unit) {
     var genre by remember(mangaMode) { mutableStateOf("All") }
     var sort by remember(mangaMode) { mutableStateOf("Popular") }
     val history = remember(mangaMode) { readSearchHistory(context, historyKey) }
-    // Keep Browse's backdrop isolated so its floating search surface samples only this page.
-    val browseHazeState = rememberHazeState()
     val genres = listOf("All", "Action", "Adventure", "Comedy", "Drama", "Fantasy", "Romance", "Sci-Fi", "Slice of Life", "Sports", "Supernatural")
     LaunchedEffect(mangaMode) {
         loading = true
@@ -615,11 +613,9 @@ private fun BrowsePage(mangaMode: Boolean, onEntry: (Int) -> Unit) {
         "Title" -> list.sortedBy { it.title.display.lowercase() }
         else -> list.sortedByDescending { it.averageScore ?: 0 }
     } }
-    CompositionLocalProvider(LocalRykoHazeState provides browseHazeState) {
-        Box(Modifier.fillMaxSize()) {
+    Box(Modifier.fillMaxSize()) {
             LazyColumn(
                 Modifier.fillMaxSize().background(Color.Black)
-                    .then(Modifier.hazeSource(browseHazeState))
                     .padding(horizontal = 16.dp),
                 // Reserve space for the overlay search surface; list content scrolls beneath it.
                 contentPadding = PaddingValues(top = 84.dp, bottom = 144.dp)
@@ -685,7 +681,7 @@ private fun BrowsePage(mangaMode: Boolean, onEntry: (Int) -> Unit) {
                 modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth()
                     .statusBarsPadding().padding(horizontal = 12.dp, vertical = 7.dp)
                     // Use the same glass and inner spacing as the page's bottom navigation.
-                    .rykoGlass(22.dp, Color(0xF01A1A1D), 0.42f)
+                    .rykoGlass(22.dp, Color(0xF01A1A1D), 0.42f, 42.dp)
                     .zIndex(30f)
                     .padding(horizontal = 7.dp, vertical = 7.dp),
                 verticalAlignment = Alignment.CenterVertically
@@ -710,7 +706,6 @@ private fun BrowsePage(mangaMode: Boolean, onEntry: (Int) -> Unit) {
                 }
             }
         }
-    }
 }
 @Composable
 private fun EntryDetails(id: Int, mangaMode: Boolean) {
