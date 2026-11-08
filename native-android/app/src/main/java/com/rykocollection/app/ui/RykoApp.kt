@@ -254,7 +254,7 @@ private fun RykoBottomNavigation(
             .padding(horizontal = 10.dp, vertical = 6.dp)
             .navigationBarsPadding()
             // Match the character detail dialog's exact shared frosted-glass treatment.
-            .rykoGlass(22.dp, Color(0xF01A1A1D), 0.42f)
+            .rykoGlass(22.dp, Color(0xD91A1A1D), 0.48f, 64.dp)
             .padding(horizontal = 7.dp, vertical = 7.dp),
         horizontalArrangement = Arrangement.SpaceAround,
         verticalAlignment = Alignment.CenterVertically
@@ -687,7 +687,7 @@ private fun BrowsePage(mangaMode: Boolean, onEntry: (Int) -> Unit) {
                 modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth()
                     .statusBarsPadding().padding(horizontal = 12.dp, vertical = 7.dp)
                     // Use the same glass and inner spacing as the page's bottom navigation.
-                    .rykoGlass(22.dp, Color(0xF01A1A1D), 0.42f, 42.dp)
+                    .rykoGlass(22.dp, Color(0xD91A1A1D), 0.48f, 64.dp)
                     .zIndex(30f)
                     .padding(horizontal = 7.dp, vertical = 7.dp),
                 verticalAlignment = Alignment.CenterVertically
