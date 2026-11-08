@@ -722,8 +722,8 @@ private fun BrowsePage(mangaMode: Boolean, onEntry: (Int) -> Unit) {
         }
 }
 @Composable
-private fun EntryDetails(id: Int, mangaMode: Boolean) {
-    NativeEntryPage(id, mangaMode)
+private fun EntryDetails(id: Int, mangaMode: Boolean, onSignIn: () -> Unit = {}) {
+    NativeEntryPage(id, mangaMode, onSignIn)
 }
 
 @Composable
