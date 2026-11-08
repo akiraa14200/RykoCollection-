@@ -114,6 +114,7 @@ fun RykoApp() {
     var mangaMode by remember { mutableStateOf(false) }
     var selectedEntry by remember { mutableStateOf<Int?>(null) }
     var showExitDialog by remember { mutableStateOf(false) }
+    var libraryRefreshToken by remember { mutableIntStateOf(0) }
 
     BackHandler {
         when {
@@ -159,7 +160,7 @@ fun RykoApp() {
             }
             if (visitedTabs.contains(MainTab.LIBRARY)) {
                 Box(Modifier.fillMaxSize().hazeSource(hazeState).graphicsLayer { alpha = if (tab == MainTab.LIBRARY && selectedEntry == null && extraPage == null) 1f else 0f }.zIndex(if (tab == MainTab.LIBRARY && selectedEntry == null && extraPage == null) 1f else -1f).then(if (tab == MainTab.LIBRARY && selectedEntry == null && extraPage == null) Modifier else Modifier.offset(x = 10000.dp))) {
-                    Column(Modifier.fillMaxSize()) { Spacer(Modifier.height(109.dp)); NativeLibraryPage() }
+                    Column(Modifier.fillMaxSize()) { Spacer(Modifier.height(109.dp)); NativeLibraryPage(refreshToken = libraryRefreshToken) }
                 }
             }
             if (visitedTabs.contains(MainTab.ACCOUNT)) {
@@ -225,6 +226,7 @@ fun RykoApp() {
                     onSelect = { item ->
                         tab = item
                         if (!visitedTabs.contains(item)) visitedTabs.add(item)
+                        if (item == MainTab.LIBRARY) libraryRefreshToken++
                         extraPage = null
                         selectedEntry = null
                     },
