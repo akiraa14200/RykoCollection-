@@ -10,6 +10,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BookmarkBorder
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Sort
@@ -166,6 +168,11 @@ fun NativeLibraryPage(refreshToken: Int = 0) {
                                 onRemove = {
                                     LibraryStore.remove(context, entry.type, entry.id)
                                     refreshKey++
+                                },
+                                onProgress = { delta ->
+                                    val maximum = entry.total.takeIf { it > 0 } ?: Int.MAX_VALUE
+                                    LibraryStore.update(context, entry.copy(progress = (entry.progress + delta).coerceIn(0, maximum)))
+                                    refreshKey++
                                 }
                             )
                         }
@@ -177,7 +184,7 @@ fun NativeLibraryPage(refreshToken: Int = 0) {
 }
 
 @Composable
-private fun LibraryEntryRow(entry: LibraryEntry, onStatus: (String) -> Unit, onRemove: () -> Unit) {
+private fun LibraryEntryRow(entry: LibraryEntry, onStatus: (String) -> Unit, onRemove: () -> Unit, onProgress: (Int) -> Unit) {
     var menuOpen by remember(entry.id) { mutableStateOf(false) }
     val statuses = if (entry.type == "Manga") {
         listOf("Reading", "Plan to Read", "Completed", "On Hold", "Dropped")
@@ -199,8 +206,25 @@ private fun LibraryEntryRow(entry: LibraryEntry, onStatus: (String) -> Unit, onR
             Text(entry.title, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
             Text(listOf(entry.format, entry.type).filter(String::isNotBlank).joinToString(" · "), color = LibraryMuted, fontSize = 10.sp)
             Text(entry.status, color = LibraryAccent, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                Text(
+                    if (entry.type == "Manga") {
+                        if (entry.total > 0) "Ch. ${entry.progress}/${entry.total}" else "Ch. ${entry.progress}"
+                    } else {
+                        if (entry.total > 0) "Ep. ${entry.progress}/${entry.total}" else "Ep. ${entry.progress}"
+                    },
+                    color = LibraryMuted,
+                    fontSize = 10.sp,
+                    modifier = Modifier.weight(1f)
+                )
+                IconButton(onClick = { onProgress(-1) }, modifier = Modifier.size(27.dp), enabled = entry.progress > 0) {
+                    Icon(Icons.Default.Remove, "Decrease progress", tint = LibraryMuted, modifier = Modifier.size(15.dp))
+                }
+                IconButton(onClick = { onProgress(1) }, modifier = Modifier.size(27.dp), enabled = entry.total <= 0 || entry.progress < entry.total) {
+                    Icon(Icons.Default.Add, "Increase progress", tint = LibraryAccent, modifier = Modifier.size(15.dp))
+                }
+            }
             if (entry.total > 0) {
-                Text(if (entry.type == "Manga") "Chapter progress: ${entry.progress}/${entry.total}" else "Episode progress: ${entry.progress}/${entry.total}", color = LibraryMuted, fontSize = 10.sp)
                 LinearProgressIndicator(
                     progress = { (entry.progress.toFloat() / entry.total).coerceIn(0f, 1f) },
                     modifier = Modifier.fillMaxWidth().height(4.dp).clip(RoundedCornerShape(50)),
