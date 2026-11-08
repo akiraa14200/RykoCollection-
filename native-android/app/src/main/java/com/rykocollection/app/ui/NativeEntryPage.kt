@@ -28,7 +28,7 @@ import com.rykocollection.app.data.*
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
-import io.github.jan.supabase.postgrest.rpc
+import io.github.jan.supabase.postgrest.postgrest
 
 private val EBg=Color(0xFF080808)
 private val ESurface=Color(0xB31B1B1F)
