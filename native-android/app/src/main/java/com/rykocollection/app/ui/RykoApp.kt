@@ -142,7 +142,7 @@ fun RykoApp() {
                 }
             }
             if (visitedTabs.contains(MainTab.BROWSE)) {
-                Box(Modifier.fillMaxSize().hazeSource(hazeState).graphicsLayer { alpha = if (tab == MainTab.BROWSE && selectedEntry == null && extraPage == null) 1f else 0f }.zIndex(if (tab == MainTab.BROWSE && selectedEntry == null && extraPage == null) 1f else -1f).then(if (tab == MainTab.BROWSE && selectedEntry == null && extraPage == null) Modifier else Modifier.offset(x = 10000.dp))) {
+                Box(Modifier.fillMaxSize().graphicsLayer { alpha = if (tab == MainTab.BROWSE && selectedEntry == null && extraPage == null) 1f else 0f }.zIndex(if (tab == MainTab.BROWSE && selectedEntry == null && extraPage == null) 1f else -1f).then(if (tab == MainTab.BROWSE && selectedEntry == null && extraPage == null) Modifier else Modifier.offset(x = 10000.dp))) {
                     Box(Modifier.fillMaxSize()) { BrowsePage(mangaMode, onEntry = { selectedEntry = it }) }
                 }
             }
@@ -582,7 +582,8 @@ private fun BrowsePage(mangaMode: Boolean, onEntry: (Int) -> Unit) {
     var genre by remember(mangaMode) { mutableStateOf("All") }
     var sort by remember(mangaMode) { mutableStateOf("Popular") }
     val history = remember(mangaMode) { readSearchHistory(context, historyKey) }
-    val hazeState = LocalRykoHazeState.current
+    // Keep Browse's backdrop isolated so its floating search surface samples only this page.
+    val browseHazeState = rememberHazeState()
     val genres = listOf("All", "Action", "Adventure", "Comedy", "Drama", "Fantasy", "Romance", "Sci-Fi", "Slice of Life", "Sports", "Supernatural")
     LaunchedEffect(mangaMode) {
         loading = true
@@ -614,39 +615,16 @@ private fun BrowsePage(mangaMode: Boolean, onEntry: (Int) -> Unit) {
         "Title" -> list.sortedBy { it.title.display.lowercase() }
         else -> list.sortedByDescending { it.averageScore ?: 0 }
     } }
-    LazyColumn(
-        Modifier.fillMaxSize().background(Color.Black).statusBarsPadding().padding(horizontal = 16.dp),
-        contentPadding = PaddingValues(top = 8.dp, bottom = 144.dp)
-    ) {
-        item { Text(if (mangaMode) "Explore Manga" else "Explore Anime", color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(bottom = 12.dp)) }
-        stickyHeader {
-            Row(
-                modifier = Modifier.fillMaxWidth()
-                    // Match the exact live frosted-glass treatment used by the top Ryko header.
-                    .rykoGlass(22.dp, Color(0xF01A1A1D), 0.42f)
-                    .padding(horizontal = 16.dp, vertical = 13.dp),
-                verticalAlignment = Alignment.CenterVertically
+    CompositionLocalProvider(LocalRykoHazeState provides browseHazeState) {
+        Box(Modifier.fillMaxSize()) {
+            LazyColumn(
+                Modifier.fillMaxSize().background(Color.Black)
+                    .then(Modifier.hazeSource(browseHazeState))
+                    .padding(horizontal = 16.dp),
+                // Reserve space for the overlay search surface; list content scrolls beneath it.
+                contentPadding = PaddingValues(top = 84.dp, bottom = 144.dp)
             ) {
-                Icon(Icons.Default.Search, contentDescription = "Search anime", tint = Violet, modifier = Modifier.size(21.dp))
-                Spacer(Modifier.width(12.dp))
-                Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
-                    if (search.isEmpty()) Text("Search anime, manga, titles...", color = Muted, fontSize = 14.sp)
-                    BasicTextField(
-                        value = search,
-                        onValueChange = { search = it },
-                        singleLine = true,
-                        textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 14.sp),
-                        cursorBrush = androidx.compose.ui.graphics.SolidColor(Violet),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-                if (search.isNotBlank()) {
-                    IconButton(onClick = { search = "" }, modifier = Modifier.size(28.dp)) {
-                        Text("×", color = Color.White, fontSize = 21.sp)
-                    }
-                }
-            }
-        }
+                item { Text(if (mangaMode) "Explore Manga" else "Explore Anime", color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(bottom = 12.dp)) }
         if (search.isBlank() && history.isNotEmpty()) item {
             Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                 history.take(3).forEach { term -> FilterChip(selected = false, onClick = { search = term }, label = { Text(term, maxLines = 1) }) }
@@ -699,9 +677,39 @@ private fun BrowsePage(mangaMode: Boolean, onEntry: (Int) -> Unit) {
                 }
             }
         }
+            }
+
+            // This is a sibling overlay, not a child of hazeSource: Haze can now sample
+            // the scrolling catalogue beneath it, just like the Home header does.
+            Row(
+                modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth()
+                    .statusBarsPadding().padding(horizontal = 16.dp, vertical = 8.dp)
+                    .rykoGlass(22.dp, Color(0xF01A1A1D), 0.42f, blurRadius = 36.dp)
+                    .padding(horizontal = 16.dp, vertical = 13.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(Icons.Default.Search, contentDescription = "Search anime", tint = Violet, modifier = Modifier.size(21.dp))
+                Spacer(Modifier.width(12.dp))
+                Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
+                    if (search.isEmpty()) Text("Search anime, manga, titles...", color = Muted, fontSize = 14.sp)
+                    BasicTextField(
+                        value = search,
+                        onValueChange = { search = it },
+                        singleLine = true,
+                        textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 14.sp),
+                        cursorBrush = androidx.compose.ui.graphics.SolidColor(Violet),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+                if (search.isNotBlank()) {
+                    IconButton(onClick = { search = "" }, modifier = Modifier.size(28.dp)) {
+                        Text("×", color = Color.White, fontSize = 21.sp)
+                    }
+                }
+            }
+        }
     }
 }
-
 @Composable
 private fun EntryDetails(id: Int, mangaMode: Boolean) {
     NativeEntryPage(id, mangaMode)
