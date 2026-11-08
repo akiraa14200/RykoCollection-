@@ -24,7 +24,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import coil.compose.AsyncImage
-import com.rykocollection.app.BuildConfig\nimport com.rykocollection.app.data.*\nimport io.github.jan.supabase.auth.auth
+import com.rykocollection.app.BuildConfig
+import com.rykocollection.app.data.*
+import io.github.jan.supabase.auth.auth
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -50,7 +52,8 @@ fun NativeEntryPage(id:Int,mangaMode:Boolean,onSignIn:()->Unit = {}) {
     var selected by remember{ mutableStateOf<AniListCharacterEdge?>(null) }
     var isSaved by remember(id, mangaMode) { mutableStateOf(LibraryStore.contains(context, if (mangaMode) "Manga" else "Anime", id)) }
     var showLibraryStatus by remember(id, mangaMode) { mutableStateOf(false) }
-    var showOpinionDialog by remember(id) { mutableStateOf(false) }\n    var showSignInPrompt by remember(id) { mutableStateOf(false) }
+    var showOpinionDialog by remember(id) { mutableStateOf(false) }
+    var showSignInPrompt by remember(id) { mutableStateOf(false) }
     var selectedOpinion by remember(id) { mutableIntStateOf(0) }
     var opinionMessage by remember { mutableStateOf<String?>(null) }
     var savingOpinion by remember { mutableStateOf(false) }
@@ -80,7 +83,10 @@ fun NativeEntryPage(id:Int,mangaMode:Boolean,onSignIn:()->Unit = {}) {
     Column(Modifier.fillMaxSize().background(Color.Black)) {
         EntryHero(item, mangaMode, saved = isSaved, onSave = {
             showLibraryStatus = true
-        }, onOpinion = {\n            val signedIn = BuildConfig.SUPABASE_PUBLISHABLE_KEY.isNotBlank() && runCatching { SupabaseProvider.client.auth.currentUserOrNull() != null }.getOrDefault(false)\n            if (signedIn) showOpinionDialog = true else showSignInPrompt = true\n        }) {
+        }, onOpinion = {
+            val signedIn = BuildConfig.SUPABASE_PUBLISHABLE_KEY.isNotBlank() && runCatching { SupabaseProvider.client.auth.currentUserOrNull() != null }.getOrDefault(false)
+            if (signedIn) showOpinionDialog = true else showSignInPrompt = true
+        }) {
             val share=Intent(Intent.ACTION_SEND).apply {
                 type="text/plain"
                 putExtra(Intent.EXTRA_TEXT,"https://anilist.co/${if(mangaMode) "manga" else "anime"}/${item.id}")
