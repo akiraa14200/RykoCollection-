@@ -515,7 +515,7 @@ fun NativeRykoTube() {
                         }
                         OutlinedTextField(
                             value = search, onValueChange = { search = it },
-                            modifier = Modifier.weight(1f).focusRequester(searchFocus).rykoGlass(18.dp, Color(0x3318181B), 0.30f),
+                            modifier = Modifier.weight(1f).focusRequester(searchFocus),
                             singleLine = true,
                             placeholder = { Text("Search videos, creators or titles", maxLines = 1, fontSize = 12.sp) },
                             leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search videos") },
