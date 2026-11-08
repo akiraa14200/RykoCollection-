@@ -126,6 +126,7 @@ fun RykoApp() {
 
     val hazeState = rememberHazeState()
     val browseHazeState = rememberHazeState()
+    val videoHazeState = rememberHazeState()
     CompositionLocalProvider(LocalRykoHazeState provides hazeState) {
     Scaffold(
         modifier = Modifier,
@@ -151,7 +152,9 @@ fun RykoApp() {
             }
             if (visitedTabs.contains(MainTab.VIDEO)) {
                 Box(Modifier.fillMaxSize().graphicsLayer { alpha = if (tab == MainTab.VIDEO && selectedEntry == null && extraPage == null) 1f else 0f }.zIndex(if (tab == MainTab.VIDEO && selectedEntry == null && extraPage == null) 1f else -1f).then(if (tab == MainTab.VIDEO && selectedEntry == null && extraPage == null) Modifier else Modifier.offset(x = 10000.dp))) {
-                    NativeRykoTube()
+                    CompositionLocalProvider(LocalRykoHazeState provides videoHazeState) {
+                        NativeRykoTube()
+                    }
                 }
             }
             if (visitedTabs.contains(MainTab.LIBRARY)) {
@@ -211,7 +214,11 @@ fun RykoApp() {
 
 
             // Draw last so it floats above every page instead of being covered by page content.
-            CompositionLocalProvider(LocalRykoHazeState provides if (tab == MainTab.BROWSE) browseHazeState else hazeState) {
+            CompositionLocalProvider(LocalRykoHazeState provides when (tab) {
+                    MainTab.BROWSE -> browseHazeState
+                    MainTab.VIDEO -> videoHazeState
+                    else -> hazeState
+                }) {
                 RykoBottomNavigation(
                     selectedTab = tab,
                     visible = selectedEntry == null && extraPage == null,
