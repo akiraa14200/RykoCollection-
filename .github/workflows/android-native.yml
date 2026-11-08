@@ -20,13 +20,24 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
-      - uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '8.13'
+      - name: Install Gradle 8.13
+        shell: bash
+        run: |
+          set -euo pipefail
+          GRADLE_VERSION=8.13
+          INSTALL_DIR="$RUNNER_TEMP/gradle"
+          ZIP="$RUNNER_TEMP/gradle-${GRADLE_VERSION}-bin.zip"
+          mkdir -p "$INSTALL_DIR"
+          curl --fail --location --retry 6 --retry-all-errors --retry-delay 10 \
+            "https://downloads.gradle.org/distributions/gradle-${GRADLE_VERSION}-bin.zip" \
+            --output "$ZIP"
+          unzip -q "$ZIP" -d "$INSTALL_DIR"
+          echo "$INSTALL_DIR/gradle-${GRADLE_VERSION}/bin" >> "$GITHUB_PATH"
+          "$INSTALL_DIR/gradle-${GRADLE_VERSION}/bin/gradle" --version
       - name: Assemble native debug APK
         shell: bash
         run: |
-          # Retry transient repository/CDN gateway failures, but fail immediately on code errors.
+          # Retry transient dependency repository gateway failures, but fail immediately on code errors.
           for attempt in 1 2 3; do
             echo "Android build attempt ${attempt}/3"
             set +e
