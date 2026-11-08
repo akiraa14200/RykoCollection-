@@ -124,6 +124,8 @@ private fun thumbnailFor(url: String, titleCover: String): String {
     return if (id != null) "https://i.ytimg.com/vi/$id/hqdefault.jpg" else titleCover
 }
 
+private val tubeHttpClient by lazy(LazyThreadSafetyMode.SYNCHRONIZED) { HttpClient(Android) }
+
 private suspend fun fetchTubePage(page: Int): List<TubeVideo> = withContext(Dispatchers.IO) {
     val baseUrl = BuildConfig.SUPABASE_URL.trimEnd('/')
     val key = BuildConfig.SUPABASE_PUBLISHABLE_KEY.ifBlank { TUBE_PUBLIC_KEY_FALLBACK }
@@ -134,9 +136,7 @@ private suspend fun fetchTubePage(page: Int): List<TubeVideo> = withContext(Disp
     // related_videos does not contain title_name, title_format, or title_cover.
     val select = "id,title_id,legacy_title_id,video_url,platform,video_title,creator_name,creator_avatar_url,action_type,action_url,sort_order,created_at,source_id,titles!related_videos_title_id_fkey(name,media_type,cover_url)"
     val url = "$baseUrl/rest/v1/related_videos?select=$select&order=sort_order.asc,created_at.desc&offset=$from&limit=$TUBE_PAGE_SIZE"
-    val client = HttpClient(Android)
-    try {
-        val response = client.get(url) {
+    val response = tubeHttpClient.get(url) {
             header("apikey", key)
             header("Authorization", "Bearer $key")
             header("Accept", "application/json")
@@ -168,17 +168,12 @@ private suspend fun fetchTubePage(page: Int): List<TubeVideo> = withContext(Disp
                 short = isTubeShort(videoUrl, platform)
             )
         }.distinctBy { it.id }
-    } finally {
-        client.close()
-    }
 }
 
 private suspend fun fetchTubeSources(): List<TubeSource> = withContext(Dispatchers.IO) {
     val baseUrl = BuildConfig.SUPABASE_URL.trimEnd('/')
     val key = BuildConfig.SUPABASE_PUBLISHABLE_KEY.ifBlank { TUBE_PUBLIC_KEY_FALLBACK }
-    val client = HttpClient(Android)
-    try {
-        val response = client.get("$baseUrl/rest/v1/video_discovery_sources?select=id,source_type,label&enabled=eq.true&order=label.asc") {
+    val response = tubeHttpClient.get("$baseUrl/rest/v1/video_discovery_sources?select=id,source_type,label&enabled=eq.true&order=label.asc") {
             header("apikey", key)
             header("Authorization", "Bearer $key")
             header("Accept", "application/json")
@@ -191,9 +186,6 @@ private suspend fun fetchTubeSources(): List<TubeSource> = withContext(Dispatche
             val row = item.jsonObject
             TubeSource(row.string("id"), row.string("source_type"), row.string("label"))
         }.filter { it.id.isNotBlank() && it.label.isNotBlank() }
-    } finally {
-        client.close()
-    }
 }
 
 
