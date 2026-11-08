@@ -684,10 +684,10 @@ private fun BrowsePage(mangaMode: Boolean, onEntry: (Int) -> Unit) {
             Row(
                 modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth()
                     .statusBarsPadding().padding(horizontal = 12.dp, vertical = 7.dp)
-                    // Match the Home header's exact glass parameters and spacing.
+                    // Use the same glass and inner spacing as the page's bottom navigation.
                     .rykoGlass(22.dp, Color(0xF01A1A1D), 0.42f)
                     .zIndex(30f)
-                    .padding(horizontal = 8.dp, vertical = 3.dp),
+                    .padding(horizontal = 7.dp, vertical = 7.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(Icons.Default.Search, contentDescription = "Search anime", tint = Violet, modifier = Modifier.size(21.dp))
