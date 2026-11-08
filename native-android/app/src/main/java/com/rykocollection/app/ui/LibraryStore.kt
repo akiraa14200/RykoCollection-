@@ -19,6 +19,8 @@ data class LibraryEntry(
 object LibraryStore {
     private const val PREFS = "ryko_library_v1"
     private const val KEY_ENTRIES = "entries"
+    private const val KEY_ANIME_ORDER = "anime_order"
+    private const val KEY_MANGA_ORDER = "manga_order"
 
     @Synchronized
     fun entries(context: Context, type: String? = null): List<LibraryEntry> {
@@ -43,7 +45,45 @@ object LibraryStore {
             }.getOrNull() ?: continue
             if (type == null || entry.type == type) result.add(entry)
         }
+        val orderKey = when (type) {
+            "Anime" -> KEY_ANIME_ORDER
+            "Manga" -> KEY_MANGA_ORDER
+            else -> null
+        }
+        if (orderKey != null) {
+            val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            val rawOrder = prefs.getString(orderKey, null)
+            if (!rawOrder.isNullOrBlank()) {
+                val orderedIds = runCatching { JSONArray(rawOrder) }.getOrElse { JSONArray() }
+                val positions = (0 until orderedIds.length()).associate { index -> orderedIds.optInt(index) to index }
+                return result.sortedWith(compareBy<LibraryEntry> { positions[it.id] ?: Int.MAX_VALUE }
+                    .thenByDescending { it.savedAt })
+            }
+        }
         return result.sortedByDescending { it.savedAt }
+    }
+
+    @Synchronized
+    fun saveOrder(context: Context, type: String, orderedIds: List<Int>) {
+        val key = when (type) {
+            "Anime" -> KEY_ANIME_ORDER
+            "Manga" -> KEY_MANGA_ORDER
+            else -> return
+        }
+        val array = JSONArray()
+        orderedIds.distinct().forEach { array.put(it) }
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit().putString(key, array.toString()).apply()
+    }
+
+    fun hasCustomOrder(context: Context, type: String): Boolean {
+        val key = when (type) {
+            "Anime" -> KEY_ANIME_ORDER
+            "Manga" -> KEY_MANGA_ORDER
+            else -> return false
+        }
+        return !context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getString(key, null).isNullOrBlank()
     }
 
     fun contains(context: Context, type: String, id: Int): Boolean =
