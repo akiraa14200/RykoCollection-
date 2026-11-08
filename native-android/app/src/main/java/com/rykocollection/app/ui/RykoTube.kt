@@ -347,7 +347,7 @@ fun NativeRykoTube() {
             TubePlayer(selected!!, rankRelatedVideos(selected!!, filtered, context), filtered.filter { it.short }) { selected = null }
         } else {
             LazyColumn(
-                modifier = Modifier.fillMaxSize().then(if (tubeHazeState != null) Modifier.hazeSource(tubeHazeState) else Modifier),
+                modifier = Modifier.fillMaxSize().hazeSource(tubeHazeState ?: error("RykoTube HazeState is missing")).background(Color.Black),
                 contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 140.dp, bottom = 144.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
