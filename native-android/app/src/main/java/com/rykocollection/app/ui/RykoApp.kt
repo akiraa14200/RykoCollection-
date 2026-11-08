@@ -114,7 +114,7 @@ fun RykoApp() {
     var mangaMode by remember { mutableStateOf(false) }
     var selectedEntry by remember { mutableStateOf<Int?>(null) }
     var showExitDialog by remember { mutableStateOf(false) }
-    var libraryRefreshToken by remember { mutableIntStateOf(0) }
+    var libraryRefreshToken by remember { mutableStateOf(0) }
 
     BackHandler {
         when {
