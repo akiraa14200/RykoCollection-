@@ -114,7 +114,6 @@ fun NativeLibraryPage(refreshToken: Int = 0) {
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = Color(0xFF34313F),
                                 selectedLabelColor = Color.White,
-                                labelColor = LibraryMuted
                             )
                         )
                     }
