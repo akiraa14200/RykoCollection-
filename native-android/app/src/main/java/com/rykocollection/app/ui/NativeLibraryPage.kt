@@ -186,37 +186,27 @@ fun NativeLibraryPage(refreshToken: Int = 0) {
 @Composable
 private fun LibraryEntryRow(entry: LibraryEntry, onStatus: (String) -> Unit, onRemove: () -> Unit, onProgress: (Int) -> Unit) {
     var menuOpen by remember(entry.id) { mutableStateOf(false) }
-    val statuses = if (entry.type == "Manga") {
-        listOf("Reading", "Plan to Read", "Completed", "On Hold", "Dropped")
-    } else {
-        listOf("Watching", "Plan to Watch", "Completed", "On Hold", "Dropped")
-    }
+    var statusDialogOpen by remember(entry.id) { mutableStateOf(false) }
+    val statuses = if (entry.type == "Manga") listOf("Plan to Read", "Reading", "Completed", "On Hold", "Dropped")
+        else listOf("Plan to Watch", "Watching", "Completed", "On Hold", "Dropped")
     Row(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(17.dp)).background(Color(0xFF151519)).padding(9.dp),
-        horizontalArrangement = Arrangement.spacedBy(11.dp),
-        verticalAlignment = Alignment.CenterVertically
+        Modifier.fillMaxWidth().rykoGlass(18.dp, Color(0xD91B1B1F), 0.32f).padding(9.dp),
+        horizontalArrangement = Arrangement.spacedBy(11.dp), verticalAlignment = Alignment.CenterVertically
     ) {
-        AsyncImage(
-            model = entry.cover.takeIf(String::isNotBlank),
-            contentDescription = entry.title,
-            modifier = Modifier.width(76.dp).height(105.dp).clip(RoundedCornerShape(11.dp)).background(Color(0xFF29292F)),
-            contentScale = ContentScale.Crop
-        )
+        AsyncImage(entry.cover.takeIf(String::isNotBlank), entry.title,
+            Modifier.width(76.dp).height(105.dp).clip(RoundedCornerShape(11.dp)).background(Color(0xFF29292F)),
+            contentScale = ContentScale.Crop)
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
             Text(entry.title, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
             Text(listOf(entry.format, entry.type).filter(String::isNotBlank).joinToString(" · "), color = LibraryMuted, fontSize = 10.sp)
-            Text(entry.status, color = LibraryAccent, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+            Text(entry.status, color = LibraryAccent, fontSize = 11.sp, fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.clip(RoundedCornerShape(8.dp)).clickable { statusDialogOpen = true }.padding(horizontal = 7.dp, vertical = 4.dp))
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                Text(
-                    if (entry.type == "Manga") {
-                        if (entry.total > 0) "Ch. ${entry.progress}/${entry.total}" else "Ch. ${entry.progress}"
-                    } else {
-                        if (entry.total > 0) "Ep. ${entry.progress}/${entry.total}" else "Ep. ${entry.progress}"
-                    },
-                    color = LibraryMuted,
-                    fontSize = 10.sp,
-                    modifier = Modifier.weight(1f)
-                )
+                Text(if (entry.type == "Manga") {
+                    if (entry.total > 0) "Ch. ${entry.progress}/${entry.total}" else "Ch. ${entry.progress}"
+                } else {
+                    if (entry.total > 0) "Ep. ${entry.progress}/${entry.total}" else "Ep. ${entry.progress}"
+                }, color = LibraryMuted, fontSize = 10.sp, modifier = Modifier.weight(1f))
                 IconButton(onClick = { onProgress(-1) }, modifier = Modifier.size(27.dp), enabled = entry.progress > 0) {
                     Icon(Icons.Default.Remove, "Decrease progress", tint = LibraryMuted, modifier = Modifier.size(15.dp))
                 }
@@ -224,26 +214,25 @@ private fun LibraryEntryRow(entry: LibraryEntry, onStatus: (String) -> Unit, onR
                     Icon(Icons.Default.Add, "Increase progress", tint = LibraryAccent, modifier = Modifier.size(15.dp))
                 }
             }
-            if (entry.total > 0) {
-                LinearProgressIndicator(
-                    progress = { (entry.progress.toFloat() / entry.total).coerceIn(0f, 1f) },
-                    modifier = Modifier.fillMaxWidth().height(4.dp).clip(RoundedCornerShape(50)),
-                    color = LibraryAccent,
-                    trackColor = Color(0xFF34343A)
-                )
-            }
+            if (entry.total > 0) LinearProgressIndicator(
+                progress = { (entry.progress.toFloat() / entry.total).coerceIn(0f, 1f) },
+                modifier = Modifier.fillMaxWidth().height(4.dp).clip(RoundedCornerShape(50)),
+                color = LibraryAccent, trackColor = Color(0xFF34343A))
         }
         Box {
-            IconButton(onClick = { menuOpen = true }) {
-                Icon(Icons.Default.Sort, contentDescription = "Entry options", tint = LibraryMuted)
-            }
+            IconButton(onClick = { menuOpen = true }) { Icon(Icons.Default.Sort, "Entry options", tint = LibraryMuted) }
             DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                statuses.forEach { status ->
-                    DropdownMenuItem(text = { Text("Move to $status") }, onClick = { onStatus(status); menuOpen = false })
-                }
+                DropdownMenuItem(text = { Text("Change status") }, onClick = { statusDialogOpen = true; menuOpen = false })
                 Divider()
                 DropdownMenuItem(text = { Text("Remove from Library", color = Color(0xFFFF8D8D)) }, onClick = { onRemove(); menuOpen = false })
             }
         }
     }
+    if (statusDialogOpen) LibraryStatusDialog(
+        title = entry.title,
+        subtitle = if (entry.type == "Manga") "Update your reading status" else "Update your watching status",
+        statuses = statuses, selectedStatus = entry.status,
+        onSelect = { onStatus(it); statusDialogOpen = false },
+        onRemove = { onRemove(); statusDialogOpen = false },
+        onDismiss = { statusDialogOpen = false })
 }
