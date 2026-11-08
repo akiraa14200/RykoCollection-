@@ -159,7 +159,7 @@ fun RykoApp() {
             }
             if (visitedTabs.contains(MainTab.LIBRARY)) {
                 Box(Modifier.fillMaxSize().hazeSource(hazeState).graphicsLayer { alpha = if (tab == MainTab.LIBRARY && selectedEntry == null && extraPage == null) 1f else 0f }.zIndex(if (tab == MainTab.LIBRARY && selectedEntry == null && extraPage == null) 1f else -1f).then(if (tab == MainTab.LIBRARY && selectedEntry == null && extraPage == null) Modifier else Modifier.offset(x = 10000.dp))) {
-                    Column(Modifier.fillMaxSize()) { Spacer(Modifier.height(109.dp)); NativePlaceholder("My Library", "Watching, plan-to-watch, completed and saved entries.") }
+                    Column(Modifier.fillMaxSize()) { Spacer(Modifier.height(109.dp)); NativeLibraryPage() }
                 }
             }
             if (visitedTabs.contains(MainTab.ACCOUNT)) {
