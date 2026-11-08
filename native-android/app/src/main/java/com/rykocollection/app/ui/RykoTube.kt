@@ -726,7 +726,7 @@ private fun TubePlayer(video: TubeVideo, recommendations: List<TubeVideo>, short
 
 
 @Composable
-fun NativeLibraryVideos() {
+fun NativeLibraryVideos(refreshToken: Int = 0) {
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("ryko_saved_videos", android.content.Context.MODE_PRIVATE) }
     var savedIds by remember {
@@ -736,6 +736,10 @@ fun NativeLibraryVideos() {
     var loading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     var selected by remember { mutableStateOf<TubeVideo?>(null) }
+
+    LaunchedEffect(refreshToken) {
+        savedIds = prefs.getStringSet("ids", emptySet()).orEmpty().toSet()
+    }
 
     LaunchedEffect(savedIds) {
         if (savedIds.isEmpty()) {
