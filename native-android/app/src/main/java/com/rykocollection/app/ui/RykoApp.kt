@@ -622,20 +622,8 @@ private fun BrowsePage(mangaMode: Boolean, onEntry: (Int) -> Unit) {
         stickyHeader {
             Row(
                 modifier = Modifier.fillMaxWidth()
-                    .clip(RoundedCornerShape(24.dp))
-                    .then(
-                        if (hazeState != null) Modifier.hazeEffect(
-                            state = hazeState,
-                            style = HazeStyle(
-                                backgroundColor = Color(0xB817181D),
-                                tints = emptyList(),
-                                blurRadius = 48.dp,
-                                noiseFactor = 0.12f
-                            )
-                        ) else Modifier
-                    )
-                    .background(Color(0xB817181D), RoundedCornerShape(24.dp))
-                    .border(1.dp, Color.White.copy(alpha = 0.18f), RoundedCornerShape(24.dp))
+                    // Match the exact live frosted-glass treatment used by the top Ryko header.
+                    .rykoGlass(22.dp, Color(0xF01A1A1D), 0.42f)
                     .padding(horizontal = 16.dp, vertical = 13.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
