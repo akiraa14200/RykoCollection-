@@ -622,7 +622,20 @@ private fun BrowsePage(mangaMode: Boolean, onEntry: (Int) -> Unit) {
         stickyHeader {
             Row(
                 modifier = Modifier.fillMaxWidth()
-                    .rykoGlass(24.dp, Color(0x22191A20), 0.52f, 42.dp)
+                    .clip(RoundedCornerShape(24.dp))
+                    .then(
+                        if (hazeState != null) Modifier.hazeEffect(
+                            state = hazeState,
+                            style = HazeStyle(
+                                backgroundColor = Color(0xB817181D),
+                                tints = emptyList(),
+                                blurRadius = 48.dp,
+                                noiseFactor = 0.12f
+                            )
+                        ) else Modifier
+                    )
+                    .background(Color(0xB817181D), RoundedCornerShape(24.dp))
+                    .border(1.dp, Color.White.copy(alpha = 0.18f), RoundedCornerShape(24.dp))
                     .padding(horizontal = 16.dp, vertical = 13.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
