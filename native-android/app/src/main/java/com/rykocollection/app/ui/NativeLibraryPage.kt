@@ -105,8 +105,7 @@ fun NativeLibraryPage(refreshToken: Int = 0) {
                     }
                 }
             }
-            if (mediaType != "Videos") {
-                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                     statusOptions.forEach { status ->
                         FilterChip(
                             selected = selectedStatus == status,
@@ -119,12 +118,16 @@ fun NativeLibraryPage(refreshToken: Int = 0) {
                             )
                         )
                     }
-                }
             }
         }
 
         when (mediaType) {
-            "Videos" -> NativeLibraryVideos(refreshToken)
+            "Videos" -> NativeLibraryVideos(
+                refreshToken = refreshToken,
+                searchQuery = search,
+                formatFilter = selectedStatus,
+                modifier = Modifier.weight(1f)
+            )
             else -> {
                 val counts = allEntries.groupingBy(LibraryEntry::status).eachCount()
                 Row(
@@ -150,7 +153,7 @@ fun NativeLibraryPage(refreshToken: Int = 0) {
                     }
                 } else {
                     LazyColumn(
-                        Modifier.fillMaxSize(),
+                        Modifier.weight(1f).fillMaxWidth(),
                         contentPadding = PaddingValues(start = 13.dp, end = 13.dp, top = 9.dp, bottom = 145.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
