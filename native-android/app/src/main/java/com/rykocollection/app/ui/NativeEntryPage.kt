@@ -24,7 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import coil.compose.AsyncImage
-import com.rykocollection.app.data.*
+import com.rykocollection.app.BuildConfig\nimport com.rykocollection.app.data.*\nimport io.github.jan.supabase.auth.auth
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -36,7 +36,7 @@ private val EAccent=Color(0xFFA99BFF)
 private val EMuted=Color(0xFFAAA8B5)
 
 @Composable
-fun NativeEntryPage(id:Int,mangaMode:Boolean) {
+fun NativeEntryPage(id:Int,mangaMode:Boolean,onSignIn:()->Unit = {}) {
     val context= LocalContext.current
     val scope= rememberCoroutineScope()
     var media by remember(id){ mutableStateOf<AniListDetail?>(null) }
@@ -50,7 +50,7 @@ fun NativeEntryPage(id:Int,mangaMode:Boolean) {
     var selected by remember{ mutableStateOf<AniListCharacterEdge?>(null) }
     var isSaved by remember(id, mangaMode) { mutableStateOf(LibraryStore.contains(context, if (mangaMode) "Manga" else "Anime", id)) }
     var showLibraryStatus by remember(id, mangaMode) { mutableStateOf(false) }
-    var showOpinionDialog by remember(id) { mutableStateOf(false) }
+    var showOpinionDialog by remember(id) { mutableStateOf(false) }\n    var showSignInPrompt by remember(id) { mutableStateOf(false) }
     var selectedOpinion by remember(id) { mutableIntStateOf(0) }
     var opinionMessage by remember { mutableStateOf<String?>(null) }
     var savingOpinion by remember { mutableStateOf(false) }
@@ -80,7 +80,7 @@ fun NativeEntryPage(id:Int,mangaMode:Boolean) {
     Column(Modifier.fillMaxSize().background(Color.Black)) {
         EntryHero(item, mangaMode, saved = isSaved, onSave = {
             showLibraryStatus = true
-        }, onOpinion = { showOpinionDialog = true }) {
+        }, onOpinion = {\n            val signedIn = BuildConfig.SUPABASE_PUBLISHABLE_KEY.isNotBlank() && runCatching { SupabaseProvider.client.auth.currentUserOrNull() != null }.getOrDefault(false)\n            if (signedIn) showOpinionDialog = true else showSignInPrompt = true\n        }) {
             val share=Intent(Intent.ACTION_SEND).apply {
                 type="text/plain"
                 putExtra(Intent.EXTRA_TEXT,"https://anilist.co/${if(mangaMode) "manga" else "anime"}/${item.id}")
@@ -141,6 +141,21 @@ fun NativeEntryPage(id:Int,mangaMode:Boolean) {
         }
     }
     selected?.let { CharacterDialog(it){selected=null} }
+
+    if (showSignInPrompt) {
+        AlertDialog(
+            onDismissRequest = { showSignInPrompt = false },
+            containerColor = Color(0xFF191820),
+            title = { Text("Sign in to rate this manhwa", color = Color.White, fontWeight = FontWeight.Bold) },
+            text = { Text("Your Bad-to-Peak opinion is saved to your Ryko account and counts toward community rankings.", color = EMuted, fontSize = 12.sp) },
+            confirmButton = {
+                TextButton(onClick = { showSignInPrompt = false; onSignIn() }) {
+                    Text("Go to Account", color = EAccent)
+                }
+            },
+            dismissButton = { TextButton(onClick = { showSignInPrompt = false }) { Text("Not now", color = EMuted) } }
+        )
+    }
 
     if (showOpinionDialog) {
         AlertDialog(
