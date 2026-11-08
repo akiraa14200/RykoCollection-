@@ -11,7 +11,7 @@ val supabaseUrl = providers.gradleProperty("SUPABASE_URL")
     .get()
 val supabasePublishableKey = providers.gradleProperty("SUPABASE_PUBLISHABLE_KEY")
     .orElse(providers.environmentVariable("SUPABASE_PUBLISHABLE_KEY"))
-    .orElse("")
+    .orElse("sb_publishable_XrJYTYAGNjlfPsWlP1SfUg_-yr9HBrq")
     .get()
 
 android {
