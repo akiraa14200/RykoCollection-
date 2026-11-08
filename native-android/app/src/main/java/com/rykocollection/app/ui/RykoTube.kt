@@ -726,7 +726,12 @@ private fun TubePlayer(video: TubeVideo, recommendations: List<TubeVideo>, short
 
 
 @Composable
-fun NativeLibraryVideos(refreshToken: Int = 0) {
+fun NativeLibraryVideos(
+    refreshToken: Int = 0,
+    searchQuery: String = "",
+    formatFilter: String = "All",
+    modifier: Modifier = Modifier
+) {
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("ryko_saved_videos", android.content.Context.MODE_PRIVATE) }
     var savedIds by remember {
@@ -776,13 +781,24 @@ fun NativeLibraryVideos(refreshToken: Int = 0) {
         return
     }
 
+    val visibleVideos = videos.filter { video ->
+        val matchesSearch = searchQuery.isBlank() ||
+            video.title.contains(searchQuery, ignoreCase = true) ||
+            video.creator.contains(searchQuery, ignoreCase = true) ||
+            video.titleName.contains(searchQuery, ignoreCase = true)
+        val matchesFormat = formatFilter == "All" ||
+            (formatFilter == "Shorts" && video.short) ||
+            (formatFilter == "Videos" && !video.short)
+        matchesSearch && matchesFormat
+    }
+
     if (loading && videos.isEmpty()) {
-        Box(Modifier.fillMaxWidth().padding(36.dp), contentAlignment = Alignment.Center) {
+        Box(modifier.fillMaxWidth().padding(36.dp), contentAlignment = Alignment.Center) {
             CircularProgressIndicator(color = Color(0xFFA99BFF))
         }
     } else if (videos.isEmpty()) {
         Column(
-            Modifier.fillMaxWidth().padding(horizontal = 22.dp, vertical = 42.dp),
+            modifier.fillMaxWidth().padding(horizontal = 22.dp, vertical = 42.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(9.dp)
         ) {
@@ -792,17 +808,17 @@ fun NativeLibraryVideos(refreshToken: Int = 0) {
         }
     } else {
         LazyColumn(
-            Modifier.fillMaxSize(),
+            modifier.fillMaxWidth(),
             contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 12.dp, bottom = 150.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Text("Saved videos", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                    Text("${videos.size} saved", color = Color(0xFFAAA8B5), fontSize = 11.sp)
+                    Text("${visibleVideos.size} shown · ${videos.size} saved", color = Color(0xFFAAA8B5), fontSize = 11.sp)
                 }
             }
-            items(videos, key = { it.id }) { video -> TubeVideoCard(video) { selected = video } }
+            items(visibleVideos, key = { it.id }) { video -> TubeVideoCard(video) { selected = video } }
         }
     }
 }
