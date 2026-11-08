@@ -125,6 +125,7 @@ fun RykoApp() {
     }
 
     val hazeState = rememberHazeState()
+    val browseHazeState = rememberHazeState()
     CompositionLocalProvider(LocalRykoHazeState provides hazeState) {
     Scaffold(
         modifier = Modifier,
@@ -142,8 +143,10 @@ fun RykoApp() {
                 }
             }
             if (visitedTabs.contains(MainTab.BROWSE)) {
-                Box(Modifier.fillMaxSize().graphicsLayer { alpha = if (tab == MainTab.BROWSE && selectedEntry == null && extraPage == null) 1f else 0f }.zIndex(if (tab == MainTab.BROWSE && selectedEntry == null && extraPage == null) 1f else -1f).then(if (tab == MainTab.BROWSE && selectedEntry == null && extraPage == null) Modifier else Modifier.offset(x = 10000.dp))) {
-                    Box(Modifier.fillMaxSize()) { BrowsePage(mangaMode, onEntry = { selectedEntry = it }) }
+                Box(Modifier.fillMaxSize().hazeSource(browseHazeState).graphicsLayer { alpha = if (tab == MainTab.BROWSE && selectedEntry == null && extraPage == null) 1f else 0f }.zIndex(if (tab == MainTab.BROWSE && selectedEntry == null && extraPage == null) 1f else -1f).then(if (tab == MainTab.BROWSE && selectedEntry == null && extraPage == null) Modifier else Modifier.offset(x = 10000.dp))) {
+                    CompositionLocalProvider(LocalRykoHazeState provides browseHazeState) {
+                        Box(Modifier.fillMaxSize()) { BrowsePage(mangaMode, onEntry = { selectedEntry = it }) }
+                    }
                 }
             }
             if (visitedTabs.contains(MainTab.VIDEO)) {
@@ -208,17 +211,19 @@ fun RykoApp() {
 
 
             // Draw last so it floats above every page instead of being covered by page content.
-            RykoBottomNavigation(
-                selectedTab = tab,
-                visible = selectedEntry == null && extraPage == null,
-                onSelect = { item ->
-                    tab = item
-                    if (!visitedTabs.contains(item)) visitedTabs.add(item)
-                    extraPage = null
-                    selectedEntry = null
-                },
-                modifier = Modifier.align(Alignment.BottomCenter).zIndex(20f)
-            )
+            CompositionLocalProvider(LocalRykoHazeState provides if (tab == MainTab.BROWSE) browseHazeState else hazeState) {
+                RykoBottomNavigation(
+                    selectedTab = tab,
+                    visible = selectedEntry == null && extraPage == null,
+                    onSelect = { item ->
+                        tab = item
+                        if (!visitedTabs.contains(item)) visitedTabs.add(item)
+                        extraPage = null
+                        selectedEntry = null
+                    },
+                    modifier = Modifier.align(Alignment.BottomCenter).zIndex(20f)
+                )
+            }
         }
         if (showExitDialog) {
             AlertDialog(
@@ -582,8 +587,6 @@ private fun BrowsePage(mangaMode: Boolean, onEntry: (Int) -> Unit) {
     var genre by remember(mangaMode) { mutableStateOf("All") }
     var sort by remember(mangaMode) { mutableStateOf("Popular") }
     val history = remember(mangaMode) { readSearchHistory(context, historyKey) }
-    // Browse owns its own backdrop so the search glass samples Browse cards only, never Home.
-    val browseHazeState = rememberHazeState()
     val genres = listOf("All", "Action", "Adventure", "Comedy", "Drama", "Fantasy", "Romance", "Sci-Fi", "Slice of Life", "Sports", "Supernatural")
     LaunchedEffect(mangaMode) {
         loading = true
@@ -615,11 +618,9 @@ private fun BrowsePage(mangaMode: Boolean, onEntry: (Int) -> Unit) {
         "Title" -> list.sortedBy { it.title.display.lowercase() }
         else -> list.sortedByDescending { it.averageScore ?: 0 }
     } }
-    CompositionLocalProvider(LocalRykoHazeState provides browseHazeState) {
-        Box(Modifier.fillMaxSize()) {
+    Box(Modifier.fillMaxSize()) {
             LazyColumn(
                 Modifier.fillMaxSize().background(Color.Black)
-                    .hazeSource(browseHazeState)
                     .padding(horizontal = 16.dp),
                 // Reserve space for the overlay search surface; list content scrolls beneath it.
                 contentPadding = PaddingValues(top = 84.dp, bottom = 144.dp)
@@ -710,7 +711,6 @@ private fun BrowsePage(mangaMode: Boolean, onEntry: (Int) -> Unit) {
                 }
             }
         }
-    }
 }
 @Composable
 private fun EntryDetails(id: Int, mangaMode: Boolean) {
