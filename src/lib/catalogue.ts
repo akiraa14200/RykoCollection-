@@ -54,6 +54,8 @@ type TitleRow = {
   source_url?: string; anilist_id?: number; trailer_url?: string; is_trending?: boolean; is_featured?: boolean;
 };
 type CharacterRow = { id: string; name: string; role?: string; description?: string; image_url?: string };
+const TITLE_COLUMNS = 'id,name,alternative_names,media_type,synopsis,cover_url,banner_url,genres,themes,status,release_year,season,rating,popularity,chapters,episodes,author,artist,studio,country,source_url,anilist_id,trailer_url,is_trending,is_featured';
+
 const cache = new Map<string, { at: number; value: unknown }>();
 const TTL = 90_000;
 const hashId = (value: string) => Array.from(value).reduce((h, c) => ((h * 31 + c.charCodeAt(0)) >>> 0), 7);
@@ -354,7 +356,7 @@ const mergeUnique = (...lists: Anime[][]) => {
 export async function getTrending(): Promise<Anime[]> {
   return cached('trending', async () => {
     const [local, remote] = await Promise.allSettled([
-      fetchTitles(supabase.from('titles').select('*').or('is_featured.eq.true,is_trending.eq.true').order('popularity', { ascending: false }).limit(18)),
+      fetchTitles(supabase.from('titles').select(TITLE_COLUMNS).or('is_featured.eq.true,is_trending.eq.true').order('popularity', { ascending: false }).limit(18)),
       homeAniList()
     ]);
     if (local.status === 'rejected' && remote.status === 'rejected') throw remote.reason;
@@ -364,7 +366,7 @@ export async function getTrending(): Promise<Anime[]> {
 export async function getPopular(): Promise<Anime[]> {
   return cached('popular', async () => {
     const [local, remote] = await Promise.allSettled([
-      fetchTitles(supabase.from('titles').select('*').order('popularity', { ascending: false }).limit(18)),
+      fetchTitles(supabase.from('titles').select(TITLE_COLUMNS).order('popularity', { ascending: false }).limit(18)),
       homeAniList()
     ]);
     if (local.status === 'rejected' && remote.status === 'rejected') throw remote.reason;
@@ -378,11 +380,11 @@ export async function getPopularManga(): Promise<Anime[]> {
   return cached('popular-manga', async () => (await homeAniList()).popularManga.map(mapAniListMedia));
 }
 export async function getSeasonal(): Promise<Anime[]> {
-  return cached('seasonal', () => fetchTitles(supabase.from('titles').select('*').in('status', ['Airing','Ongoing']).order('release_year', { ascending: false }).limit(18)));
+  return cached('seasonal', () => fetchTitles(supabase.from('titles').select(TITLE_COLUMNS).in('status', ['Airing','Ongoing']).order('release_year', { ascending: false }).limit(18)));
 }
 export async function getVideoCatalogue(page = 1, genre?: string): Promise<Anime[]> {
   const from = (page - 1) * 50;
-  let request = supabase.from('titles').select('*').not('trailer_url', 'is', null).neq('trailer_url', '').order('popularity', { ascending: false }).range(from, from + 49);
+  let request = supabase.from('titles').select(TITLE_COLUMNS).not('trailer_url', 'is', null).neq('trailer_url', '').order('popularity', { ascending: false }).range(from, from + 49);
   if (genre) request = request.contains('genres', [genre]);
   return fetchTitles(request);
 }
@@ -413,13 +415,13 @@ export async function getAnime(id: string): Promise<Anime | null> {
     });
   }
   return cached(`detail:${id}`, async () => {
-    const { data, error } = await supabase.from('titles').select('*').eq('id', id).maybeSingle();
+    const { data, error } = await supabase.from('titles').select(TITLE_COLUMNS).eq('id', id).maybeSingle();
     throwIf(error);
     if (!data) return null;
     const row = data as TitleRow;
     const anime = mapTitle(row);
     const { data: characters, error: characterError } = await supabase
-      .from('characters').select('*').eq('title_id', id).order('created_at').limit(50);
+      .from('characters').select('id,name,role,description,image_url').eq('title_id', id).order('created_at').limit(50);
     throwIf(characterError);
     const localEdges = ((characters || []) as CharacterRow[]).map(row => ({
       role: row.role || 'Supporting',
