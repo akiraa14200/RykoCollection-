@@ -277,7 +277,7 @@ internal fun NativeAdminWorkspacePage(
                 "characters" -> {
                     AdminSectionHeading("CAST DATABASE", "Character profiles", "Add and remove character profiles for shared title pages.")
                     AdminPanelCard("Add character") {
-                        AdminSelect("Related title", characterTitle, titles.map { it.str("id") to it.str("name") }, Modifier.fillMaxWidth()) { characterTitle = it }
+                        AdminSelectPairs("Related title", characterTitle, titles.map { it.str("id") to it.str("name") }, Modifier.fillMaxWidth()) { characterTitle = it }
                         AdminInput("Character name *", characterName) { characterName = it }
                         AdminInput("Role", characterRole) { characterRole = it }
                         AdminInput("Image URL", characterImage) { characterImage = it }
@@ -309,7 +309,7 @@ internal fun NativeAdminWorkspacePage(
                 "videos" -> {
                     AdminSectionHeading("CURATED CONTENT", "Related videos", "Manage the same video cards shown on RykoCollection.")
                     AdminPanelCard("Add related video") {
-                        AdminSelect("Related title (optional)", videoTitleId, listOf("" to "General video (no title)") + titles.map { it.str("id") to it.str("name") }, Modifier.fillMaxWidth()) { videoTitleId = it }
+                        AdminSelectPairs("Related title (optional)", videoTitleId, listOf("" to "General video (no title)") + titles.map { it.str("id") to it.str("name") }, Modifier.fillMaxWidth()) { videoTitleId = it }
                         AdminSelect("Platform", videoPlatform, listOf("youtube","instagram","dailymotion","tiktok"), Modifier.fillMaxWidth()) { videoPlatform = it }
                         AdminInput("Video URL *", videoUrl) { videoUrl = it }
                         AdminInput("Video title", videoTitle) { videoTitle = it }
@@ -472,11 +472,11 @@ private fun AdminInput(label: String, value: String, minLines: Int = 1, onChange
 
 @Composable
 private fun AdminSelect(label: String, value: String, options: List<String>, modifier: Modifier = Modifier, onSelect: (String) -> Unit) {
-    AdminSelect(label, value, options.map { it to it }, modifier, onSelect)
+    AdminSelectPairs(label, value, options.map { it to it }, modifier, onSelect)
 }
 
 @Composable
-private fun AdminSelect(label: String, value: String, options: List<Pair<String, String>>, modifier: Modifier = Modifier, onSelect: (String) -> Unit) {
+private fun AdminSelectPairs(label: String, value: String, options: List<Pair<String, String>>, modifier: Modifier = Modifier, onSelect: (String) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
     Column(modifier) {
         Text(label, color = AdminMuted, fontSize = 9.sp)
