@@ -126,10 +126,7 @@ internal fun NativeProfilePage(
         } else if (profile != null) {
             val current = profile!!
             Column(
-                Modifier.fillMaxWidth().background(
-                    Brush.linearGradient(listOf(Color(0xFF30264D), Color(0xFF191722), Color(0xFF111116))),
-                    RoundedCornerShape(24.dp)
-                ).padding(20.dp),
+                Modifier.fillMaxWidth().rykoGlass(24.dp, Color(0xC51B1925), 0.42f).padding(20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(9.dp)
             ) {
@@ -189,7 +186,7 @@ internal fun NativeProfilePage(
             }
 
             Column(
-                Modifier.fillMaxWidth().background(ProfileSurface, RoundedCornerShape(18.dp)).padding(16.dp),
+                Modifier.fillMaxWidth().rykoGlass(18.dp, Color(0xB51B1A22), 0.34f).padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(7.dp)
             ) {
                 Text("Your Ryko activity", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp)
@@ -265,7 +262,7 @@ internal fun NativeProfilePage(
 @Composable
 private fun ProfileStatCard(label: String, value: Int, modifier: Modifier = Modifier) {
     Column(
-        modifier.background(ProfileSurface, RoundedCornerShape(15.dp)).padding(vertical = 14.dp, horizontal = 8.dp),
+        modifier.rykoGlass(15.dp, Color(0xB51B1A22), 0.30f).padding(vertical = 14.dp, horizontal = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(3.dp)
     ) {
