@@ -67,6 +67,19 @@ internal fun NativeAdminWorkspacePage(
     var pending by remember { mutableStateOf<List<JsonObject>>(emptyList()) }
     var reports by remember { mutableStateOf<List<JsonObject>>(emptyList()) }
     var videoReports by remember { mutableStateOf<List<JsonObject>>(emptyList()) }
+    var entryPending by remember { mutableStateOf<List<JsonObject>>(emptyList()) }
+    var discoverySources by remember { mutableStateOf<List<JsonObject>>(emptyList()) }
+    var discoveryQueue by remember { mutableStateOf<List<JsonObject>>(emptyList()) }
+    var discoveryBusy by remember { mutableStateOf(false) }
+    var sourceType by remember { mutableStateOf("channel") }
+    var sourceKey by remember { mutableStateOf("") }
+    var sourceLabel by remember { mutableStateOf("") }
+    var shortPlatform by remember { mutableStateOf("youtube") }
+    var shortUrl by remember { mutableStateOf("") }
+    var shortTitle by remember { mutableStateOf("") }
+    var shortCreator by remember { mutableStateOf("") }
+    var approvalTitleId by remember { mutableStateOf("") }
+    var discoverySearch by remember { mutableStateOf("") }
     var socialLinks by remember { mutableStateOf<List<Pair<String, String>>>(emptyList()) }
     var storage by remember { mutableStateOf<List<JsonObject>>(emptyList()) }
     var titleName by remember { mutableStateOf("") }
@@ -114,6 +127,58 @@ internal fun NativeAdminWorkspacePage(
     var creatorName by remember { mutableStateOf("") }
     var search by remember { mutableStateOf("") }
 
+    suspend fun loadDiscovery() {
+        discoverySources = client.postgrest["video_discovery_sources"].select { order("created_at", Order.DESCENDING); limit(100) }.decodeList<JsonObject>()
+        discoveryQueue = client.postgrest["video_discovery_queue"].select {
+            filter { eq("status", "pending") }; order("discovered_at", Order.DESCENDING); limit(1000)
+        }.decodeList<JsonObject>()
+    }
+
+    suspend fun discoverSource(source: JsonObject) {
+        discoveryBusy = true
+        error = null
+        try {
+            val response = client.functions.invoke("video-discovery", body = buildJsonObject { put("source_id", source.str("id")) })
+            val result = Json.parseToJsonElement(response.bodyAsText()).jsonObject
+            if (result["ok"]?.jsonPrimitive?.booleanOrNull != true) throw IllegalStateException(result.str("error", "Video discovery failed."))
+            loadDiscovery()
+            notice = "Checked " + source.str("label") + ": " + result.str("fetched", "0") + " fetched, " + result.str("added", "0") + " queued."
+        } catch (t: Throwable) { error = t.message ?: "Video discovery failed." }
+        finally { discoveryBusy = false }
+    }
+
+    suspend fun publishDiscovered(item: JsonObject) {
+        discoveryBusy = true
+        error = null
+        try {
+            client.postgrest["related_videos"].upsert(buildJsonObject {
+                if (approvalTitleId.isBlank()) put("title_id", JsonNull) else put("title_id", approvalTitleId)
+                if (item.str("source_id").isBlank()) put("source_id", JsonNull) else put("source_id", item.str("source_id"))
+                put("video_url", item.str("video_url")); put("platform", "youtube")
+                put("video_title", item.str("video_title", "Untitled YouTube video"))
+                put("creator_name", item.str("creator_name", "YouTube")); put("creator_avatar_url", item.str("creator_avatar_url"))
+                put("action_type", "watch"); put("action_url", item.str("video_url")); put("sort_order", 0)
+            }) { onConflict = "title_id,video_url"; ignoreDuplicates = true }
+            client.postgrest["video_discovery_queue"].update(buildJsonObject {
+                put("status", "approved"); put("reviewed_at", java.time.Instant.now().toString())
+            }) { filter { eq("id", item.str("id")) } }
+            loadDiscovery()
+            videos = client.postgrest["related_videos"].select { order("sort_order", Order.ASCENDING); limit(300) }.decodeList<JsonObject>()
+            notice = "Video approved and published."
+        } catch (t: Throwable) { error = t.message ?: "Could not publish discovered video." }
+        finally { discoveryBusy = false }
+    }
+
+    suspend fun rejectDiscovered(item: JsonObject) {
+        try {
+            client.postgrest["video_discovery_queue"].update(buildJsonObject {
+                put("status", "rejected"); put("reviewed_at", java.time.Instant.now().toString())
+            }) { filter { eq("id", item.str("id")) } }
+            loadDiscovery()
+            notice = "Video rejected."
+        } catch (t: Throwable) { error = t.message ?: "Could not reject video." }
+    }
+
     suspend fun loadAll() {
         loading = true
         error = null
@@ -128,6 +193,12 @@ internal fun NativeAdminWorkspacePage(
             reports = client.postgrest["community_comment_reports"].select {
                 order("created_at", Order.DESCENDING); limit(100)
             }.decodeList<JsonObject>()
+            entryPending = runCatching {
+                client.postgrest["anime_entry_comments"].select {
+                    filter { eq("moderation_status", "pending") }; order("created_at", Order.DESCENDING); limit(100)
+                }.decodeList<JsonObject>()
+            }.getOrDefault(emptyList())
+            runCatching { loadDiscovery() }.onFailure { error = it.message ?: "Video discovery tables unavailable." }
             videoReports = runCatching {
                 client.postgrest["video_reports"].select { order("created_at", Order.DESCENDING); limit(100) }.decodeList<JsonObject>()
             }.getOrDefault(emptyList())
@@ -397,7 +468,78 @@ internal fun NativeAdminWorkspacePage(
                     }
                 }
                 "videos" -> {
-                    AdminSectionHeading("CURATED CONTENT", "Related videos", "Create, edit, search and remove video cards.")
+                    AdminSectionHeading("SHORT-FORM VIDEO", "Add Shorts", "Publish a YouTube Short, Instagram Reel or TikTok video to the Shorts feed.")
+                    AdminPanelCard("Shorts publisher") {
+                        AdminSelect("Platform", shortPlatform, listOf("youtube", "instagram", "tiktok"), Modifier.fillMaxWidth()) { shortPlatform = it }
+                        AdminInput("Short / Reel URL *", shortUrl) { shortUrl = it }
+                        AdminInput("Video title", shortTitle) { shortTitle = it }
+                        AdminInput("Creator / channel", shortCreator) { shortCreator = it }
+                        Button(onClick = {
+                            val host = runCatching { java.net.URI(shortUrl.trim()).host?.lowercase()?.removePrefix("www.") }.getOrNull().orEmpty()
+                            val valid = shortUrl.startsWith("https://") && when (shortPlatform) {
+                                "youtube" -> host.endsWith("youtube.com") && shortUrl.contains("/shorts/")
+                                "instagram" -> (host == "instagram.com" || host.endsWith(".instagram.com")) && (shortUrl.contains("/reel/") || shortUrl.contains("/reels/"))
+                                else -> host == "tiktok.com" || host.endsWith(".tiktok.com")
+                            }
+                            if (!valid) { error = "Enter a valid URL for the selected Shorts platform."; return@Button }
+                            scope.launch {
+                                saving = true
+                                try {
+                                    client.postgrest["related_videos"].insert(buildJsonObject {
+                                        put("title_id", JsonNull); put("video_url", shortUrl.trim()); put("platform", shortPlatform)
+                                        put("video_title", shortTitle.ifBlank { "Short video" }); put("creator_name", shortCreator)
+                                        put("action_type", "watch"); put("action_url", shortUrl.trim()); put("sort_order", 0)
+                                    })
+                                    shortUrl = ""; shortTitle = ""; shortCreator = ""; loadAll(); notice = "Short added to the video feed."
+                                } catch (t: Throwable) { error = t.message ?: "Could not add Short." }
+                                finally { saving = false }
+                            }
+                        }, enabled = !saving, colors = ButtonDefaults.buttonColors(containerColor = AdminAccent, contentColor = Color(0xFF17151F))) { Text("Add to Shorts", fontSize = 11.sp) }
+                    }
+                    AdminSectionHeading("CURATED YOUTUBE LIBRARY", "Trusted sources", "Collect channel and playlist uploads, then approve videos before publication.")
+                    AdminPanelCard("Add discovery source") {
+                        AdminSelect("Source type", sourceType, listOf("channel", "playlist"), Modifier.fillMaxWidth()) { sourceType = it }
+                        AdminInput("Display name", sourceLabel) { sourceLabel = it }
+                        AdminInput("Channel handle / ID or playlist URL", sourceKey) { sourceKey = it }
+                        Button(onClick = {
+                            val raw = sourceKey.trim()
+                            val key = if (sourceType == "playlist" && raw.contains("list=")) raw.substringAfter("list=").substringBefore("&")
+                                else if (sourceType == "channel" && raw.contains("/@")) "@" + raw.substringAfter("/@").substringBefore("/")
+                                else raw
+                            if (key.isBlank()) { error = "Enter a channel or playlist identifier."; return@Button }
+                            scope.launch {
+                                discoveryBusy = true
+                                try {
+                                    client.postgrest["video_discovery_sources"].insert(buildJsonObject {
+                                        put("source_type", sourceType); put("source_key", key); put("label", sourceLabel.ifBlank { key })
+                                    })
+                                    sourceKey = ""; sourceLabel = ""; loadDiscovery(); notice = "Discovery source saved."
+                                } catch (t: Throwable) { error = t.message ?: "Could not save source." }
+                                finally { discoveryBusy = false }
+                            }
+                        }, enabled = !discoveryBusy, colors = ButtonDefaults.buttonColors(containerColor = AdminAccent, contentColor = Color(0xFF17151F))) { Text("Add source", fontSize = 11.sp) }
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            TextButton(onClick = { sourceType = "channel"; sourceKey = "@museindiachannel"; sourceLabel = "Muse India" }) { Text("Muse India", color = AdminAccent, fontSize = 10.sp) }
+                            TextButton(onClick = { sourceType = "channel"; sourceKey = "@MuseAsia"; sourceLabel = "Muse Asia" }) { Text("Muse Asia", color = AdminAccent, fontSize = 10.sp) }
+                            TextButton(onClick = { sourceType = "channel"; sourceKey = "@anioneasia"; sourceLabel = "Ani-One Asia" }) { Text("Ani-One Asia", color = AdminAccent, fontSize = 10.sp) }
+                        }
+                    }
+                    discoverySources.forEach { source ->
+                        AdminRecord(source.str("label"), source.str("source_type") + " · " + source.str("source_key")) {
+                            TextButton(onClick = { scope.launch { discoverSource(source) } }, enabled = !discoveryBusy) { Text("Discover", color = AdminAccent, fontSize = 10.sp) }
+                            TextButton(onClick = { scope.launch { runCatching { client.postgrest["video_discovery_sources"].delete { filter { eq("id", source.str("id")) } }; loadDiscovery() }.onFailure { error = it.message } } }) { Text("Remove", color = AdminDanger, fontSize = 10.sp) }
+                        }
+                    }
+                    AdminSectionHeading("HUMAN REVIEW", "Pending approval (" + discoveryQueue.size + ")", "Only approved videos are published.")
+                    AdminInput("Search pending videos", discoverySearch) { discoverySearch = it }
+                    AdminSelectPairs("Publish under title (optional)", approvalTitleId, listOf("" to "General video") + titles.map { it.str("id") to it.str("name") }, Modifier.fillMaxWidth()) { approvalTitleId = it }
+                    discoveryQueue.filter { it.str("video_title").contains(discoverySearch, true) || it.str("creator_name").contains(discoverySearch, true) }.forEach { item ->
+                        AdminRecord(item.str("video_title", "Untitled video"), item.str("creator_name", "YouTube") + " · " + item.str("discovered_at")) {
+                            TextButton(onClick = { scope.launch { publishDiscovered(item) } }, enabled = !discoveryBusy) { Text("Approve", color = AdminAccent, fontSize = 10.sp) }
+                            TextButton(onClick = { scope.launch { rejectDiscovered(item) } }, enabled = !discoveryBusy) { Text("Reject", color = AdminDanger, fontSize = 10.sp) }
+                        }
+                    }
+                    AdminSectionHeading("PUBLISHED VIDEOS", "Related videos", "Create, edit, search and remove video cards.")
                     AdminInput("Search videos", videoSearch) { videoSearch = it }
                     AdminPanelCard(if (videoEditingId == null) "Add related video" else "Edit related video") {
                         AdminSelectPairs("Related title (optional)", videoTitleId, listOf("" to "General video (no title)") + titles.map { it.str("id") to it.str("name") }, Modifier.fillMaxWidth()) { videoTitleId = it }
@@ -440,7 +582,7 @@ internal fun NativeAdminWorkspacePage(
                 }
                 "moderation" -> {
                     AdminSectionHeading("COMMUNITY SAFETY", "Pending moderation", "Approve or reject comments awaiting review.")
-                    if (pending.isEmpty()) AdminEmpty("No pending comments right now.")
+                    if (pending.isEmpty() && entryPending.isEmpty()) AdminEmpty("No pending comments right now.")
                     pending.forEach { item ->
                         AdminPanelCard(item.str("kind", "Community post")) {
                             Text(item.str("body", "[Image / GIF attachment]"), color = Color.White, fontSize = 12.sp, lineHeight = 18.sp)
@@ -448,6 +590,26 @@ internal fun NativeAdminWorkspacePage(
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Button(onClick = { scope.launch { moderateComment(client, item.str("id"), "approved", { error = it }, { loadAll() }) } }, colors = ButtonDefaults.buttonColors(containerColor = AdminAccent, contentColor = Color(0xFF17151F))) { Text("Approve", fontSize = 10.sp) }
                                 OutlinedButton(onClick = { scope.launch { moderateComment(client, item.str("id"), "rejected", { error = it }, { loadAll() }) } }) { Text("Reject", color = AdminDanger, fontSize = 10.sp) }
+                            }
+                        }
+                    }
+                    if (entryPending.isNotEmpty()) {
+                        AdminSectionHeading("ANIME & MANGA", "Entry comments (" + entryPending.size + ")", "Review comments attached to AniList entries.")
+                        entryPending.forEach { item ->
+                            AdminPanelCard("AniList entry #" + item.str("anilist_id")) {
+                                Text(item.str("body"), color = Color.White, fontSize = 12.sp, lineHeight = 18.sp)
+                                if (item.str("spoiler") == "true") Text("Marked as spoiler", color = AdminAccent, fontSize = 9.sp)
+                                Text(item.str("created_at"), color = AdminMuted, fontSize = 9.sp)
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Button(onClick = { scope.launch { runCatching {
+                                        client.postgrest["anime_entry_comments"].update(buildJsonObject { put("moderation_status", "approved"); put("moderation_reason", JsonNull) }) { filter { eq("id", item.str("id")) } }
+                                        loadAll(); notice = "Entry comment approved."
+                                    }.onFailure { error = it.message } } }, colors = ButtonDefaults.buttonColors(containerColor = AdminAccent, contentColor = Color(0xFF17151F))) { Text("Approve", fontSize = 10.sp) }
+                                    OutlinedButton(onClick = { scope.launch { runCatching {
+                                        client.postgrest["anime_entry_comments"].update(buildJsonObject { put("moderation_status", "rejected"); put("moderation_reason", "Did not meet Community Guidelines") }) { filter { eq("id", item.str("id")) } }
+                                        loadAll(); notice = "Entry comment rejected."
+                                    }.onFailure { error = it.message } } }) { Text("Reject", color = AdminDanger, fontSize = 10.sp) }
+                                }
                             }
                         }
                     }
