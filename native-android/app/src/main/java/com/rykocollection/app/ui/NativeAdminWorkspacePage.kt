@@ -26,11 +26,11 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.json.*
 
 private val AdminBg = Color(0xFF000000)
-private val AdminPanel = Color(0xFF0C0C0C)
-private val AdminCard = Color(0xFF101010)
+private val AdminPanel = Color(0xFF101015)
+private val AdminCard = Color(0xFF15151B)
 private val AdminMuted = Color(0xFFA1A1AA)
 private val AdminAccent = Color(0xFF9B8CFF)
-private val AdminLine = Color(0x24FFFFFF)
+private val AdminLine = Color(0x30FFFFFF)
 private val AdminDanger = Color(0xFFFF8D9A)
 
 private data class AdminTab(val id: String, val label: String)
@@ -736,7 +736,7 @@ private fun AdminInput(label: String, value: String, minLines: Int = 1, onChange
             focusedTextColor = Color.White, unfocusedTextColor = Color.White,
             cursorColor = AdminAccent
         ),
-        shape = RoundedCornerShape(10.dp)
+        shape = RoundedCornerShape(13.dp)
     )
 }
 
