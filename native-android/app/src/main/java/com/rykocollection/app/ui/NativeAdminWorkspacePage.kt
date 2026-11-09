@@ -93,7 +93,7 @@ internal fun NativeAdminWorkspacePage(
             videos = client.postgrest["related_videos"].select { order("sort_order", Order.ASCENDING); limit(300) }.decodeList<JsonObject>()
             pending = client.postgrest["community_comments"].select {
                 filter { eq("moderation_status", "pending") }
-                order("created_at") { ascending = false }; limit(100)
+                order("created_at", Order.DESCENDING); limit(100)
             }.decodeList<JsonObject>()
             reports = client.postgrest["community_comment_reports"].select {
                 order("created_at") { ascending = false }; limit(100)
