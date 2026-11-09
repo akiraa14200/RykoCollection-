@@ -282,7 +282,7 @@ internal fun NativeAdminWorkspacePage(
                                                 if (titleCover.isBlank()) put("cover_url", JsonNull) else put("cover_url", titleCover)
                                                 if (titleSynopsis.isBlank()) put("synopsis", JsonNull) else put("synopsis", titleSynopsis)
                                                 if (titleBanner.isBlank()) put("banner_url", JsonNull) else put("banner_url", titleBanner)
-                                                put("alternative_names", JsonArray(titleAltNames.split(",").map { it.trim() }.filter { it.isNotBlank() }.map(::JsonPrimitive)))
+                                                put("alternative_names", JsonArray(titleAltNames.split(",").map { it.trim() }.filter { it.isNotBlank() }.map { JsonPrimitive(it) }))
                                                 put("genres", JsonArray(titleGenres.split(",").map { it.trim() }.filter { it.isNotBlank() }.map(::JsonPrimitive)))
                                                 put("themes", JsonArray(titleThemes.split(",").map { it.trim() }.filter { it.isNotBlank() }.map(::JsonPrimitive)))
                                                 put("release_year", titleYear.toIntOrNull()?.let(::JsonPrimitive) ?: JsonNull)
@@ -332,7 +332,7 @@ internal fun NativeAdminWorkspacePage(
                 "characters" -> {
                     AdminSectionHeading("CAST DATABASE", "Character profiles", "Create, edit, search and remove character profiles.")
                     AdminInput("Search characters", characterSearch) { characterSearch = it }
-                    AdminPanelCard("Add character") {
+                    AdminPanelCard(if (characterEditingId == null) "Add character" else "Edit character") {
                         AdminSelectPairs("Related title", characterTitle, titles.map { it.str("id") to it.str("name") }, Modifier.fillMaxWidth()) { characterTitle = it }
                         AdminInput("Character name *", characterName) { characterName = it }
                         AdminInput("Role", characterRole) { characterRole = it }
@@ -343,12 +343,14 @@ internal fun NativeAdminWorkspacePage(
                             scope.launch {
                                 saving = true
                                 try {
-                                    client.postgrest["characters"].insert(buildJsonObject {
+                                    val payload = buildJsonObject {
                                         put("title_id", characterTitle); put("name", characterName.trim())
                                         if (characterRole.isBlank()) put("role", JsonNull) else put("role", characterRole); if (characterImage.isBlank()) put("image_url", JsonNull) else put("image_url", characterImage)
                                         if (characterBio.isBlank()) put("description", JsonNull) else put("description", characterBio)
-                                    })
-                                    characterName = ""; characterImage = ""; characterBio = ""; loadAll(); notice = "Character added."
+                                    }
+                                    if (characterEditingId == null) client.postgrest["characters"].insert(payload)
+                                    else client.postgrest["characters"].update(payload) { filter { eq("id", characterEditingId!!) } }
+                                    characterName = ""; characterImage = ""; characterBio = ""; characterEditingId = null; loadAll(); notice = "Character saved."
                                 } catch (t: Throwable) { error = t.message ?: "Couldn't add character." }
                                 finally { saving = false }
                             }
@@ -356,6 +358,7 @@ internal fun NativeAdminWorkspacePage(
                     }
                     characters.filter { it.str("name").contains(characterSearch, true) }.forEach { item ->
                         AdminRecord(item.str("name"), "${titles.firstOrNull { t -> t.str("id") == item.str("title_id") }?.str("name") ?: "Unknown title"} · ${item.str("role")}") {
+                            TextButton(onClick = { characterEditingId = item.str("id"); characterTitle = item.str("title_id"); characterName = item.str("name"); characterRole = item.str("role"); characterImage = item.str("image_url"); characterBio = item.str("description") }) { Text("Edit", color = AdminAccent, fontSize = 10.sp) }
                             TextButton(onClick = {
                                 scope.launch { runCatching { client.postgrest["characters"].delete { filter { eq("id", item.str("id")) } }; loadAll() }.onFailure { error = it.message } }
                             }) { Text("Delete", color = AdminDanger, fontSize = 10.sp) }
@@ -365,7 +368,7 @@ internal fun NativeAdminWorkspacePage(
                 "videos" -> {
                     AdminSectionHeading("CURATED CONTENT", "Related videos", "Create, edit, search and remove video cards.")
                     AdminInput("Search videos", videoSearch) { videoSearch = it }
-                    AdminPanelCard("Add related video") {
+                    AdminPanelCard(if (videoEditingId == null) "Add related video" else "Edit related video") {
                         AdminSelectPairs("Related title (optional)", videoTitleId, listOf("" to "General video (no title)") + titles.map { it.str("id") to it.str("name") }, Modifier.fillMaxWidth()) { videoTitleId = it }
                         AdminSelect("Platform", videoPlatform, listOf("youtube","instagram","dailymotion","tiktok"), Modifier.fillMaxWidth()) { videoPlatform = it }
                         AdminInput("Video URL *", videoUrl) { videoUrl = it }
@@ -380,13 +383,16 @@ internal fun NativeAdminWorkspacePage(
                             scope.launch {
                                 saving = true
                                 try {
-                                    client.postgrest["related_videos"].insert(buildJsonObject {
+                                    val payload = buildJsonObject {
                                         if (videoTitleId.isNotBlank()) put("title_id", videoTitleId) else put("title_id", JsonNull)
                                         put("video_url", videoUrl.trim()); put("platform", videoPlatform)
                                         if (videoTitle.isBlank()) put("video_title", JsonNull) else put("video_title", videoTitle); if (creatorName.isBlank()) put("creator_name", JsonNull) else put("creator_name", creatorName)
-                                        put("action_type", "watch"); put("action_url", videoUrl.trim()); put("sort_order", 0)
-                                    })
-                                    videoUrl = ""; videoTitle = ""; creatorName = ""; loadAll(); notice = "Related video added."
+                                        if (creatorAvatar.isBlank()) put("creator_avatar_url", JsonNull) else put("creator_avatar_url", creatorAvatar)
+                                        put("action_type", videoActionType); put("action_url", videoActionUrl.ifBlank { videoUrl.trim() }); put("sort_order", videoSortOrder.toIntOrNull() ?: 0)
+                                    }
+                                    if (videoEditingId == null) client.postgrest["related_videos"].insert(payload)
+                                    else client.postgrest["related_videos"].update(payload) { filter { eq("id", videoEditingId!!) } }
+                                    videoUrl = ""; videoTitle = ""; creatorName = ""; creatorAvatar = ""; videoSortOrder = "0"; videoActionUrl = ""; videoEditingId = null; loadAll(); notice = "Related video saved."
                                 } catch (t: Throwable) { error = t.message ?: "Couldn't add video." }
                                 finally { saving = false }
                             }
@@ -394,6 +400,7 @@ internal fun NativeAdminWorkspacePage(
                     }
                     videos.filter { it.str("video_title", it.str("video_url")).contains(videoSearch, true) }.forEach { item ->
                         AdminRecord(item.str("video_title", item.str("video_url")), "${item.str("platform")} · ${item.str("creator_name", "Creator not set")}") {
+                            TextButton(onClick = { videoEditingId = item.str("id"); videoTitleId = item.str("title_id"); videoUrl = item.str("video_url"); videoPlatform = item.str("platform", "youtube"); videoTitle = item.str("video_title"); creatorName = item.str("creator_name"); creatorAvatar = item.str("creator_avatar_url"); videoSortOrder = item.str("sort_order", "0"); videoActionType = item.str("action_type", "watch"); videoActionUrl = item.str("action_url") }) { Text("Edit", color = AdminAccent, fontSize = 10.sp) }
                             TextButton(onClick = {
                                 scope.launch { runCatching { client.postgrest["related_videos"].delete { filter { eq("id", item.str("id")) } }; loadAll() }.onFailure { error = it.message } }
                             }) { Text("Remove", color = AdminDanger, fontSize = 10.sp) }
