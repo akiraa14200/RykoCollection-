@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.postgrest.postgrest
+import io.github.jan.supabase.postgrest.query.Order
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.*
 
@@ -87,9 +88,9 @@ internal fun NativeAdminWorkspacePage(
         loading = true
         error = null
         try {
-            titles = client.postgrest["titles"].select { order("name") { ascending = true }; limit(1000) }.decodeList<JsonObject>()
-            characters = client.postgrest["characters"].select { order("created_at") { ascending = false }; limit(300) }.decodeList<JsonObject>()
-            videos = client.postgrest["related_videos"].select { order("sort_order"); limit(300) }.decodeList<JsonObject>()
+            titles = client.postgrest["titles"].select { order("name", Order.ASCENDING); limit(1000) }.decodeList<JsonObject>()
+            characters = client.postgrest["characters"].select { order("created_at", Order.DESCENDING); limit(300) }.decodeList<JsonObject>()
+            videos = client.postgrest["related_videos"].select { order("sort_order", Order.ASCENDING); limit(300) }.decodeList<JsonObject>()
             pending = client.postgrest["community_comments"].select {
                 filter { eq("moderation_status", "pending") }
                 order("created_at") { ascending = false }; limit(100)
