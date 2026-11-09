@@ -1,0 +1,26 @@
+{
+  "id": "/",
+  "name": "RykoCollection",
+  "short_name": "Ryko",
+  "description": "Discover anime and manga, explore trending titles and build your personal library.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "icons": [
+    {
+      "src": "/logo.jpg",
+      "sizes": "128x125",
+      "type": "image/jpeg",
+      "purpose": "any"
+    },
+    {
+      "src": "/logo.jpg",
+      "sizes": "128x125",
+      "type": "image/jpeg",
+      "purpose": "maskable"
+    }
+  ]
+}
