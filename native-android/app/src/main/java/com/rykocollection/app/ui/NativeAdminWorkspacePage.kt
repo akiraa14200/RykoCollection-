@@ -139,8 +139,9 @@ internal fun NativeAdminWorkspacePage(
                 val obj = item as? JsonObject ?: return@mapNotNull null
                 obj.str("platform", obj.str("label")) to obj.str("url")
             } ?: emptyList()
+            storage = runCatching { client.postgrest.rpc("admin_storage_usage").decodeList<JsonObject>() }.getOrDefault(storage)
         } catch (t: Throwable) {
-            error = t.message ?: "Couldn't load workspace data."
+            error = t.message ?: "Could not load workspace data."
         } finally { loading = false }
     }
 
