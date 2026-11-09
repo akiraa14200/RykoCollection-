@@ -19,6 +19,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.postgrest.postgrest
+import io.github.jan.supabase.functions.functions
+import io.ktor.client.statement.bodyAsText
 import io.github.jan.supabase.postgrest.query.Order
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.*
@@ -96,6 +98,8 @@ internal fun NativeAdminWorkspacePage(
     var videoSortOrder by remember { mutableStateOf("0") }
     var videoActionType by remember { mutableStateOf("watch") }
     var videoActionUrl by remember { mutableStateOf("") }
+    var aniSyncBusy by remember { mutableStateOf(false) }
+    var aniSyncProgress by remember { mutableStateOf<JsonObject?>(null) }
     var editingTitleId by remember { mutableStateOf<String?>(null) }
     var characterTitle by remember { mutableStateOf("") }
     var characterName by remember { mutableStateOf("") }
@@ -313,7 +317,27 @@ internal fun NativeAdminWorkspacePage(
                         }
                     }
                     AdminInput("Find a title", search) { search = it }
-                    Text("Full AniList import is not yet connected in this native build; existing manual catalogue management remains available.", color = AdminMuted, fontSize = 9.sp)
+                    AdminActionButton(if (aniSyncBusy) "AniList sync running…" else "Start / continue AniList full sync", Icons.Outlined.CloudDownload) {
+                        if (!aniSyncBusy) scope.launch {
+                            aniSyncBusy = true; error = null; var done = false; var batches = 0
+                            try {
+                                while (!done && batches < 8) {
+                                    val response = client.functions.invoke("anilist-catalogue-sync", body = buildJsonObject { put("reset", batches == 0 && aniSyncProgress == null) })
+                                    val result = Json.parseToJsonElement(response.bodyAsText()).jsonObject
+                                    if (result["ok"]?.jsonPrimitive?.booleanOrNull == false) error = result["error"]?.jsonPrimitive?.content ?: "AniList sync failed."
+                                    aniSyncProgress = result["state"]?.jsonObject
+                                    done = result["done"]?.jsonPrimitive?.booleanOrNull == true
+                                    batches++
+                                    if (error != null) break
+                                }
+                                if (error == null) notice = if (done) "AniList catalogue sync completed." else "Sync checkpoint saved. Tap Continue sync to process the next batch."
+                                loadAll()
+                            } catch (t: Throwable) { error = t.message ?: "AniList sync failed." }
+                            finally { aniSyncBusy = false }
+                        }
+                    }
+                    aniSyncProgress?.let { Text("Sync checkpoint: " + it.toString(), color = AdminMuted, fontSize = 9.sp) }
+                    if (aniSyncBusy) LinearProgressIndicator(Modifier.fillMaxWidth(), color = AdminAccent)
                     Text("Published entries · ${titles.size}", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                     titles.filter { it.str("name").contains(search, true) }.take(150).forEach { item ->
                         AdminRecord(item.str("name"), "${item.str("media_type")} · ${item.str("status")} · ${item.str("release_year", "Year unknown")}") {
