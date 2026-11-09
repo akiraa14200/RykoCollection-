@@ -152,8 +152,8 @@ fun NativeEntryPage(id:Int,mangaMode:Boolean,onSignIn:()->Unit = {}) {
         AlertDialog(
             onDismissRequest = { showSignInPrompt = false },
             containerColor = Color(0xFF191820),
-            title = { Text("Sign in to rate this manhwa", color = Color.White, fontWeight = FontWeight.Bold) },
-            text = { Text("Your Bad-to-Peak opinion is saved to your Ryko account and counts toward community rankings.", color = EMuted, fontSize = 12.sp) },
+            title = { Text("Sign in to share your opinion", color = Color.White, fontWeight = FontWeight.Bold) },
+            text = { Text("Your opinion is saved to your Ryko account and counts toward the separate anime or manga community rankings.", color = EMuted, fontSize = 12.sp) },
             confirmButton = {
                 TextButton(onClick = { showSignInPrompt = false; onSignIn() }) {
                     Text("Go to Account", color = EAccent)
@@ -194,8 +194,9 @@ fun NativeEntryPage(id:Int,mangaMode:Boolean,onSignIn:()->Unit = {}) {
                         opinionMessage = null
                         try {
                             SupabaseProvider.client.postgrest.rpc(
-                                "submit_manhwa_opinion",
+                                "submit_ryko_media_opinion",
                                 buildJsonObject {
+                                    put("p_media_type", if (mangaMode) "manga" else "anime")
                                     put("p_media_id", item.id)
                                     put("p_media_title", item.title.display)
                                     put("p_cover_url", item.coverImage?.imageUrl.orEmpty())
@@ -263,7 +264,7 @@ private fun EntryHero(m:AniListDetail,manga:Boolean,saved:Boolean,onSave:()->Uni
                 Text(m.genres.take(3).joinToString(" • "),color=Color(0xFFD6D6D6),fontSize=9.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
                 Row(verticalAlignment=Alignment.CenterVertically){
                     IconButton(onClick=onSave,modifier=Modifier.size(34.dp)){Icon(if(saved) Icons.Default.Bookmark else Icons.Default.BookmarkBorder, if(saved) "In Library" else "Add to Library",tint=if(saved) EAccent else Color.White)}
-                    if (manga) IconButton(onClick=onOpinion,modifier=Modifier.size(34.dp)){Icon(Icons.Default.FavoriteBorder,"Share your opinion",tint=Color(0xFFFF7C9C))}
+                    IconButton(onClick=onOpinion,modifier=Modifier.size(34.dp)){Icon(Icons.Default.FavoriteBorder,"Share your opinion",tint=Color(0xFFFF7C9C))}
                     IconButton(onClick=onShare,modifier=Modifier.size(34.dp)){Icon(Icons.Default.Share,"Share",tint=Color.White)}
                     TextButton(onClick={
                         context.startActivity(Intent(Intent.ACTION_VIEW,Uri.parse("https://anilist.co/" + (if(manga) "manga" else "anime") + "/" + m.id)))
