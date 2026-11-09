@@ -49,18 +49,6 @@ fun NativeAccountPage() {
             .padding(horizontal = 18.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        Column(
-            Modifier.fillMaxWidth().background(
-                Brush.linearGradient(listOf(Color(0xFF30264D), Color(0xFF17151F), Color(0xFF111116))),
-                RoundedCornerShape(24.dp)
-            ).padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Text("RYKO ACCOUNT", color = AccountAccent, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.8.sp)
-            Text("Your Ryko identity", color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.ExtraBold)
-            Text("Sign in to save your community opinions and sync your account activity.", color = AccountMuted, fontSize = 12.sp, lineHeight = 18.sp)
-        }
-
         when (val current = status) {
             SessionStatus.Initializing -> Box(Modifier.fillMaxWidth().padding(35.dp), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(color = AccountAccent)
