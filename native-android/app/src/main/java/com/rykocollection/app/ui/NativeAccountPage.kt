@@ -47,7 +47,6 @@ fun NativeAccountPage() {
     var password by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
-    var adminUserId by remember { mutableStateOf<String?>(null) }
     var isAdmin by remember { mutableStateOf(false) }
     var adminChecking by remember { mutableStateOf(false) }
     var adminLookupError by remember { mutableStateOf<String?>(null) }
@@ -56,7 +55,6 @@ fun NativeAccountPage() {
     LaunchedEffect(Unit) { client.auth.awaitInitialization() }
     LaunchedEffect(status) {
         val userId = (status as? SessionStatus.Authenticated)?.session?.user?.id
-        adminUserId = userId
         isAdmin = false
         showAdminWorkspace = false
         adminLookupError = null
@@ -119,13 +117,6 @@ fun NativeAccountPage() {
                                 CircularProgressIndicator(Modifier.size(14.dp), color = AccountAccent, strokeWidth = 2.dp)
                                 Text(" Checking admin access…", color = AccountMuted, fontSize = 10.sp)
                             }
-                        }
-                        if (isAdmin) {
-                            Button(
-                                onClick = { showAdminWorkspace = true },
-                                modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 8.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = AccountAccent, contentColor = Color(0xFF17151F))
-                            ) { Text("Open Admin Workspace", fontWeight = FontWeight.Bold) }
                         }
                         adminLookupError?.let { errorText ->
                             Column(Modifier.fillMaxWidth().padding(horizontal = 18.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
