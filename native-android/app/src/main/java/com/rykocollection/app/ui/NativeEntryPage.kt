@@ -64,15 +64,26 @@ fun NativeEntryPage(id:Int,mangaMode:Boolean,onSignIn:()->Unit = {}) {
 
     LaunchedEffect(id, mangaMode) {
         val user = runCatching { SupabaseProvider.client.auth.currentUserOrNull()?.id }.getOrNull()
-        if (user != null) runCatching {
-            val rows = SupabaseProvider.client.postgrest["ryko_media_opinions"].select {
-                filter {
-                    eq("user_id", user)
-                    eq("media_id", id)
-                    eq("media_type", if (mangaMode) "manga" else "anime")
-                }
-            }.decodeList<JsonObject>()
-            hasOpinion = rows.any { (it["opinion"]?.jsonPrimitive?.intOrNull ?: 0) in 1..5 }
+        if (user != null) {
+            runCatching {
+                val rows = SupabaseProvider.client.postgrest["ryko_media_opinions"].select {
+                    filter {
+                        eq("user_id", user)
+                        eq("anilist_media_id", id)
+                        eq("media_type", if (mangaMode) "manga" else "anime")
+                    }
+                }.decodeList<JsonObject>()
+                val existingOpinion = rows.firstOrNull()?.get("opinion")?.jsonPrimitive?.intOrNull ?: 0
+                selectedOpinion = existingOpinion.takeIf { it in 1..5 } ?: 0
+                hasOpinion = existingOpinion in 1..5
+                opinionMessage = null
+            }.onFailure {
+                hasOpinion = false
+                opinionMessage = "Couldn't load your saved opinion. ${it.message ?: ""}".trim()
+            }
+        } else {
+            hasOpinion = false
+            selectedOpinion = 0
         }
     }
 
@@ -217,17 +228,33 @@ fun NativeEntryPage(id:Int,mangaMode:Boolean,onSignIn:()->Unit = {}) {
                                 savingOpinion = true
                                 opinionMessage = null
                                 try {
-                                    SupabaseProvider.client.postgrest.rpc(
-                                        "submit_ryko_media_opinion",
+                                    val userId = SupabaseProvider.client.auth.currentUserOrNull()?.id
+                                        ?: error("Please sign in again before saving your opinion.")
+                                    SupabaseProvider.client.postgrest["ryko_media_opinions"].upsert(
                                         buildJsonObject {
-                                            put("p_media_type", if (mangaMode) "manga" else "anime")
-                                            put("p_media_id", item.id)
-                                            put("p_media_title", item.title.display)
-                                            put("p_cover_url", item.coverImage?.imageUrl.orEmpty())
-                                            put("p_opinion", selectedOpinion)
+                                            put("user_id", userId)
+                                            put("media_type", if (mangaMode) "manga" else "anime")
+                                            put("anilist_media_id", item.id)
+                                            put("media_title", item.title.display)
+                                            put("cover_url", item.coverImage?.imageUrl)
+                                            put("opinion", selectedOpinion)
                                         }
-                                    )
+                                    ) {
+                                        onConflict = "media_type,anilist_media_id,user_id"
+                                    }
+                                    val confirmed = SupabaseProvider.client.postgrest["ryko_media_opinions"].select {
+                                        filter {
+                                            eq("user_id", userId)
+                                            eq("anilist_media_id", item.id)
+                                            eq("media_type", if (mangaMode) "manga" else "anime")
+                                        }
+                                    }.decodeList<JsonObject>().firstOrNull()
+                                        ?.get("opinion")?.jsonPrimitive?.intOrNull
+                                    check(confirmed == selectedOpinion) {
+                                        "Supabase did not confirm the saved opinion. Please try again."
+                                    }
                                     hasOpinion = true
+                                    opinionMessage = null
                                     showOpinionDialog = false
                                 } catch (t: Throwable) {
                                     opinionMessage = t.message ?: "Your opinion could not be saved. Please try again."
