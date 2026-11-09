@@ -84,6 +84,7 @@ fun NativeAccountPage() {
                 val userId = current.session.user?.id.orEmpty()
                 if (showAdminWorkspace && isAdmin) {
                     NativeAdminWorkspacePage(
+                        client = client,
                         email = current.session.user?.email.orEmpty(),
                         onBack = { showAdminWorkspace = false },
                         onRefreshAccess = {
