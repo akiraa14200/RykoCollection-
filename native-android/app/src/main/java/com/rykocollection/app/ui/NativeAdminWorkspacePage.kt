@@ -230,78 +230,85 @@ internal fun NativeAdminWorkspacePage(
     LaunchedEffect(tab) { if (tab == "storage") loadStorage() }
 
     Column(Modifier.fillMaxSize().background(AdminBg)) {
-        Row(
-            Modifier.fillMaxWidth().padding(horizontal = 15.dp, vertical = 5.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            TextButton(onClick = onBack, contentPadding = PaddingValues(horizontal = 4.dp)) {
-                Icon(Icons.Outlined.ArrowBack, null, tint = AdminAccent, modifier = Modifier.size(17.dp))
-                Spacer(Modifier.width(5.dp))
-                Text("Account", color = Color.White, fontSize = 12.sp)
+        Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            TextButton(onClick = onBack, contentPadding = PaddingValues(0.dp)) {
+                Icon(Icons.Outlined.ArrowBack, null, tint = AdminAccent, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(7.dp)); Text("Account", color = Color.White, fontSize = 12.sp)
             }
             Spacer(Modifier.weight(1f))
-            Text("RYKOCOLLECTION", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("RYKO", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Black, letterSpacing = 2.sp)
+                Text("ADMIN CONSOLE", color = AdminAccent, fontSize = 7.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.6.sp)
+            }
             Spacer(Modifier.weight(1f))
-            TextButton(onClick = onRefreshAccess, enabled = !checkingAccess, contentPadding = PaddingValues(horizontal = 4.dp)) {
+            TextButton(onClick = onRefreshAccess, enabled = !checkingAccess, contentPadding = PaddingValues(0.dp)) {
                 if (checkingAccess) CircularProgressIndicator(Modifier.size(14.dp), color = AdminAccent, strokeWidth = 2.dp)
-                else Text("Recheck", color = AdminMuted, fontSize = 10.sp)
+                else Icon(Icons.Outlined.Refresh, "Recheck access", tint = AdminMuted, modifier = Modifier.size(19.dp))
             }
         }
         HorizontalDivider(color = AdminLine)
-        Column(
-            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(15.dp)
-        ) {
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(top = 13.dp)) {
-                Text("RYKOCOLLECTION · ADMIN", color = AdminAccent, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.8.sp)
-                Text("Control workspace.", color = Color(0xFFF7F7FB), fontSize = 30.sp, lineHeight = 35.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = (-1.2).sp)
-                Text("Manage the catalogue, community and website settings.", color = AdminMuted, fontSize = 11.sp, lineHeight = 17.sp)
-            }
-            Row(
-                Modifier.fillMaxWidth().background(AdminPanel, RoundedCornerShape(13.dp)).padding(13.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(Icons.Outlined.VerifiedUser, null, tint = AdminAccent, modifier = Modifier.size(30.dp))
-                Spacer(Modifier.width(12.dp))
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                    Text("SIGNED IN AS", color = AdminMuted, fontSize = 8.sp, letterSpacing = 1.2.sp)
-                    Text(email.ifBlank { "Administrator" }, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 17.dp), verticalArrangement = Arrangement.spacedBy(17.dp)) {
+            Column(Modifier.fillMaxWidth().padding(top = 5.dp).background(Color(0xFF111019), RoundedCornerShape(22.dp)).padding(19.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                    Box(Modifier.size(7.dp).background(AdminAccent, RoundedCornerShape(50)))
+                    Text("RYKOCOLLECTION  /  CONTROL CENTER", color = AdminAccent, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.3.sp)
                 }
-                Text("ADMIN", color = AdminAccent, fontSize = 9.sp, fontWeight = FontWeight.Bold)
-            }
-            Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                Text("WORKSPACE", color = AdminMuted, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp)
-                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                    adminTabs.forEach { item ->
-                        val active = tab == item.id
-                        Text(
-                            item.label,
-                            modifier = Modifier.background(if (active) Color(0xFF211C36) else AdminPanel, RoundedCornerShape(9.dp))
-                                .clickable { tab = item.id }.padding(horizontal = 13.dp, vertical = 10.dp),
-                            color = if (active) AdminAccent else AdminMuted,
-                            fontSize = 10.sp, fontWeight = if (active) FontWeight.Bold else FontWeight.Medium
-                        )
+                Text("Your workspace.", color = Color.White, fontSize = 29.sp, lineHeight = 34.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = (-1.1).sp)
+                Text("Manage every part of your catalogue and community from one place.", color = AdminMuted, fontSize = 11.sp, lineHeight = 17.sp)
+                Row(Modifier.fillMaxWidth().padding(top = 5.dp).background(Color(0xFF09090C), RoundedCornerShape(14.dp)).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(38.dp).background(Color(0xFF211C36), RoundedCornerShape(12.dp)), contentAlignment = Alignment.Center) {
+                        Icon(Icons.Outlined.VerifiedUser, null, tint = AdminAccent, modifier = Modifier.size(22.dp))
+                    }
+                    Spacer(Modifier.width(11.dp))
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                        Text("SIGNED IN · ADMINISTRATOR", color = AdminMuted, fontSize = 8.sp, letterSpacing = 1.sp)
+                        Text(email.ifBlank { "Administrator" }, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                    }
+                    Box(Modifier.background(Color(0xFF211C36), RoundedCornerShape(30.dp)).padding(horizontal = 10.dp, vertical = 6.dp)) {
+                        Text("VERIFIED", color = AdminAccent, fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = .5.sp)
                     }
                 }
-                OutlinedButton(
-                    onClick = { scope.launch { loadAll(); if (tab == "storage") loadStorage() } },
-                    enabled = !loading,
-                    contentPadding = PaddingValues(horizontal = 11.dp, vertical = 2.dp),
-                    modifier = Modifier.height(34.dp),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, AdminLine),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = AdminMuted)
-                ) {
-                    if (loading) CircularProgressIndicator(Modifier.size(13.dp), color = AdminAccent, strokeWidth = 2.dp)
-                    else { Icon(Icons.Outlined.Refresh, null, modifier = Modifier.size(14.dp)); Spacer(Modifier.width(5.dp)); Text("Refresh data", fontSize = 10.sp) }
+            }
+            Column(Modifier.fillMaxWidth().background(AdminPanel, RoundedCornerShape(18.dp)).padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("WORKSPACE", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
+                    Spacer(Modifier.weight(1f))
+                    TextButton(onClick = { scope.launch { loadAll(); if (tab == "storage") loadStorage() } }, enabled = !loading, contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp)) {
+                        if (loading) CircularProgressIndicator(Modifier.size(12.dp), color = AdminAccent, strokeWidth = 2.dp)
+                        else Icon(Icons.Outlined.Refresh, null, tint = AdminAccent, modifier = Modifier.size(14.dp))
+                        Spacer(Modifier.width(4.dp)); Text("Refresh", color = AdminAccent, fontSize = 10.sp)
+                    }
+                }
+                Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                    adminTabs.chunked(4).forEach { rowTabs ->
+                        Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                            rowTabs.forEach { item ->
+                                val active = tab == item.id
+                                Column(Modifier.weight(1f).background(if (active) Color(0xFF28213F) else Color(0xFF09090C), RoundedCornerShape(12.dp)).clickable { tab = item.id }.padding(horizontal = 5.dp, vertical = 11.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Icon(when (item.id) {
+                                        "overview" -> Icons.Outlined.Dashboard
+                                        "catalogue" -> Icons.Outlined.CollectionsBookmark
+                                        "characters" -> Icons.Outlined.People
+                                        "videos" -> Icons.Outlined.PlayCircle
+                                        "moderation" -> Icons.Outlined.Shield
+                                        "reports" -> Icons.Outlined.Flag
+                                        "settings" -> Icons.Outlined.Settings
+                                        else -> Icons.Outlined.Cloud
+                                    }, null, tint = if (active) AdminAccent else AdminMuted, modifier = Modifier.size(18.dp))
+                                    Text(when (item.id) { "videos" -> "Videos"; "settings" -> "Settings"; else -> item.label }, color = if (active) Color.White else AdminMuted, fontSize = 9.sp, fontWeight = if (active) FontWeight.Bold else FontWeight.Medium, maxLines = 1)
+                                }
+                            }
+                            repeat(4 - rowTabs.size) { Spacer(Modifier.weight(1f)) }
+                        }
+                    }
                 }
             }
             error?.let { AdminNotice(it, true) }
             notice?.let { AdminNotice(it, false) { notice = null } }
             if (loading && titles.isEmpty()) {
-                Box(Modifier.fillMaxWidth().padding(35.dp), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = AdminAccent)
-                }
-            } else when (tab) {
+                Box(Modifier.fillMaxWidth().padding(35.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = AdminAccent) }
+            } else
+else when (tab) {
                 "overview" -> {
                     AdminSectionHeading("LIVE DATABASE", "Dashboard overview", "Current counts from the shared website database.")
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -679,7 +686,7 @@ internal fun NativeAdminWorkspacePage(
                     TextButton(onClick = { scope.launch { loadStorage() } }) { Text("Refresh storage", color = AdminAccent) }
                 }
             }
-            Spacer(Modifier.height(25.dp))
+            Spacer(Modifier.height(110.dp))
         }
     }
 }
