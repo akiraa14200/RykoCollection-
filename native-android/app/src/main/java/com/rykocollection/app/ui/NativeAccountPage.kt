@@ -18,10 +18,16 @@ import com.rykocollection.app.data.SupabaseProvider
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.auth.status.SessionStatus
+import io.github.jan.supabase.postgrest.postgrest
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 import kotlinx.coroutines.launch
 
 private val AccountAccent = Color(0xFFA99BFF)
 private val AccountMuted = Color(0xFFAAA8B5)
+
+@Serializable
+private data class AdminMembershipRecord(@SerialName("user_id") val userId: String)
 
 @Composable
 fun NativeAccountPage() {
@@ -41,8 +47,31 @@ fun NativeAccountPage() {
     var password by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
+    var adminUserId by remember { mutableStateOf<String?>(null) }
+    var isAdmin by remember { mutableStateOf(false) }
+    var adminChecking by remember { mutableStateOf(false) }
+    var adminLookupError by remember { mutableStateOf<String?>(null) }
+    var showAdminWorkspace by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) { client.auth.awaitInitialization() }
+    LaunchedEffect(status) {
+        val userId = (status as? SessionStatus.Authenticated)?.session?.user?.id
+        adminUserId = userId
+        isAdmin = false
+        showAdminWorkspace = false
+        adminLookupError = null
+        if (userId != null) {
+            adminChecking = true
+            try {
+                val memberships = client.postgrest["admin_users"].select {
+                    filter { eq("user_id", userId) }
+                }.decodeList<AdminMembershipRecord>()
+                isAdmin = memberships.any { it.userId == userId }
+            } catch (t: Throwable) {
+                adminLookupError = t.message ?: "Could not verify admin access."
+            } finally { adminChecking = false }
+        } else adminChecking = false
+    }
 
     Column(
         Modifier.fillMaxSize().background(Color(0xFF08080C))
@@ -54,11 +83,71 @@ fun NativeAccountPage() {
                 CircularProgressIndicator(color = AccountAccent)
             }
             is SessionStatus.Authenticated -> {
-                NativeProfilePage(
-                    client = client,
-                    userId = current.session.user?.id.orEmpty(),
-                    onSignOut = { client.auth.signOut() }
-                )
+                val userId = current.session.user?.id.orEmpty()
+                if (showAdminWorkspace && isAdmin) {
+                    NativeAdminWorkspacePage(
+                        email = current.session.user?.email.orEmpty(),
+                        onBack = { showAdminWorkspace = false },
+                        onRefreshAccess = {
+                            scope.launch {
+                                adminChecking = true
+                                adminLookupError = null
+                                try {
+                                    val memberships = client.postgrest["admin_users"].select {
+                                        filter { eq("user_id", userId) }
+                                    }.decodeList<AdminMembershipRecord>()
+                                    isAdmin = memberships.any { it.userId == userId }
+                                    if (!isAdmin) showAdminWorkspace = false
+                                } catch (t: Throwable) {
+                                    adminLookupError = t.message ?: "Could not verify admin access."
+                                } finally { adminChecking = false }
+                            }
+                        },
+                        checkingAccess = adminChecking
+                    )
+                } else {
+                    Column {
+                        NativeProfilePage(
+                            client = client,
+                            userId = userId,
+                            onSignOut = { client.auth.signOut() },
+                            isAdmin = isAdmin,
+                            onOpenAdmin = { showAdminWorkspace = true }
+                        )
+                        if (adminChecking) {
+                            Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                                CircularProgressIndicator(Modifier.size(14.dp), color = AccountAccent, strokeWidth = 2.dp)
+                                Text(" Checking admin access…", color = AccountMuted, fontSize = 10.sp)
+                            }
+                        }
+                        if (isAdmin) {
+                            Button(
+                                onClick = { showAdminWorkspace = true },
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 8.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = AccountAccent, contentColor = Color(0xFF17151F))
+                            ) { Text("Open Admin Workspace", fontWeight = FontWeight.Bold) }
+                        }
+                        adminLookupError?.let { errorText ->
+                            Column(Modifier.fillMaxWidth().padding(horizontal = 18.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                                Text("Admin access could not be verified", color = Color(0xFFFFA6AE), fontSize = 11.sp)
+                                Text(errorText, color = AccountMuted, fontSize = 10.sp)
+                                TextButton(onClick = {
+                                    scope.launch {
+                                        adminChecking = true
+                                        adminLookupError = null
+                                        try {
+                                            val memberships = client.postgrest["admin_users"].select {
+                                                filter { eq("user_id", userId) }
+                                            }.decodeList<AdminMembershipRecord>()
+                                            isAdmin = memberships.any { it.userId == userId }
+                                        } catch (t: Throwable) { adminLookupError = t.message ?: "Could not verify admin access." }
+                                        finally { adminChecking = false }
+                                    }
+                                }) { Text("Retry verification", color = AccountAccent) }
+                            }
+                        }
+                    }
+                }
             }
             else -> {
                 Column(
