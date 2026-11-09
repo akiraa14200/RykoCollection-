@@ -307,8 +307,7 @@ internal fun NativeAdminWorkspacePage(
             notice?.let { AdminNotice(it, false) { notice = null } }
             if (loading && titles.isEmpty()) {
                 Box(Modifier.fillMaxWidth().padding(35.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = AdminAccent) }
-            } else
-else when (tab) {
+            } else when (tab) {
                 "overview" -> {
                     AdminSectionHeading("LIVE DATABASE", "Dashboard overview", "Current counts from the shared website database.")
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
