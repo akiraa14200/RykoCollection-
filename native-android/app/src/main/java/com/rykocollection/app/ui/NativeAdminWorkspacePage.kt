@@ -701,25 +701,25 @@ private suspend fun moderateComment(client: SupabaseClient, id: String, status: 
 
 @Composable
 private fun AdminSectionHeading(kicker: String, title: String, description: String) {
-    Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(top = 2.dp, bottom = 2.dp)) {
         Text(kicker, color = AdminAccent, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp)
-        Text(title, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.4).sp)
-        Text(description, color = AdminMuted, fontSize = 10.sp, lineHeight = 15.sp)
+        Text(title, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = (-0.6).sp)
+        Text(description, color = AdminMuted, fontSize = 11.sp, lineHeight = 16.sp)
     }
 }
 
 @Composable
 private fun AdminStat(label: String, value: String, modifier: Modifier = Modifier) {
-    Column(modifier.background(AdminCard, RoundedCornerShape(13.dp)).padding(13.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
-        Text(label, color = AdminMuted, fontSize = 9.sp, lineHeight = 13.sp)
-        Text(value, color = Color.White, fontSize = 23.sp, fontWeight = FontWeight.Bold)
+    Column(modifier.background(AdminCard, RoundedCornerShape(16.dp)).padding(15.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(label, color = AdminMuted, fontSize = 10.sp, lineHeight = 14.sp)
+        Text(value, color = Color.White, fontSize = 27.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = (-0.7).sp)
     }
 }
 
 @Composable
 private fun AdminPanelCard(title: String, content: @Composable ColumnScope.() -> Unit) {
-    Column(Modifier.fillMaxWidth().background(AdminPanel, RoundedCornerShape(14.dp)).padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text(title, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+    Column(Modifier.fillMaxWidth().background(AdminPanel, RoundedCornerShape(18.dp)).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text(title, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
         content()
     }
 }
