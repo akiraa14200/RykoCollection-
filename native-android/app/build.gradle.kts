@@ -5,14 +5,15 @@ plugins {
     id("org.jetbrains.kotlin.plugin.serialization")
 }
 
-val supabaseUrl = providers.gradleProperty("SUPABASE_URL")
-    .orElse(providers.environmentVariable("SUPABASE_URL"))
-    .orElse("https://moicrqcddmftjgwjqkvz.supabase.co")
-    .get()
-val supabasePublishableKey = providers.gradleProperty("SUPABASE_PUBLISHABLE_KEY")
-    .orElse(providers.environmentVariable("SUPABASE_PUBLISHABLE_KEY"))
-    .orElse("sb_publishable_XrJYTYAGNjlfPsWlP1SfUg_-yr9HBrq")
-    .get()
+// GitHub Actions defines the secret environment variable even when the secret is
+// missing. Gradle's orElse() treats an empty value as present, so explicitly
+// reject blank values before falling back.
+val supabaseUrl = providers.gradleProperty("SUPABASE_URL").orNull?.takeIf { it.isNotBlank() }
+    ?: providers.environmentVariable("SUPABASE_URL").orNull?.takeIf { it.isNotBlank() }
+    ?: "https://moicrqcddmftjgwjqkvz.supabase.co"
+val supabasePublishableKey = providers.gradleProperty("SUPABASE_PUBLISHABLE_KEY").orNull?.takeIf { it.isNotBlank() }
+    ?: providers.environmentVariable("SUPABASE_PUBLISHABLE_KEY").orNull?.takeIf { it.isNotBlank() }
+    ?: "sb_publishable_XrJYTYAGNjlfPsWlP1SfUg_-yr9HBrq"
 
 android {
     namespace = "com.rykocollection.app"
