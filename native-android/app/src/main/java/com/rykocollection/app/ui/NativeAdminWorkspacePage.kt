@@ -241,8 +241,8 @@ internal fun NativeAdminWorkspacePage(
                                         try {
                                             val payload = buildJsonObject {
                                                 put("name", titleName.trim()); put("media_type", titleType); put("status", titleStatus)
-                                                put("cover_url", titleCover.ifBlank { JsonNull })
-                                                put("synopsis", titleSynopsis.ifBlank { JsonNull })
+                                                if (titleCover.isBlank()) put("cover_url", JsonNull) else put("cover_url", titleCover)
+                                                if (titleSynopsis.isBlank()) put("synopsis", JsonNull) else put("synopsis", titleSynopsis)
                                             }
                                             if (editingTitleId == null) client.postgrest["titles"].insert(payload)
                                             else client.postgrest["titles"].update(payload) { filter { eq("id", editingTitleId!!) } }
@@ -289,8 +289,8 @@ internal fun NativeAdminWorkspacePage(
                                 try {
                                     client.postgrest["characters"].insert(buildJsonObject {
                                         put("title_id", characterTitle); put("name", characterName.trim())
-                                        put("role", characterRole.ifBlank { JsonNull }); put("image_url", characterImage.ifBlank { JsonNull })
-                                        put("description", characterBio.ifBlank { JsonNull })
+                                        if (characterRole.isBlank()) put("role", JsonNull) else put("role", characterRole); if (characterImage.isBlank()) put("image_url", JsonNull) else put("image_url", characterImage)
+                                        if (characterBio.isBlank()) put("description", JsonNull) else put("description", characterBio)
                                     })
                                     characterName = ""; characterImage = ""; characterBio = ""; loadAll(); notice = "Character added."
                                 } catch (t: Throwable) { error = t.message ?: "Couldn't add character." }
@@ -322,7 +322,7 @@ internal fun NativeAdminWorkspacePage(
                                     client.postgrest["related_videos"].insert(buildJsonObject {
                                         if (videoTitleId.isNotBlank()) put("title_id", videoTitleId) else put("title_id", JsonNull)
                                         put("video_url", videoUrl.trim()); put("platform", videoPlatform)
-                                        put("video_title", videoTitle.ifBlank { JsonNull }); put("creator_name", creatorName.ifBlank { JsonNull })
+                                        if (videoTitle.isBlank()) put("video_title", JsonNull) else put("video_title", videoTitle); if (creatorName.isBlank()) put("creator_name", JsonNull) else put("creator_name", creatorName)
                                         put("action_type", "watch"); put("action_url", videoUrl.trim()); put("sort_order", 0)
                                     })
                                     videoUrl = ""; videoTitle = ""; creatorName = ""; loadAll(); notice = "Related video added."
