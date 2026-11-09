@@ -66,28 +66,11 @@ fun NativeAccountPage() {
                 CircularProgressIndicator(color = AccountAccent)
             }
             is SessionStatus.Authenticated -> {
-                val userEmail = current.session.user?.email.orEmpty()
-                Column(
-                    Modifier.fillMaxWidth().background(Color(0xFF191820), RoundedCornerShape(20.dp)).padding(18.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Text("SIGNED IN", color = AccountAccent, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                    Text(userEmail.ifBlank { "Ryko member" }, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
-                    Text("Your opinions are now linked to this account.", color = AccountMuted, fontSize = 12.sp)
-                    Button(
-                        enabled = !busy,
-                        onClick = {
-                            scope.launch {
-                                busy = true
-                                message = null
-                                try { client.auth.signOut(); message = "You have been signed out." }
-                                catch (t: Throwable) { message = t.message ?: "Sign out failed." }
-                                finally { busy = false }
-                            }
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF393247), contentColor = Color.White)
-                    ) { if (busy) CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp) else Text("Sign out") }
-                }
+                NativeProfilePage(
+                    client = client,
+                    userId = current.session.user?.id.orEmpty(),
+                    onSignOut = { client.auth.signOut() }
+                )
             }
             else -> {
                 Column(
