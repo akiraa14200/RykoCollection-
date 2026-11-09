@@ -19,11 +19,10 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.postgrest.postgrest
-import io.github.jan.supabase.postgrest.query.Count
-import io.github.jan.supabase.postgrest.query.filter.eq
 import kotlinx.coroutines.launch
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonObject
 import java.time.Instant
 
 private val ProfileAccent = Color(0xFFA99BFF)
@@ -92,21 +91,21 @@ internal fun NativeProfilePage(
             copyProfileToFields(loaded)
 
             ratingsCount = runCatching {
-                client.postgrest["ryko_media_opinions"].select(head = true, count = Count.EXACT) {
+                client.postgrest["ryko_media_opinions"].select {
                     filter { eq("user_id", userId) }
-                }.count() ?: 0
+                }.decodeList<JsonObject>().size
             }.getOrDefault(0)
 
             reviewsCount = runCatching {
-                client.postgrest["title_reviews"].select(head = true, count = Count.EXACT) {
+                client.postgrest["title_reviews"].select {
                     filter { eq("user_id", userId) }
-                }.count() ?: 0
+                }.decodeList<JsonObject>().size
             }.getOrDefault(0)
 
             libraryCount = runCatching {
-                client.postgrest["user_library"].select(head = true, count = Count.EXACT) {
+                client.postgrest["user_library"].select {
                     filter { eq("user_id", userId) }
-                }.count() ?: 0
+                }.decodeList<JsonObject>().size
             }.getOrDefault(0)
         } catch (t: Throwable) {
             error = t.message ?: "Couldn't load your profile. Please try again."
@@ -159,13 +158,6 @@ internal fun NativeProfilePage(
                     Text(current.bio, color = Color(0xFFE0DDE8), fontSize = 12.sp, lineHeight = 18.sp)
                 }
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Icon(
-                        imageVector = if (current.isPublic) androidx.compose.material.icons.Icons.Default.Public
-                            else androidx.compose.material.icons.Icons.Default.Lock,
-                        contentDescription = null,
-                        tint = ProfileAccent,
-                        modifier = Modifier.size(14.dp)
-                    )
                     Text(if (current.isPublic) "Public profile" else "Private profile", color = ProfileAccent, fontSize = 11.sp)
                 }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -243,11 +235,7 @@ internal fun NativeProfilePage(
                                         publicLists = isPublic,
                                         updatedAt = Instant.now().toString()
                                     )
-                                    client.postgrest["profiles"].insert(
-                                        updated,
-                                        upsert = true,
-                                        onConflict = "id"
-                                    )
+                                    client.postgrest["profiles"].upsert(updated)
                                     profile = updated
                                     editing = false
                                     notice = "Profile updated."
