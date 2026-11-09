@@ -254,7 +254,7 @@ export function RykoTrendingPage() {
     let active = true;
     setLoading(true); setError('');
     void (async () => {
-      const { data, error: rpcError } = await supabase.rpc('get_ryko_top_trending', { period_key: period, result_limit: 30 });
+      const { data, error: rpcError } = await supabase.rpc('get_ryko_top_trending', { period_key: period, result_limit: 30, entry_type: 'ANIME' });
       if (rpcError) { if (active) { setError(rpcError.message); setLoading(false); } return; }
       const rows = (data || []) as TrendRow[];
       const entries = await getAnimeByAniListIds(rows.map(row => Number(row.anilist_id)));
