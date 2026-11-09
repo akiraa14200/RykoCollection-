@@ -96,10 +96,10 @@ internal fun NativeAdminWorkspacePage(
                 order("created_at", Order.DESCENDING); limit(100)
             }.decodeList<JsonObject>()
             reports = client.postgrest["community_comment_reports"].select {
-                order("created_at") { ascending = false }; limit(100)
+                order("created_at", Order.DESCENDING); limit(100)
             }.decodeList<JsonObject>()
             videoReports = runCatching {
-                client.postgrest["video_reports"].select { order("created_at") { ascending = false }; limit(100) }.decodeList<JsonObject>()
+                client.postgrest["video_reports"].select { order("created_at", Order.DESCENDING); limit(100) }.decodeList<JsonObject>()
             }.getOrDefault(emptyList())
             val settings = client.postgrest["site_settings"].select {
                 filter { eq("key", "social_links") }
