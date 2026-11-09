@@ -71,6 +71,31 @@ internal fun NativeAdminWorkspacePage(
     var titleStatus by remember { mutableStateOf("Ongoing") }
     var titleCover by remember { mutableStateOf("") }
     var titleSynopsis by remember { mutableStateOf("") }
+    var titleBanner by remember { mutableStateOf("") }
+    var titleAltNames by remember { mutableStateOf("") }
+    var titleGenres by remember { mutableStateOf("") }
+    var titleThemes by remember { mutableStateOf("") }
+    var titleYear by remember { mutableStateOf("") }
+    var titleRating by remember { mutableStateOf("") }
+    var titleChapters by remember { mutableStateOf("") }
+    var titleEpisodes by remember { mutableStateOf("") }
+    var titleAuthor by remember { mutableStateOf("") }
+    var titleArtist by remember { mutableStateOf("") }
+    var titleStudio by remember { mutableStateOf("") }
+    var titleCountry by remember { mutableStateOf("") }
+    var titleSource by remember { mutableStateOf("") }
+    var titleTrailer by remember { mutableStateOf("") }
+    var titleReadUrl by remember { mutableStateOf("") }
+    var titleFeatured by remember { mutableStateOf(false) }
+    var titleTrending by remember { mutableStateOf(false) }
+    var characterEditingId by remember { mutableStateOf<String?>(null) }
+    var videoEditingId by remember { mutableStateOf<String?>(null) }
+    var characterSearch by remember { mutableStateOf("") }
+    var videoSearch by remember { mutableStateOf("") }
+    var creatorAvatar by remember { mutableStateOf("") }
+    var videoSortOrder by remember { mutableStateOf("0") }
+    var videoActionType by remember { mutableStateOf("watch") }
+    var videoActionUrl by remember { mutableStateOf("") }
     var editingTitleId by remember { mutableStateOf<String?>(null) }
     var characterTitle by remember { mutableStateOf("") }
     var characterName by remember { mutableStateOf("") }
@@ -88,7 +113,7 @@ internal fun NativeAdminWorkspacePage(
         loading = true
         error = null
         try {
-            titles = client.postgrest["titles"].select { order("name", Order.ASCENDING); limit(1000) }.decodeList<JsonObject>()
+            titles = client.postgrest["titles"].select { order("name", Order.ASCENDING); limit(5000) }.decodeList<JsonObject>()
             characters = client.postgrest["characters"].select { order("created_at", Order.DESCENDING); limit(300) }.decodeList<JsonObject>()
             videos = client.postgrest["related_videos"].select { order("sort_order", Order.ASCENDING); limit(300) }.decodeList<JsonObject>()
             pending = client.postgrest["community_comments"].select {
@@ -232,6 +257,18 @@ internal fun NativeAdminWorkspacePage(
                             AdminSelect("Status", titleStatus, listOf("Airing","Ongoing","Completed","Hiatus","Upcoming","Cancelled"), Modifier.weight(1f)) { titleStatus = it }
                         }
                         AdminInput("Cover image URL", titleCover) { titleCover = it }
+                        AdminInput("Banner image URL", titleBanner) { titleBanner = it }
+                        AdminInput("Alternative names · comma separated", titleAltNames) { titleAltNames = it }
+                        AdminInput("Genres · comma separated", titleGenres) { titleGenres = it }
+                        AdminInput("Themes · comma separated", titleThemes) { titleThemes = it }
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { AdminInput("Release year", titleYear) { titleYear = it }; AdminInput("Rating (0–10)", titleRating) { titleRating = it } }
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { AdminInput("Chapters", titleChapters) { titleChapters = it }; AdminInput("Episodes", titleEpisodes) { titleEpisodes = it } }
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { AdminInput("Author", titleAuthor) { titleAuthor = it }; AdminInput("Artist", titleArtist) { titleArtist = it } }
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { AdminInput("Studio", titleStudio) { titleStudio = it }; AdminInput("Country", titleCountry) { titleCountry = it } }
+                        AdminInput("Source URL", titleSource) { titleSource = it }
+                        AdminInput("Trailer URL", titleTrailer) { titleTrailer = it }
+                        AdminInput("Read / Watch URL", titleReadUrl) { titleReadUrl = it }
+                        Row(verticalAlignment = Alignment.CenterVertically) { Checkbox(titleFeatured, { titleFeatured = it }); Text("Featured", color = AdminMuted, fontSize = 10.sp); Checkbox(titleTrending, { titleTrending = it }); Text("Trending", color = AdminMuted, fontSize = 10.sp) }
                         AdminInput("Synopsis", titleSynopsis, minLines = 3) { titleSynopsis = it }
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Button(
@@ -244,6 +281,22 @@ internal fun NativeAdminWorkspacePage(
                                                 put("name", titleName.trim()); put("media_type", titleType); put("status", titleStatus)
                                                 if (titleCover.isBlank()) put("cover_url", JsonNull) else put("cover_url", titleCover)
                                                 if (titleSynopsis.isBlank()) put("synopsis", JsonNull) else put("synopsis", titleSynopsis)
+                                                if (titleBanner.isBlank()) put("banner_url", JsonNull) else put("banner_url", titleBanner)
+                                                put("alternative_names", JsonArray(titleAltNames.split(",").map { it.trim() }.filter { it.isNotBlank() }.map(::JsonPrimitive)))
+                                                put("genres", JsonArray(titleGenres.split(",").map { it.trim() }.filter { it.isNotBlank() }.map(::JsonPrimitive)))
+                                                put("themes", JsonArray(titleThemes.split(",").map { it.trim() }.filter { it.isNotBlank() }.map(::JsonPrimitive)))
+                                                put("release_year", titleYear.toIntOrNull()?.let(::JsonPrimitive) ?: JsonNull)
+                                                put("rating", titleRating.toDoubleOrNull()?.let(::JsonPrimitive) ?: JsonNull)
+                                                put("chapters", titleChapters.toIntOrNull()?.let(::JsonPrimitive) ?: JsonNull)
+                                                put("episodes", titleEpisodes.toIntOrNull()?.let(::JsonPrimitive) ?: JsonNull)
+                                                put("author", titleAuthor.takeIf { it.isNotBlank() }?.let(::JsonPrimitive) ?: JsonNull)
+                                                put("artist", titleArtist.takeIf { it.isNotBlank() }?.let(::JsonPrimitive) ?: JsonNull)
+                                                put("studio", titleStudio.takeIf { it.isNotBlank() }?.let(::JsonPrimitive) ?: JsonNull)
+                                                put("country", titleCountry.takeIf { it.isNotBlank() }?.let(::JsonPrimitive) ?: JsonNull)
+                                                put("source_url", titleSource.takeIf { it.isNotBlank() }?.let(::JsonPrimitive) ?: JsonNull)
+                                                put("trailer_url", titleTrailer.takeIf { it.isNotBlank() }?.let(::JsonPrimitive) ?: JsonNull)
+                                                put("read_url", titleReadUrl.takeIf { it.isNotBlank() }?.let(::JsonPrimitive) ?: JsonNull)
+                                                put("is_featured", titleFeatured); put("is_trending", titleTrending)
                                             }
                                             if (editingTitleId == null) client.postgrest["titles"].insert(payload)
                                             else client.postgrest["titles"].update(payload) { filter { eq("id", editingTitleId!!) } }
@@ -260,6 +313,7 @@ internal fun NativeAdminWorkspacePage(
                         }
                     }
                     AdminInput("Find a title", search) { search = it }
+                    Text("Full AniList import is not yet connected in this native build; existing manual catalogue management remains available.", color = AdminMuted, fontSize = 9.sp)
                     Text("Published entries · ${titles.size}", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                     titles.filter { it.str("name").contains(search, true) }.take(150).forEach { item ->
                         AdminRecord(item.str("name"), "${item.str("media_type")} · ${item.str("status")} · ${item.str("release_year", "Year unknown")}") {
@@ -276,7 +330,8 @@ internal fun NativeAdminWorkspacePage(
                     }
                 }
                 "characters" -> {
-                    AdminSectionHeading("CAST DATABASE", "Character profiles", "Add and remove character profiles for shared title pages.")
+                    AdminSectionHeading("CAST DATABASE", "Character profiles", "Create, edit, search and remove character profiles.")
+                    AdminInput("Search characters", characterSearch) { characterSearch = it }
                     AdminPanelCard("Add character") {
                         AdminSelectPairs("Related title", characterTitle, titles.map { it.str("id") to it.str("name") }, Modifier.fillMaxWidth()) { characterTitle = it }
                         AdminInput("Character name *", characterName) { characterName = it }
@@ -299,7 +354,7 @@ internal fun NativeAdminWorkspacePage(
                             }
                         }, enabled = !saving, colors = ButtonDefaults.buttonColors(containerColor = AdminAccent, contentColor = Color(0xFF17151F))) { Text("Add character", fontSize = 11.sp) }
                     }
-                    characters.forEach { item ->
+                    characters.filter { it.str("name").contains(characterSearch, true) }.forEach { item ->
                         AdminRecord(item.str("name"), "${titles.firstOrNull { t -> t.str("id") == item.str("title_id") }?.str("name") ?: "Unknown title"} · ${item.str("role")}") {
                             TextButton(onClick = {
                                 scope.launch { runCatching { client.postgrest["characters"].delete { filter { eq("id", item.str("id")) } }; loadAll() }.onFailure { error = it.message } }
@@ -308,13 +363,18 @@ internal fun NativeAdminWorkspacePage(
                     }
                 }
                 "videos" -> {
-                    AdminSectionHeading("CURATED CONTENT", "Related videos", "Manage the same video cards shown on RykoCollection.")
+                    AdminSectionHeading("CURATED CONTENT", "Related videos", "Create, edit, search and remove video cards.")
+                    AdminInput("Search videos", videoSearch) { videoSearch = it }
                     AdminPanelCard("Add related video") {
                         AdminSelectPairs("Related title (optional)", videoTitleId, listOf("" to "General video (no title)") + titles.map { it.str("id") to it.str("name") }, Modifier.fillMaxWidth()) { videoTitleId = it }
                         AdminSelect("Platform", videoPlatform, listOf("youtube","instagram","dailymotion","tiktok"), Modifier.fillMaxWidth()) { videoPlatform = it }
                         AdminInput("Video URL *", videoUrl) { videoUrl = it }
                         AdminInput("Video title", videoTitle) { videoTitle = it }
                         AdminInput("Creator / channel", creatorName) { creatorName = it }
+                        AdminInput("Channel avatar URL", creatorAvatar) { creatorAvatar = it }
+                        AdminInput("Display order", videoSortOrder) { videoSortOrder = it }
+                        AdminSelect("Action type", videoActionType, listOf("watch", "read"), Modifier.fillMaxWidth()) { videoActionType = it }
+                        AdminInput("Action URL", videoActionUrl) { videoActionUrl = it }
                         Button(onClick = {
                             if (!videoUrl.startsWith("https://")) { error = "Enter a valid HTTPS video URL."; return@Button }
                             scope.launch {
@@ -332,7 +392,7 @@ internal fun NativeAdminWorkspacePage(
                             }
                         }, enabled = !saving, colors = ButtonDefaults.buttonColors(containerColor = AdminAccent, contentColor = Color(0xFF17151F))) { Text("Add related video", fontSize = 11.sp) }
                     }
-                    videos.forEach { item ->
+                    videos.filter { it.str("video_title", it.str("video_url")).contains(videoSearch, true) }.forEach { item ->
                         AdminRecord(item.str("video_title", item.str("video_url")), "${item.str("platform")} · ${item.str("creator_name", "Creator not set")}") {
                             TextButton(onClick = {
                                 scope.launch { runCatching { client.postgrest["related_videos"].delete { filter { eq("id", item.str("id")) } }; loadAll() }.onFailure { error = it.message } }
@@ -360,6 +420,8 @@ internal fun NativeAdminWorkspacePage(
                         AdminPanelCard(item.str("reason", "Report")) {
                             Text(item.str("details", "No extra details provided."), color = AdminMuted, fontSize = 11.sp)
                             Text("Comment ID: ${item.str("comment_id")}", color = AdminMuted, fontSize = 9.sp)
+                            Text("Reporter: " + item.str("user_id", item.str("reporter_id", "Unknown")), color = AdminMuted, fontSize = 9.sp)
+                            Text("Submitted: " + item.str("created_at"), color = AdminMuted, fontSize = 9.sp)
                             TextButton(onClick = {
                                 scope.launch { runCatching { client.postgrest["community_comment_reports"].delete { filter { eq("id", item.str("id")) } }; loadAll(); notice = "Report dismissed." }.onFailure { error = it.message } }
                             }) { Text("Dismiss report", color = AdminDanger, fontSize = 10.sp) }
