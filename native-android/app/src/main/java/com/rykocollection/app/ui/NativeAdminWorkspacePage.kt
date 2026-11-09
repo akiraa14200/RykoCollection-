@@ -44,6 +44,7 @@ private val adminTabs = listOf(
 private fun JsonObject.str(key: String, fallback: String = ""): String =
     this[key]?.let { runCatching { it.jsonPrimitive.content }.getOrNull() } ?: fallback
 private fun JsonObject.int(key: String): Int = str(key).toIntOrNull() ?: 0
+private fun JsonObject.arrayText(key: String): String = (this[key] as? JsonArray)?.joinToString(", ") { it.jsonPrimitive.content } ?: ""
 private fun jsonString(value: String): JsonPrimitive = JsonPrimitive(value)
 
 @Composable
@@ -345,6 +346,11 @@ internal fun NativeAdminWorkspacePage(
                                 TextButton(onClick = {
                                     editingTitleId = item.str("id"); titleName = item.str("name"); titleType = item.str("media_type", "Manga")
                                     titleStatus = item.str("status", "Ongoing"); titleCover = item.str("cover_url"); titleSynopsis = item.str("synopsis")
+                                    titleBanner = item.str("banner_url"); titleAltNames = item.arrayText("alternative_names"); titleGenres = item.arrayText("genres"); titleThemes = item.arrayText("themes")
+                                    titleYear = item.str("release_year"); titleRating = item.str("rating"); titleChapters = item.str("chapters"); titleEpisodes = item.str("episodes")
+                                    titleAuthor = item.str("author"); titleArtist = item.str("artist"); titleStudio = item.str("studio"); titleCountry = item.str("country")
+                                    titleSource = item.str("source_url"); titleTrailer = item.str("trailer_url"); titleReadUrl = item.str("read_url")
+                                    titleFeatured = item.str("is_featured") == "true"; titleTrending = item.str("is_trending") == "true"
                                 }) { Text("Edit", color = AdminAccent, fontSize = 10.sp) }
                                 TextButton(onClick = {
                                     scope.launch { runCatching { client.postgrest["titles"].delete { filter { eq("id", item.str("id")) } }; loadAll(); notice = "Entry deleted." }.onFailure { error = it.message } }
