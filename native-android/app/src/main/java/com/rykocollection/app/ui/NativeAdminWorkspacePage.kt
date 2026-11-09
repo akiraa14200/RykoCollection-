@@ -2,6 +2,8 @@ package com.rykocollection.app.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -23,7 +25,7 @@ internal fun NativeAdminWorkspacePage(
     checkingAccess: Boolean
 ) {
     Column(
-        Modifier.fillMaxSize().background(Color(0xFF08080C)).padding(horizontal = 18.dp, vertical = 12.dp),
+        Modifier.fillMaxSize().background(Color(0xFF08080C)).verticalScroll(rememberScrollState()).padding(horizontal = 18.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
