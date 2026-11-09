@@ -47,7 +47,9 @@ private data class RykoProfileRecord(
 internal fun NativeProfilePage(
     client: SupabaseClient,
     userId: String,
-    onSignOut: suspend () -> Unit
+    onSignOut: suspend () -> Unit,
+    isAdmin: Boolean = false,
+    onOpenAdmin: () -> Unit = {}
 ) {
     val scope = rememberCoroutineScope()
     var profile by remember(userId) { mutableStateOf<RykoProfileRecord?>(null) }
@@ -177,6 +179,14 @@ internal fun NativeProfilePage(
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)
                     ) { Text("Sign out") }
                 }
+            }
+
+            if (isAdmin) {
+                Button(
+                    onClick = onOpenAdmin,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = ProfileAccent, contentColor = Color(0xFF17151F))
+                ) { Text("Open Admin Workspace", fontWeight = FontWeight.Bold) }
             }
 
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
