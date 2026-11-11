@@ -395,9 +395,14 @@ class TubePlayerActivity : ComponentActivity() {
                 scaleType = ImageView.ScaleType.CENTER_CROP
                 setBackgroundColor(Color.rgb(28, 28, 28))
             }
+            // Expand recommendation thumbnails beyond the padded details column
+            // so they reach both screen edges, matching the main RykoTube feed.
             recommendation.addView(thumb, LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, dp(screenWidthDp * 9 / 16)
-            ))
+            ).apply {
+                leftMargin = -dp(18)
+                rightMargin = -dp(18)
+            })
             recommendThumbs.getOrNull(index)?.takeIf { it.isNotBlank() }?.let { loadImage(it, thumb) }
             val metadata = LinearLayout(this).apply {
                 gravity = Gravity.CENTER_VERTICAL
