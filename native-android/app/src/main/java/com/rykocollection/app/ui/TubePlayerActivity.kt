@@ -457,6 +457,48 @@ class TubePlayerActivity : ComponentActivity() {
             root.addView(playerView, FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT
             ))
+
+            // Keep swipe/tap gestures outside the YouTube iframe. Touches delivered
+            // directly to the iframe can briefly reveal its own playback overlay
+            // every time a Short is changed. The transparent layer owns all Shorts
+            // gestures while controls(0) keeps the iframe controls hidden.
+            val shortGestureLayer = View(this).apply {
+                setBackgroundColor(Color.TRANSPARENT)
+                isClickable = true
+                setOnTouchListener { _, event ->
+                    when (event.actionMasked) {
+                        android.view.MotionEvent.ACTION_DOWN -> {
+                            touchStartY = event.rawY
+                            touchStartX = event.rawX
+                            touchStartAt = android.os.SystemClock.elapsedRealtime()
+                            true
+                        }
+                        android.view.MotionEvent.ACTION_UP -> {
+                            val dy = event.rawY - touchStartY
+                            val dx = event.rawX - touchStartX
+                            val elapsed = (android.os.SystemClock.elapsedRealtime() - touchStartAt).coerceAtLeast(1L)
+                            if (kotlin.math.abs(dy) > dp(110) &&
+                                kotlin.math.abs(dy) > kotlin.math.abs(dx) * 1.25f &&
+                                elapsed < 900L
+                            ) {
+                                moveShort(if (dy < 0) 1 else -1)
+                            } else if (
+                                kotlin.math.abs(dy) < dp(18) &&
+                                kotlin.math.abs(dx) < dp(18) &&
+                                elapsed < 350L
+                            ) {
+                                youTubePlayer?.let { if (shortIsPlaying) it.pause() else it.play() }
+                            }
+                            true
+                        }
+                        android.view.MotionEvent.ACTION_CANCEL -> true
+                        else -> true
+                    }
+                }
+            }
+            root.addView(shortGestureLayer, FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT
+            ))
         } else {
             val scroll = ScrollView(this).apply { isFillViewport = true }
             scroll.addView(page)
@@ -672,33 +714,8 @@ class TubePlayerActivity : ComponentActivity() {
 
     private fun heightPx(): Int = resources.displayMetrics.heightPixels
 
-    override fun dispatchTouchEvent(event: android.view.MotionEvent): Boolean {
-        if (isShort && shortQueue.size > 1) {
-            when (event.actionMasked) {
-                android.view.MotionEvent.ACTION_DOWN -> {
-                    touchStartY = event.rawY
-                    touchStartX = event.rawX
-                    touchStartAt = android.os.SystemClock.elapsedRealtime()
-                }
-                android.view.MotionEvent.ACTION_UP -> {
-                    val dy = event.rawY - touchStartY
-                    val dx = event.rawX - touchStartX
-                    val elapsed = (android.os.SystemClock.elapsedRealtime() - touchStartAt).coerceAtLeast(1L)
-                    if (kotlin.math.abs(dy) > dp(110) &&
-                        kotlin.math.abs(dy) > kotlin.math.abs(dx) * 1.25f &&
-                        elapsed < 900L
-                    ) {
-                        moveShort(if (dy < 0) 1 else -1)
-                        return true
-                    }
-                    if (kotlin.math.abs(dy) < dp(18) && kotlin.math.abs(dx) < dp(18) && elapsed < 350L) {
-                        youTubePlayer?.let { if (shortIsPlaying) it.pause() else it.play() }
-                    }
-                }
-            }
-        }
-        return super.dispatchTouchEvent(event)
-    }
+    // Shorts gestures are handled by the transparent layer above the iframe so
+    // swipe events never reach YouTube's built-in touch controls.
 
     private fun isSaved(): Boolean =
         getSharedPreferences(PREFS, MODE_PRIVATE).getStringSet("ids", emptySet())?.contains(currentVideoId) == true
