@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.foundation.text.KeyboardActions
@@ -243,6 +244,8 @@ fun NativeRykoTube() {
     var loadingMore by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     var selectedFormat by remember { mutableStateOf("All") }
+    var tubeMenuExpanded by remember { mutableStateOf(false) }
+    var selectedSourceType by remember { mutableStateOf("all") }
     var search by remember { mutableStateOf("") }
     var selected by remember { mutableStateOf<TubeVideo?>(null) }
     var sources by remember { mutableStateOf<List<TubeSource>>(emptyList()) }
@@ -352,8 +355,8 @@ fun NativeRykoTube() {
             ) {
                                 if (sources.isNotEmpty()) {
                                     item(key = "tube-discovery-sources") {
-                                        val channels = sources.filterNot { it.type.contains("playlist", true) }
-                                        val playlists = sources.filter { it.type.contains("playlist", true) }
+                                        val channels = sources.filterNot { it.type.contains("playlist", true) }.let { if (selectedSourceType == "channel") it else emptyList() }
+                                        val playlists = sources.filter { it.type.contains("playlist", true) }.let { if (selectedSourceType == "playlist") it else emptyList() }
                                         Column(Modifier.fillMaxWidth().rykoGlass(20.dp, Color(0x6618181B), 0.24f).padding(vertical = 5.dp)) {
                                             Row(Modifier.fillMaxWidth().clickable { channelsExpanded = !channelsExpanded }.padding(horizontal = 13.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                                                 Text("Channels", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
@@ -506,8 +509,24 @@ fun NativeRykoTube() {
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.width(142.dp)) {
-                            Box(Modifier.size(31.dp).clip(RoundedCornerShape(9.dp)).background(Color(0xFFA99BFF)), contentAlignment = Alignment.Center) {
-                                Text("R", color = Color(0xFF100D1D), fontWeight = FontWeight.Black, fontSize = 18.sp)
+                            Box {
+                                IconButton(onClick = { tubeMenuExpanded = true }, modifier = Modifier.size(38.dp)) {
+                                    Icon(Icons.Default.Menu, contentDescription = "Open RykoTube menu", tint = Color.White)
+                                }
+                                DropdownMenu(expanded = tubeMenuExpanded, onDismissRequest = { tubeMenuExpanded = false }) {
+                                    DropdownMenuItem(text = { Text("Videos") }, onClick = {
+                                        selectedFormat = "Videos"; selectedSourceType = "all"; selectedSource = ""; tubeMenuExpanded = false
+                                    })
+                                    DropdownMenuItem(text = { Text("Shorts") }, onClick = {
+                                        selectedFormat = "Shorts"; selectedSourceType = "all"; selectedSource = ""; tubeMenuExpanded = false
+                                    })
+                                    DropdownMenuItem(text = { Text("Channels") }, onClick = {
+                                        selectedFormat = "All"; selectedSourceType = "channel"; selectedSource = ""; tubeMenuExpanded = false
+                                    })
+                                    DropdownMenuItem(text = { Text("Playlists") }, onClick = {
+                                        selectedFormat = "All"; selectedSourceType = "playlist"; selectedSource = ""; tubeMenuExpanded = false
+                                    })
+                                }
                             }
                             Spacer(Modifier.width(8.dp))
                             Text("RykoTube", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1)
@@ -529,11 +548,7 @@ fun NativeRykoTube() {
                             )
                         )
                     }
-                    Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 5.dp).rykoGlass(18.dp, Color(0x2218181B), 0.42f, 36.dp).padding(horizontal = 5.dp, vertical = 2.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf("All", "Videos", "Shorts").forEach { format ->
-                            FilterChip(selected = selectedFormat == format, onClick = { selectedFormat = format }, label = { Text(format) })
-                        }
-                        Spacer(Modifier.weight(1f))
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 5.dp), horizontalArrangement = Arrangement.End) {
                         IconButton(onClick = { refreshToken++ }) { Icon(Icons.Default.Refresh, "Refresh", tint = Color.White) }
                     }
             
