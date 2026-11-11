@@ -288,7 +288,8 @@ fun NativeEntryPage(id:Int,mangaMode:Boolean,onSignIn:()->Unit = {}) {
                     cover = item.coverImage?.imageUrl.orEmpty(), format = item.format.orEmpty(),
                     status = status, progress = current?.progress ?: 0,
                     total = (if (mangaMode) item.chapters else item.episodes) ?: current?.total ?: 0,
-                    savedAt = current?.savedAt ?: System.currentTimeMillis()
+                    savedAt = current?.savedAt ?: System.currentTimeMillis(),
+                    genres = item.genres.distinct()
                 ))
                 isSaved = true
                 showLibraryStatus = false
