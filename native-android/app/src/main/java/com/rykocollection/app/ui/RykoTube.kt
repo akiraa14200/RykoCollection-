@@ -584,14 +584,14 @@ private fun TubeVideoCard(video: TubeVideo, onClick: () -> Unit) {
                 .getStringSet("ids", emptySet()).orEmpty().contains(video.id)
         )
     }
+    val isShortCard = video.short
     Column(
-        (if (video.short) Modifier.width(170.dp) else Modifier.fillMaxWidth())
-            .clip(RoundedCornerShape(18.dp))
-            .background(Color(0xFF101012))
+        (if (isShortCard) Modifier.width(170.dp) else Modifier.fillMaxWidth())
+            .then(if (isShortCard) Modifier.clip(RoundedCornerShape(18.dp)).background(Color(0xFF101012)) else Modifier)
     ) {
         Box(
             Modifier.fillMaxWidth()
-                .then(if (video.short) Modifier.height(300.dp) else Modifier.aspectRatio(16f / 9f))
+                .then(if (isShortCard) Modifier.height(300.dp) else Modifier.aspectRatio(16f / 9f))
                 .clickable(onClick = onClick),
             contentAlignment = Alignment.Center
         ) {
@@ -608,23 +608,31 @@ private fun TubeVideoCard(video: TubeVideo, onClick: () -> Unit) {
             Box(Modifier.align(Alignment.Center).size(54.dp).clip(RoundedCornerShape(50)).background(Color(0x55000000)), contentAlignment = Alignment.Center) {
                 Icon(Icons.Default.PlayArrow, "Play video", Modifier.size(38.dp), tint = Color.White)
             }
-            if (video.short) {
+            if (isShortCard) {
                 Text("SHORT", Modifier.align(Alignment.BottomEnd).padding(8.dp).background(Color.Black.copy(alpha = 0.75f), RoundedCornerShape(5.dp)).padding(horizontal = 7.dp, vertical = 4.dp), color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
             }
         }
         Row(
-            Modifier.fillMaxWidth().padding(start = 13.dp, end = 7.dp, top = 12.dp, bottom = 14.dp),
+            Modifier.fillMaxWidth().padding(
+                start = if (isShortCard) 13.dp else 14.dp,
+                end = if (isShortCard) 7.dp else 8.dp,
+                top = if (isShortCard) 12.dp else 9.dp,
+                bottom = if (isShortCard) 14.dp else 18.dp
+            ),
             verticalAlignment = Alignment.Top
         ) {
             if (video.creatorAvatar.isNotBlank()) {
                 AsyncImage(
                     model = video.creatorAvatar,
                     contentDescription = "${video.creator} channel avatar",
-                    modifier = Modifier.size(44.dp).clip(RoundedCornerShape(50)),
+                    modifier = Modifier.size(if (isShortCard) 44.dp else 48.dp).clip(RoundedCornerShape(50)),
                     contentScale = ContentScale.Crop
                 )
             } else {
-                Box(Modifier.size(44.dp).clip(RoundedCornerShape(50)).background(Color(0xFF29292E)), contentAlignment = Alignment.Center) {
+                Box(
+                    Modifier.size(if (isShortCard) 44.dp else 48.dp).clip(RoundedCornerShape(50)).background(Color(0xFF3A3A3D)),
+                    contentAlignment = Alignment.Center
+                ) {
                     Text(video.creator.firstOrNull()?.uppercase() ?: "R", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
                 }
             }
@@ -633,12 +641,11 @@ private fun TubeVideoCard(video: TubeVideo, onClick: () -> Unit) {
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 Text(video.title, color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 16.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, lineHeight = 21.sp)
-                Text(video.creator.ifBlank { video.platform.ifBlank { "RykoCollection" } }, color = Color(0xFFB7B7BC), fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                val details = listOfNotNull(
-                    video.titleName.takeIf { it.isNotBlank() },
+                val channelMeta = listOfNotNull(
+                    video.creator.ifBlank { null },
                     video.platform.takeIf { it.isNotBlank() }?.replaceFirstChar { it.uppercase() }
                 ).distinct().joinToString("  ·  ")
-                if (details.isNotBlank()) Text(details, color = Color(0xFF8F8F96), fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(channelMeta.ifBlank { "RykoCollection" }, color = Color(0xFFB7B7BC), fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             Box {
                 IconButton(onClick = { menuExpanded = true }, modifier = Modifier.size(38.dp)) {
