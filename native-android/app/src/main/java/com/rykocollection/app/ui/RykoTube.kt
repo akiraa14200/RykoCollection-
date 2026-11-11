@@ -350,7 +350,7 @@ fun NativeRykoTube() {
         } else {
             LazyColumn(
                 modifier = Modifier.fillMaxSize().hazeSource(tubeHazeState ?: error("RykoTube HazeState is missing")).background(Color.Black),
-                contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 140.dp, bottom = 144.dp),
+                contentPadding = PaddingValues(start = 0.dp, end = 0.dp, top = 140.dp, bottom = 144.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                                 if (sources.isNotEmpty()) {
