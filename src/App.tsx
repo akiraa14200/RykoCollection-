@@ -872,11 +872,19 @@ function VideoPage() {
   const [remoteSearchVideos,setRemoteSearchVideos]=useState<RelatedVideo[]>([]);
   const [suggestionsOpen,setSuggestionsOpen]=useState(false);
   const [format,setFormat]=useState<'all'|'video'|'short'>('all');
+  const [tubeMenuOpen,setTubeMenuOpen]=useState(false);
+  const tubeMenuRef=useRef<HTMLDivElement|null>(null);
   const [category,setCategory]=useState('All');
   const [videoSources,setVideoSources]=useState<Array<{id:string;source_type:'channel'|'playlist';label:string;source_key:string}>>([]);
   const [selectedSource,setSelectedSource]=useState('');
   const [sourceTypeFilter,setSourceTypeFilter]=useState<'all'|'channel'|'playlist'>('all');
   const tabActive=useTabActive();
+  useEffect(()=>{
+    if(!tubeMenuOpen)return;
+    const close=(event:PointerEvent)=>{if(!tubeMenuRef.current?.contains(event.target as Node))setTubeMenuOpen(false);};
+    document.addEventListener('pointerdown',close);
+    return()=>document.removeEventListener('pointerdown',close);
+  },[tubeMenuOpen]);
   useEffect(()=>{if(!tabActive)setPlayingId(null);},[tabActive]);
   // Never leave an embedded player running after Android backgrounds the app.
   // Playback is intentionally not auto-resumed when the app becomes active again.
@@ -1087,17 +1095,19 @@ function VideoPage() {
   const canLoadMore=hasMore||(format!=='video'&&shortHasMore);
   const videoSentinel=useNearViewport(()=>{void loadMore();},!loading&&canLoadMore&&!loadingMore&&!error);
 
-  const filterBar=<>
-    <nav className="yt-filter-bar" aria-label="Video format">
-      {([{id:'all',label:'All'},{id:'video',label:'Videos'},{id:'short',label:'Shorts'}] as const).map(item=><button key={item.id} className={format===item.id?'active':''} onClick={()=>setFormat(item.id)}>{item.label}</button>)}
-    </nav>
-    <nav className="yt-category-bar" aria-label="Filter by title category">
-      {['All','Anime','Manga','Manhwa','Manhua','Movie','TV Series'].map(item=><button key={item} className={category===item?'active':''} onClick={()=>setCategory(item)}>{item}</button>)}
-    </nav>
-  </>;
-
   const searchBar=<header className="yt-topbar">
-    <div className="yt-brand"><img className="yt-brand-mark" src="/logo.svg" alt="" width="30" height="30"/><strong>Ryko<span>Tube</span></strong><small>Collection</small></div>
+    <div className="yt-brand">
+    <div className="yt-menu-wrap" ref={tubeMenuRef}>
+      <button type="button" className="yt-menu-button" aria-label="Open video menu" aria-haspopup="menu" aria-expanded={tubeMenuOpen} onClick={()=>setTubeMenuOpen(value=>!value)}><Menu size={23}/></button>
+      {tubeMenuOpen&&<div className="yt-menu-popup" role="menu" aria-label="RykoTube sections">
+        <button type="button" role="menuitem" onClick={()=>{setFormat('video');setSelectedSource('');setSourceTypeFilter('all');setTubeMenuOpen(false);}}><Play size={17}/> Videos</button>
+        <button type="button" role="menuitem" onClick={()=>{setFormat('short');setSelectedSource('');setSourceTypeFilter('all');setTubeMenuOpen(false);}}><Tv size={17}/> Shorts</button>
+        <button type="button" role="menuitem" onClick={()=>{setFormat('all');setSelectedSource('');setSourceTypeFilter('channel');setTubeMenuOpen(false);}}><Youtube size={17}/> Channels</button>
+        <button type="button" role="menuitem" onClick={()=>{setFormat('all');setSelectedSource('');setSourceTypeFilter('playlist');setTubeMenuOpen(false);}}><ListVideo size={17}/> Playlists</button>
+      </div>}
+    </div>
+    <strong>Ryko<span>Tube</span></strong>
+  </div>
     <div className="yt-search-wrap">
       <label className="yt-search"><Search size={19}/><input value={term} onFocus={()=>setSuggestionsOpen(true)} onChange={event=>{setTerm(event.target.value);setSuggestionsOpen(true);}} placeholder="Search videos, creators or titles" autoComplete="off" aria-expanded={suggestionsOpen}/>{term&&<button type="button" onClick={()=>{setTerm('');setRemoteSearchVideos([]);setSuggestionsOpen(false);}} aria-label="Clear search"><X size={16}/></button>}</label>
       {suggestionsOpen&&term.trim().length>=2&&remoteSearchVideos.length>0&&<div className="yt-search-suggestions" role="listbox">{remoteSearchVideos.slice(0,6).map(video=><button type="button" role="option" key={video.id} onClick={()=>{setTerm(video.videoTitle||video.creatorName||video.titleName||'');setSuggestionsOpen(false);}}><strong>{video.videoTitle||video.titleName||'Untitled video'}</strong><span>{video.creatorName||'Creator'} · {video.platform}</span></button>)}</div>}
@@ -1107,7 +1117,7 @@ function VideoPage() {
   const sortedVideoSources=[...videoSources].sort((a,b)=>a.label.localeCompare(b.label,undefined,{numeric:true,sensitivity:'base'}));
   const sourceDirectory=<section className="yt-source-directory" aria-label="Browse YouTube channels and playlists">
     <div className="yt-source-directory-head"><strong>Browse sources</strong><button type="button" onClick={()=>{setSelectedSource('');setSourceTypeFilter('all');}}>All sources</button></div>
-    {([{type:'channel',label:'Channels',icon:<Youtube size={16}/>},{type:'playlist',label:'Playlists',icon:<ListVideo size={16}/>} ] as const).map(group=>{
+    {([{type:'channel',label:'Channels',icon:<Youtube size={16}/>},{type:'playlist',label:'Playlists',icon:<ListVideo size={16}/>} ] as const).filter(group=>sourceTypeFilter==='all'||sourceTypeFilter===group.type).map(group=>{
       const items=sortedVideoSources.filter(source=>source.source_type===group.type);
       return <div className="yt-source-group" key={group.type}>
         <div className="yt-source-group-head">{group.icon}<strong>{group.label}</strong><span>{items.length}</span></div>
@@ -1125,8 +1135,7 @@ function VideoPage() {
 
   return <main className="video-page yt-page">
     {searchBar}
-    {sourceDirectory}
-    {filterBar}
+    {sourceTypeFilter!=='all'&&sourceDirectory}
     {error&&<div className="notice">{error}</div>}
     {loading?<div className="yt-loading-grid" aria-label="Loading videos">{Array.from({length:4},(_,index)=><div className="yt-skeleton-card" key={index}><div className="yt-skeleton-thumb"/><div className="yt-skeleton-meta"><div className="yt-skeleton-avatar"/><div className="yt-skeleton-copy"><span className="yt-skeleton-line"/><span className="yt-skeleton-line"/></div></div></div>)}</div>
     :format==='all'?feedBlocks.length?feedBlocks.map((block,index)=><section className={block.kind==='shorts'?'yt-section yt-shorts-section':'yt-section'} key={block.kind+'-'+index}>
