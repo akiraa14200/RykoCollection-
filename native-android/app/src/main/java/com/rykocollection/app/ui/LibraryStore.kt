@@ -13,7 +13,8 @@ data class LibraryEntry(
     val status: String,
     val progress: Int,
     val total: Int,
-    val savedAt: Long
+    val savedAt: Long,
+    val genres: List<String> = emptyList()
 )
 
 object LibraryStore {
@@ -40,7 +41,10 @@ object LibraryStore {
                     status = item.optString("status"),
                     progress = item.optInt("progress"),
                     total = item.optInt("total"),
-                    savedAt = item.optLong("savedAt")
+                    savedAt = item.optLong("savedAt"),
+                    genres = item.optJSONArray("genres")?.let { values ->
+                        (0 until values.length()).mapNotNull { index -> values.optString(index).takeIf(String::isNotBlank) }
+                    }.orEmpty()
                 )
             }.getOrNull() ?: continue
             if (type == null || entry.type == type) result.add(entry)
@@ -119,6 +123,7 @@ object LibraryStore {
                 put("progress", entry.progress)
                 put("total", entry.total)
                 put("savedAt", entry.savedAt)
+                put("genres", JSONArray(entry.genres.distinct()))
             })
         }
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
