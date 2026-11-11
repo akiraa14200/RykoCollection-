@@ -80,7 +80,8 @@ private data class TubeVideo(
     val titleName: String,
     val titleFormat: String,
     val sourceId: String,
-    val short: Boolean
+    val short: Boolean,
+    val genres: List<String> = emptyList()
 )
 
 private data class TubeSource(val id: String, val type: String, val label: String)
@@ -136,7 +137,7 @@ private suspend fun fetchTubePage(page: Int): List<TubeVideo> = withContext(Disp
     val to = from + TUBE_PAGE_SIZE - 1
     // Keep this projection aligned with the proven web getRelatedVideos() query.
     // related_videos does not contain title_name, title_format, or title_cover.
-    val select = "id,title_id,legacy_title_id,video_url,platform,video_title,creator_name,creator_avatar_url,action_type,action_url,sort_order,created_at,source_id,titles!related_videos_title_id_fkey(name,media_type,cover_url)"
+    val select = "id,title_id,legacy_title_id,video_url,platform,video_title,creator_name,creator_avatar_url,action_type,action_url,sort_order,created_at,source_id,titles!related_videos_title_id_fkey(name,media_type,cover_url,genres)"
     val url = "$baseUrl/rest/v1/related_videos?select=$select&order=sort_order.asc,created_at.desc&offset=$from&limit=$TUBE_PAGE_SIZE"
     val response = tubeHttpClient.get(url) {
             header("apikey", key)
@@ -166,7 +167,8 @@ private suspend fun fetchTubePage(page: Int): List<TubeVideo> = withContext(Disp
                 titleName = title?.string("name").orEmpty(),
                 titleFormat = title?.string("media_type").orEmpty(),
                 sourceId = row.string("source_id"),
-                short = isTubeShort(videoUrl, platform)
+                short = isTubeShort(videoUrl, platform),
+                genres = title?.get("genres")?.let { raw -> runCatching { raw.jsonArray.mapNotNull { it.jsonPrimitive.contentOrNull } }.getOrNull() }.orEmpty()
             )
         }.distinctBy { it.id }
 }
@@ -237,6 +239,60 @@ private fun rankRelatedVideos(
         }
 }
 
+private fun markTubeImpression(context: android.content.Context, videoId: String) {
+    context.getSharedPreferences("ryko_tube_impressions", android.content.Context.MODE_PRIVATE)
+        .edit().putLong("seenAt_$videoId", System.currentTimeMillis()).apply()
+}
+
+private fun rankMainFeed(
+    candidates: List<TubeVideo>,
+    library: List<LibraryEntry>,
+    context: android.content.Context
+): List<TubeVideo> {
+    if (candidates.size < 2) return candidates
+    val now = System.currentTimeMillis()
+    val day = now / 86_400_000L
+    val impressions = context.getSharedPreferences("ryko_tube_impressions", android.content.Context.MODE_PRIVATE)
+    val genreWeights = mutableMapOf<String, Int>()
+    library.forEach { entry ->
+        val statusWeight = when (entry.status.lowercase(Locale.ROOT)) {
+            "watching", "reading" -> 5
+            "completed" -> 4
+            "on hold" -> 2
+            "plan to watch", "plan to read" -> 1
+            else -> 1
+        }
+        entry.genres.forEach { genre ->
+            val key = genre.trim().lowercase(Locale.ROOT)
+            if (key.isNotBlank()) genreWeights[key] = (genreWeights[key] ?: 0) + statusWeight
+        }
+    }
+    val savedTitles = library.map { it.title.trim().lowercase(Locale.ROOT) }.filter(String::isNotBlank).toSet()
+    val scored = candidates.mapIndexed { index, video ->
+        val genreScore = video.genres.sumOf { genreWeights[it.trim().lowercase(Locale.ROOT)] ?: 0 } * 18
+        val exactTitleScore = if (video.titleName.trim().lowercase(Locale.ROOT) in savedTitles && video.titleName.isNotBlank()) 95 else 0
+        val lastShown = impressions.getLong("seenAt_${video.id}", 0L)
+        val age = if (lastShown <= 0L) Long.MAX_VALUE else now - lastShown
+        val repeatPenalty = when {
+            age < 24 * 60 * 60 * 1000L -> 220
+            age < 3 * 24 * 60 * 60 * 1000L -> 120
+            age < 7 * 24 * 60 * 60 * 1000L -> 45
+            else -> 0
+        }
+        val adminOrderBoost = (60 - index).coerceAtLeast(0)
+        val dailyRotation = Math.floorMod(video.id.hashCode() xor day.toInt(), 19)
+        video to (genreScore + exactTitleScore + adminOrderBoost + dailyRotation - repeatPenalty)
+    }.sortedWith(compareByDescending<Pair<TubeVideo, Int>> { it.second }.thenBy { it.first.id })
+    val firstPass = mutableListOf<TubeVideo>()
+    val deferred = mutableListOf<TubeVideo>()
+    val creators = mutableSetOf<String>()
+    scored.forEach { (video, _) ->
+        val creator = video.creator.trim().lowercase(Locale.ROOT)
+        if (creator.isBlank() || creators.add(creator)) firstPass.add(video) else deferred.add(video)
+    }
+    return firstPass + deferred
+}
+
 @Composable
 fun NativeRykoTube() {
     var videos by remember { mutableStateOf(TubeFeedCache.videos) }
@@ -260,6 +316,7 @@ fun NativeRykoTube() {
     var catalogueResults by remember { mutableStateOf<List<AniListMedia>>(emptyList()) }
     var catalogueLoading by remember { mutableStateOf(false) }
     val context = LocalContext.current
+    val libraryEntries = remember(videos, refreshToken) { LibraryStore.entries(context) }
     val focusManager = LocalFocusManager.current
     val searchFocus = remember { FocusRequester() }
     val tubeHistory = remember { context.getSharedPreferences("ryko_search", android.content.Context.MODE_PRIVATE).getString("tube", "").orEmpty().split("¦").filter { it.isNotBlank() }.take(8) }
@@ -341,7 +398,8 @@ fun NativeRykoTube() {
         val textMatches = query.isBlank() || relevance(video) > 0
         formatMatches && textMatches && (selectedSource.isBlank() || video.sourceId == selectedSource)
     }.let { matches ->
-        if (query.isBlank()) matches else matches.sortedByDescending(::relevance)
+        if (query.isNotBlank()) matches.sortedByDescending(::relevance)
+        else rankMainFeed(matches, libraryEntries, context)
     }
 
     Box(Modifier.fillMaxSize().background(Color.Black)) {
@@ -445,7 +503,7 @@ fun NativeRykoTube() {
                                                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                                         Text(if (rowIndex == 0) "Shorts" else "More Shorts", color = Color(0xFFA99BFF), fontSize = 18.sp, fontWeight = FontWeight.Bold)
                                                         LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(end = 4.dp)) {
-                                                            items(shortBatch, key = { it.id }) { video -> TubeVideoCard(video) { selected = video } }
+                                                            items(shortBatch, key = { it.id }) { video -> TubeVideoCard(video, onImpression = { markTubeImpression(context, video.id) }) { selected = video } }
                                                         }
                                                     }
                                                 }
@@ -458,7 +516,7 @@ fun NativeRykoTube() {
                                                 item(key = "regular-heading-$regularIndex") {
                                                     Text(if (regularIndex == 0) "Recommended videos" else "More videos", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                                                 }
-                                                items(batch, key = { it.id }) { video -> TubeVideoCard(video) { selected = video } }
+                                                items(batch, key = { it.id }) { video -> TubeVideoCard(video, onImpression = { markTubeImpression(context, video.id) }) { selected = video } }
                                                 regularIndex += batch.size
                                                 if (shortIndex < shorts.size) {
                                                     val batchSize = 6 + ((shorts[shortIndex].id.hashCode().toUInt().toLong() % 5L).toInt())
@@ -467,7 +525,7 @@ fun NativeRykoTube() {
                                                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                                             Text("Shorts", color = Color(0xFFA99BFF), fontSize = 18.sp, fontWeight = FontWeight.Bold)
                                                             LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(end = 4.dp)) {
-                                                                items(shortBatch, key = { it.id }) { video -> TubeVideoCard(video) { selected = video } }
+                                                                items(shortBatch, key = { it.id }) { video -> TubeVideoCard(video, onImpression = { markTubeImpression(context, video.id) }) { selected = video } }
                                                             }
                                                         }
                                                     }
@@ -479,13 +537,13 @@ fun NativeRykoTube() {
                                                     item(key = "shorts-only-row-$rowIndex") {
                                                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                                             Text(if (rowIndex == 0) "Shorts" else "More Shorts", color = Color(0xFFA99BFF), fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                                                            LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) { items(shortBatch, key = { it.id }) { video -> TubeVideoCard(video) { selected = video } } }
+                                                            LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) { items(shortBatch, key = { it.id }) { video -> TubeVideoCard(video, onImpression = { markTubeImpression(context, video.id) }) { selected = video } } }
                                                         }
                                                     }
                                                 }
                                             }
                                         } else {
-                                            items(regular, key = { it.id }) { video -> TubeVideoCard(video) { selected = video } }
+                                            items(regular, key = { it.id }) { video -> TubeVideoCard(video, onImpression = { markTubeImpression(context, video.id) }) { selected = video } }
                                         }
                                         if (hasMore) {
                                             item(key = "load-more") {
@@ -575,8 +633,9 @@ fun NativeRykoTube() {
 }
 
 @Composable
-private fun TubeVideoCard(video: TubeVideo, onClick: () -> Unit) {
+private fun TubeVideoCard(video: TubeVideo, onImpression: (() -> Unit)? = null, onClick: () -> Unit) {
     val context = LocalContext.current
+    LaunchedEffect(video.id) { onImpression?.invoke() }
     var menuExpanded by remember(video.id) { mutableStateOf(false) }
     var saved by remember(video.id) {
         mutableStateOf(
@@ -839,7 +898,7 @@ fun NativeLibraryVideos(
                     Text("${visibleVideos.size} shown · ${videos.size} saved", color = Color(0xFFAAA8B5), fontSize = 11.sp)
                 }
             }
-            items(visibleVideos, key = { it.id }) { video -> TubeVideoCard(video) { selected = video } }
+            items(visibleVideos, key = { it.id }) { video -> TubeVideoCard(video, onImpression = { markTubeImpression(context, video.id) }) { selected = video } }
         }
     }
 }
