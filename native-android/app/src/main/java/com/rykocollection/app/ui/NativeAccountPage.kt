@@ -76,6 +76,27 @@ fun NativeAccountPage() {
             .padding(horizontal = 18.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
+        Column(
+            Modifier.fillMaxWidth().rykoGlass(22.dp, Color(0xC51B1925), 0.38f).padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(7.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Box(
+                    Modifier.size(42.dp).background(Color(0xFF302332), RoundedCornerShape(13.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("▶", color = Color(0xFFFF365D), fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                }
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text("RYKO ACCOUNT", color = AccountAccent, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    Text("Your space, connected.", color = Color.White, fontSize = 19.sp, fontWeight = FontWeight.ExtraBold)
+                }
+            }
+            Text(
+                "Manage your profile, saved titles and optional YouTube connection in one place.",
+                color = AccountMuted, fontSize = 11.sp, lineHeight = 16.sp
+            )
+        }
         when (val current = status) {
             SessionStatus.Initializing -> Box(Modifier.fillMaxWidth().padding(35.dp), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(color = AccountAccent)
