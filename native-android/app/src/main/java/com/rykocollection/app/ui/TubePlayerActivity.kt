@@ -4,9 +4,12 @@ import com.rykocollection.app.R
 
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.app.AlertDialog
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -62,6 +65,12 @@ class TubePlayerActivity : ComponentActivity() {
     private var youTubePlayer: YouTubePlayer? = null
     private var fullscreenView: View? = null
     private var shortIsPlaying = false
+    private var hasPlaybackStarted = false
+    private var playbackFallbackShown = false
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private val playbackFallbackRunnable = Runnable {
+        if (!hasPlaybackStarted && !isFinishing && !isDestroyed) showPlaybackFallback()
+    }
     private var originalSystemUi = 0
     private var currentVideoId = ""
     private var currentTitle = ""
@@ -199,10 +208,18 @@ class TubePlayerActivity : ComponentActivity() {
                 override fun onReady(player: YouTubePlayer) {
                     youTubePlayer = player
                     player.loadVideo(currentVideoId, 0f)
+                    // YouTube may block embedded playback with an account/anti-bot check.
+                    // Never bypass that check; offer the official YouTube app as a fallback.
+                    mainHandler.removeCallbacks(playbackFallbackRunnable)
+                    mainHandler.postDelayed(playbackFallbackRunnable, 18_000L)
                 }
 
                 override fun onStateChange(player: YouTubePlayer, state: PlayerConstants.PlayerState) {
                     shortIsPlaying = state == PlayerConstants.PlayerState.PLAYING
+                    if (shortIsPlaying) {
+                        hasPlaybackStarted = true
+                        mainHandler.removeCallbacks(playbackFallbackRunnable)
+                    }
                     ambientPlaybackActive = shortIsPlaying
                     if (shortIsPlaying) ambientView?.resumeFlow() else ambientView?.pauseFlow()
                 }
@@ -210,6 +227,7 @@ class TubePlayerActivity : ComponentActivity() {
                 override fun onError(player: YouTubePlayer, error: PlayerConstants.PlayerError) {
                     Log.e(TAG, "YouTube player error: $error")
                     Toast.makeText(this@TubePlayerActivity, "Video unavailable or playback interrupted.", Toast.LENGTH_LONG).show()
+                    showPlaybackFallback(force = true)
                 }
             }, options)
             addFullscreenListener(object : FullscreenListener {
@@ -705,6 +723,10 @@ class TubePlayerActivity : ComponentActivity() {
         swipeHandled = true
         shortIndex = next
         currentVideoId = shortQueue[next]
+        hasPlaybackStarted = false
+        playbackFallbackShown = false
+        mainHandler.removeCallbacks(playbackFallbackRunnable)
+        mainHandler.postDelayed(playbackFallbackRunnable, 18_000L)
         currentTitle = shortTitles.getOrNull(next).orEmpty().ifBlank { "Short video" }
         currentCreator = shortCreators.getOrNull(next).orEmpty()
         // Reuse the same native player instance; loadVideo switches clips without WebView reload.
@@ -756,13 +778,53 @@ class TubePlayerActivity : ComponentActivity() {
         }
     }
 
+
+    /**
+     * YouTube sign-in / anti-bot pages are controlled by YouTube and cannot be
+     * authenticated or bypassed inside this embedded player. Offer a clear,
+     * supported hand-off to the official YouTube app instead.
+     */
+    private fun openCurrentVideoInYouTube() {
+        val videoUrl = Uri.parse("https://www.youtube.com/watch?v=$currentVideoId")
+        val youtubeIntent = Intent(Intent.ACTION_VIEW, videoUrl).apply {
+            setPackage("com.google.android.youtube")
+        }
+        try {
+            startActivity(youtubeIntent)
+        } catch (_: Exception) {
+            try {
+                startActivity(Intent(Intent.ACTION_VIEW, videoUrl))
+            } catch (_: Exception) {
+                Toast.makeText(this, "No app is available to open this YouTube video.", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    private fun showPlaybackFallback(force: Boolean = false) {
+        if (playbackFallbackShown || isFinishing || isDestroyed || (!force && hasPlaybackStarted)) return
+        playbackFallbackShown = true
+        AlertDialog.Builder(this)
+            .setTitle("YouTube needs verification")
+            .setMessage("YouTube may require sign-in or additional verification for this video. RykoCollection cannot complete or bypass that check inside the embedded player. You can open the same video in the official YouTube app, then return here.")
+            .setNegativeButton("Retry here") { _, _ ->
+                playbackFallbackShown = false
+                hasPlaybackStarted = false
+                youTubePlayer?.loadVideo(currentVideoId, 0f)
+                mainHandler.removeCallbacks(playbackFallbackRunnable)
+                mainHandler.postDelayed(playbackFallbackRunnable, 18_000L)
+            }
+            .setPositiveButton("Open YouTube") { _, _ -> openCurrentVideoInYouTube() }
+            .setOnCancelListener { playbackFallbackShown = false }
+            .show()
+    }
+
     private fun showMoreMenu(anchor: View) {
         PopupMenu(this, anchor).apply {
             menu.add("Save to RykoTube").setOnMenuItemClickListener { toggleSaved(); true }
             menu.add("Share").setOnMenuItemClickListener { shareVideo(); true }
             menu.add("Report").setOnMenuItemClickListener { reportVideo(); true }
             menu.add("Open in YouTube").setOnMenuItemClickListener {
-                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.youtube.com/watch?v=$currentVideoId")))
+                openCurrentVideoInYouTube()
                 true
             }
             menu.add("Download").setOnMenuItemClickListener {
@@ -785,6 +847,7 @@ class TubePlayerActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
+        mainHandler.removeCallbacks(playbackFallbackRunnable)
         ambientPlaybackActive = false
         ambientView?.pauseFlow()
         ambientView = null
