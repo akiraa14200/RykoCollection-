@@ -777,7 +777,7 @@ class TubePlayerActivity : ComponentActivity() {
                         java.net.URLEncoder.encode(videoId, "UTF-8") +
                         "&rating=" + java.net.URLEncoder.encode(rating, "UTF-8")
                 )
-                connection = (url.openConnection() as java.net.HttpURLConnection).apply {
+                val activeConnection = (url.openConnection() as java.net.HttpURLConnection).apply {
                     requestMethod = "POST"
                     connectTimeout = 15000
                     readTimeout = 15000
@@ -785,7 +785,8 @@ class TubePlayerActivity : ComponentActivity() {
                     setRequestProperty("Accept", "application/json")
                     doOutput = true
                 }
-                val status = connection.responseCode
+                connection = activeConnection
+                val status = activeConnection.responseCode
                 if (status in 200..299) {
                     runOnUiThread {
                         if (isFinishing || isDestroyed) return@runOnUiThread
@@ -814,7 +815,7 @@ class TubePlayerActivity : ComponentActivity() {
                     }
                 } else {
                     val detail = runCatching {
-                        (if (status >= 400) connection.errorStream else connection.inputStream)
+                        (if (status >= 400) connection?.errorStream else connection?.inputStream)
                             ?.bufferedReader()?.use { it.readText() }
                     }.getOrNull().orEmpty()
                     runOnUiThread {
