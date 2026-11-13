@@ -1,6 +1,7 @@
 package com.rykocollection.app.ui
 
 import com.rykocollection.app.R
+import com.rykocollection.app.BuildConfig
 import com.rykocollection.app.data.SupabaseProvider
 import io.github.jan.supabase.auth.auth
 
