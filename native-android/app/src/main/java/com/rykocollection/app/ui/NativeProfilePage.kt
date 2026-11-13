@@ -68,7 +68,7 @@ internal fun NativeProfilePage(
     var bio by remember { mutableStateOf("") }
     var avatarUrl by remember { mutableStateOf("") }
     var isPublic by remember { mutableStateOf(true) }
-    var youtubeIdentity by remember { mutableStateOf<io.github.jan.supabase.auth.user.UserIdentity?>(null) }
+    var youtubeIdentityId by remember { mutableStateOf<String?>(null) }
     var youtubeBusy by remember { mutableStateOf(false) }
     val authStatus by client.auth.sessionStatus.collectAsState()
 
@@ -81,8 +81,8 @@ internal fun NativeProfilePage(
     }
 
     LaunchedEffect(userId, authStatus) {
-        youtubeIdentity = runCatching {
-            client.auth.currentIdentitiesOrNull()?.firstOrNull { it.provider == "google" }
+        youtubeIdentityId = runCatching {
+            client.auth.currentIdentitiesOrNull()?.firstOrNull { it.provider == "google" }?.identityId
         }.getOrNull()
         loading = true
         error = null
@@ -212,12 +212,12 @@ internal fun NativeProfilePage(
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text("YouTube account", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
                         Text(
-                            if (youtubeIdentity != null) "Connected to RykoCollection"
+                            if (youtubeIdentityId != null) "Connected to RykoCollection"
                             else "Optional connection for your YouTube identity",
                             color = ProfileMuted, fontSize = 10.sp
                         )
                     }
-                    if (youtubeIdentity != null) {
+                    if (youtubeIdentityId != null) {
                         Text("CONNECTED", color = Color(0xFF8EDDB0), fontSize = 9.sp, fontWeight = FontWeight.Bold)
                     }
                 }
@@ -225,7 +225,7 @@ internal fun NativeProfilePage(
                     "Connect securely with Google using a read-only YouTube permission. This links your account identity; it does not bypass YouTube playback verification or guarantee every embed will play.",
                     color = ProfileMuted, fontSize = 11.sp, lineHeight = 16.sp
                 )
-                if (youtubeIdentity == null) {
+                if (youtubeIdentityId == null) {
                     Button(
                         onClick = {
                             scope.launch {
@@ -256,11 +256,11 @@ internal fun NativeProfilePage(
                                 youtubeBusy = true
                                 error = null
                                 try {
-                                    val identityId = youtubeIdentity?.identityId
+                                    val identityId = youtubeIdentityId
                                     if (identityId.isNullOrBlank()) error = "Google identity could not be identified."
                                     else {
                                         client.auth.unlinkIdentity(identityId)
-                                        youtubeIdentity = null
+                                        youtubeIdentityId = null
                                         notice = "YouTube account disconnected."
                                     }
                                 } catch (t: Throwable) {
