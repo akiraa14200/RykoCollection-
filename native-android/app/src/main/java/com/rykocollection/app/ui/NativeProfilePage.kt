@@ -223,7 +223,7 @@ internal fun NativeProfilePage(
                     }
                 }
                 Text(
-                    "Connect securely with Google using a read-only YouTube permission. This links your account identity; it does not bypass YouTube playback verification or guarantee every embed will play.",
+                    "Connect securely through Google in your browser. This grants RykoCollection permission to apply your YouTube video ratings; it does not change your YouTube playback or Watch Later settings.",
                     color = ProfileMuted, fontSize = 11.sp, lineHeight = 16.sp
                 )
                 if (youtubeIdentityId == null) {
@@ -235,7 +235,7 @@ internal fun NativeProfilePage(
                                 notice = null
                                 try {
                                     client.auth.linkIdentity(Google) {
-                                        scopes.add("https://www.googleapis.com/auth/youtube.readonly")
+                                        scopes.add("https://www.googleapis.com/auth/youtube.force-ssl")
                                     }
                                     notice = "Continue in the secure Google sign-in tab. RykoCollection will reopen after approval."
                                 } catch (t: Throwable) {
@@ -248,7 +248,7 @@ internal fun NativeProfilePage(
                         colors = ButtonDefaults.buttonColors(containerColor = ProfileAccent, contentColor = Color(0xFF17151F))
                     ) {
                         if (youtubeBusy) CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
-                        else Text("Connect YouTube account", fontWeight = FontWeight.Bold)
+                        else Text("Connect YouTube for Likes", fontWeight = FontWeight.Bold)
                     }
                 } else {
                     OutlinedButton(
