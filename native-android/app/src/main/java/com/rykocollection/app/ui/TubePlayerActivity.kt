@@ -1,6 +1,8 @@
 package com.rykocollection.app.ui
 
 import com.rykocollection.app.R
+import com.rykocollection.app.data.SupabaseProvider
+import io.github.jan.supabase.auth.auth
 
 import android.annotation.SuppressLint
 import android.app.Activity
@@ -30,11 +32,6 @@ import android.animation.ValueAnimator
 import android.view.animation.LinearInterpolator
 import android.util.Log
 import androidx.activity.ComponentActivity
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.activity.result.IntentSenderRequest
-import com.google.android.gms.auth.api.identity.AuthorizationRequest
-import com.google.android.gms.auth.api.identity.Identity
-import com.google.android.gms.common.api.Scope
 import androidx.core.view.WindowCompat
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.YouTubePlayer
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.PlayerConstants
@@ -63,39 +60,6 @@ class TubePlayerActivity : ComponentActivity() {
         const val EXTRA_RECOMMEND_THUMBS = "tube_recommend_thumbs"
         private const val TAG = "RykoTubePlayer"
         private const val PREFS = "ryko_tube_saved"
-    }
-
-    private val youtubeRatingScope = "https://www.googleapis.com/auth/youtube.force-ssl"
-    private var pendingYouTubeRating: String? = null
-    private val youtubeAuthorizationLauncher = registerForActivityResult(
-        ActivityResultContracts.StartIntentSenderForResult()
-    ) { result ->
-        try {
-            val authorization = Identity.getAuthorizationClient(this)
-                .getAuthorizationResultFromIntent(result.data)
-            val token = authorization.accessToken
-            val rating = pendingYouTubeRating
-            pendingYouTubeRating = null
-            if (token.isNullOrBlank() || rating == null) {
-                Log.w(TAG, "YouTube authorization completed without an access token. resultCode=${result.resultCode}")
-                Toast.makeText(this, "Google didn't return YouTube permission. Check the OAuth setup and try again.", Toast.LENGTH_LONG).show()
-            } else {
-                submitYouTubeRating(token, rating)
-            }
-        } catch (error: com.google.android.gms.common.api.ApiException) {
-            pendingYouTubeRating = null
-            Log.e(TAG, "YouTube authorization result failed: statusCode=${error.statusCode}, message=${error.message}, resultCode=${result.resultCode}", error)
-            val message = when (error.statusCode) {
-                12501 -> "Google sign-in was cancelled. Choose an account and approve YouTube access."
-                10 -> "Google OAuth configuration error. Check package name and SHA-1 in Google Cloud."
-                else -> "Google authorization failed (${error.statusCode}). Check OAuth consent settings and try again."
-            }
-            Toast.makeText(this, message, Toast.LENGTH_LONG).show()
-        } catch (error: Exception) {
-            pendingYouTubeRating = null
-            Log.e(TAG, "Unexpected YouTube authorization result error", error)
-            Toast.makeText(this, error.message ?: "YouTube authorization failed.", Toast.LENGTH_LONG).show()
-        }
     }
 
     private lateinit var root: FrameLayout
@@ -739,37 +703,20 @@ class TubePlayerActivity : ComponentActivity() {
      * Google Identity Services reuses a valid grant and refreshes short-lived access tokens.
      */
     private fun requestYouTubeRating(rating: String) {
-        pendingYouTubeRating = rating
-        val request = AuthorizationRequest.builder()
-            .setRequestedScopes(listOf(Scope(youtubeRatingScope)))
-            .build()
-        Identity.getAuthorizationClient(this)
-            .authorize(request)
-            .addOnSuccessListener { authorization ->
-                if (authorization.hasResolution()) {
-                    val pendingIntent = authorization.pendingIntent
-                    if (pendingIntent == null) {
-                        pendingYouTubeRating = null
-                        Toast.makeText(this, "Google authorization could not be started.", Toast.LENGTH_LONG).show()
-                    } else {
-                        youtubeAuthorizationLauncher.launch(
-                            IntentSenderRequest.Builder(pendingIntent.intentSender).build()
-                        )
-                    }
-                } else {
-                    val token = authorization.accessToken
-                    pendingYouTubeRating = null
-                    if (token.isNullOrBlank()) {
-                        Toast.makeText(this, "Google did not return a YouTube access token.", Toast.LENGTH_LONG).show()
-                    } else {
-                        submitYouTubeRating(token, rating)
-                    }
-                }
-            }
-            .addOnFailureListener { error ->
-                pendingYouTubeRating = null
-                Toast.makeText(this, error.message ?: "Couldn't authorize YouTube access.", Toast.LENGTH_LONG).show()
-            }
+        // YouTube authorization is completed in the system browser through Supabase Auth.
+        // The resulting Google provider token is attached to the authenticated Supabase session.
+        val token = runCatching {
+            SupabaseProvider.client.auth.currentSessionOrNull()?.providerToken
+        }.getOrNull()
+        if (token.isNullOrBlank()) {
+            Toast.makeText(
+                this,
+                "Connect YouTube from Account first, then try Like again.",
+                Toast.LENGTH_LONG
+            ).show()
+            return
+        }
+        submitYouTubeRating(token, rating)
     }
 
     /** Performs the real YouTube Data API videos.rate request off the main thread. */
