@@ -30,6 +30,11 @@ import android.animation.ValueAnimator
 import android.view.animation.LinearInterpolator
 import android.util.Log
 import androidx.activity.ComponentActivity
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.result.IntentSenderRequest
+import com.google.android.gms.auth.api.identity.AuthorizationRequest
+import com.google.android.gms.auth.api.identity.Identity
+import com.google.android.gms.common.api.Scope
 import androidx.core.view.WindowCompat
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.YouTubePlayer
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.PlayerConstants
@@ -58,6 +63,33 @@ class TubePlayerActivity : ComponentActivity() {
         const val EXTRA_RECOMMEND_THUMBS = "tube_recommend_thumbs"
         private const val TAG = "RykoTubePlayer"
         private const val PREFS = "ryko_tube_saved"
+    }
+
+    private val youtubeRatingScope = "https://www.googleapis.com/auth/youtube.force-ssl"
+    private var pendingYouTubeRating: String? = null
+    private val youtubeAuthorizationLauncher = registerForActivityResult(
+        ActivityResultContracts.StartIntentSenderForResult()
+    ) { result ->
+        if (result.resultCode != Activity.RESULT_OK) {
+            pendingYouTubeRating = null
+            Toast.makeText(this, "YouTube permission was not granted.", Toast.LENGTH_SHORT).show()
+        } else {
+            try {
+                val authorization = Identity.getAuthorizationClient(this)
+                    .getAuthorizationResultFromIntent(result.data)
+                val token = authorization.accessToken
+                val rating = pendingYouTubeRating
+                pendingYouTubeRating = null
+                if (token.isNullOrBlank() || rating == null) {
+                    Toast.makeText(this, "YouTube authorization did not return an access token.", Toast.LENGTH_LONG).show()
+                } else {
+                    submitYouTubeRating(token, rating)
+                }
+            } catch (error: Exception) {
+                pendingYouTubeRating = null
+                Toast.makeText(this, error.message ?: "YouTube authorization failed.", Toast.LENGTH_LONG).show()
+            }
+        }
     }
 
     private lateinit var root: FrameLayout
@@ -344,19 +376,15 @@ class TubePlayerActivity : ComponentActivity() {
             )
             setOnClickListener {
                 val prefs = getSharedPreferences(PREFS, MODE_PRIVATE)
-                val next = !prefs.getBoolean("like_" + currentVideoId, false)
-                prefs.edit().putBoolean("like_" + currentVideoId, next).putBoolean("dislike_" + currentVideoId, false).apply()
-                imageTintList = android.content.res.ColorStateList.valueOf(if (next) Color.rgb(205, 185, 255) else Color.WHITE)
-                dislikeAction?.imageTintList = android.content.res.ColorStateList.valueOf(Color.WHITE)
+                val nextRating = if (prefs.getBoolean("like_" + currentVideoId, false)) "none" else "like"
+                requestYouTubeRating(nextRating)
             }
         }
         dislikeAction = iconAction(R.drawable.ic_thumb_down, "Dislike").apply {
             setOnClickListener {
                 val prefs = getSharedPreferences(PREFS, MODE_PRIVATE)
-                val next = !prefs.getBoolean("dislike_" + currentVideoId, false)
-                prefs.edit().putBoolean("dislike_" + currentVideoId, next).putBoolean("like_" + currentVideoId, false).apply()
-                imageTintList = android.content.res.ColorStateList.valueOf(if (next) Color.rgb(205, 185, 255) else Color.WHITE)
-                likeAction?.imageTintList = android.content.res.ColorStateList.valueOf(Color.WHITE)
+                val nextRating = if (prefs.getBoolean("dislike_" + currentVideoId, false)) "none" else "dislike"
+                requestYouTubeRating(nextRating)
             }
         }
         actions.addView(likeAction, LinearLayout.LayoutParams(0, dp(48), 1f))
@@ -698,6 +726,120 @@ class TubePlayerActivity : ComponentActivity() {
             (Color.green(a) + (Color.green(b) - Color.green(a)) * t).toInt().coerceIn(0, 255),
             (Color.blue(a) + (Color.blue(b) - Color.blue(a)) * t).toInt().coerceIn(0, 255)
         )
+    }
+
+    /**
+     * Requests YouTube's official OAuth permission only after the user taps Like/Dislike.
+     * Google Identity Services reuses a valid grant and refreshes short-lived access tokens.
+     */
+    private fun requestYouTubeRating(rating: String) {
+        pendingYouTubeRating = rating
+        val request = AuthorizationRequest.builder()
+            .setRequestedScopes(listOf(Scope(youtubeRatingScope)))
+            .build()
+        Identity.getAuthorizationClient(this)
+            .authorize(request)
+            .addOnSuccessListener { authorization ->
+                if (authorization.hasResolution()) {
+                    val pendingIntent = authorization.pendingIntent
+                    if (pendingIntent == null) {
+                        pendingYouTubeRating = null
+                        Toast.makeText(this, "Google authorization could not be started.", Toast.LENGTH_LONG).show()
+                    } else {
+                        youtubeAuthorizationLauncher.launch(
+                            IntentSenderRequest.Builder(pendingIntent.intentSender).build()
+                        )
+                    }
+                } else {
+                    val token = authorization.accessToken
+                    pendingYouTubeRating = null
+                    if (token.isNullOrBlank()) {
+                        Toast.makeText(this, "Google did not return a YouTube access token.", Toast.LENGTH_LONG).show()
+                    } else {
+                        submitYouTubeRating(token, rating)
+                    }
+                }
+            }
+            .addOnFailureListener { error ->
+                pendingYouTubeRating = null
+                Toast.makeText(this, error.message ?: "Couldn't authorize YouTube access.", Toast.LENGTH_LONG).show()
+            }
+    }
+
+    /** Performs the real YouTube Data API videos.rate request off the main thread. */
+    private fun submitYouTubeRating(accessToken: String, rating: String) {
+        val videoId = currentVideoId
+        Thread {
+            var connection: java.net.HttpURLConnection? = null
+            try {
+                val url = java.net.URL(
+                    "https://www.googleapis.com/youtube/v3/videos/rate?id=" +
+                        java.net.URLEncoder.encode(videoId, "UTF-8") +
+                        "&rating=" + java.net.URLEncoder.encode(rating, "UTF-8")
+                )
+                connection = (url.openConnection() as java.net.HttpURLConnection).apply {
+                    requestMethod = "POST"
+                    connectTimeout = 15000
+                    readTimeout = 15000
+                    setRequestProperty("Authorization", "Bearer $accessToken")
+                    setRequestProperty("Accept", "application/json")
+                    doOutput = true
+                }
+                val status = connection.responseCode
+                if (status in 200..299) {
+                    runOnUiThread {
+                        if (isFinishing || isDestroyed) return@runOnUiThread
+                        val prefs = getSharedPreferences(PREFS, MODE_PRIVATE)
+                        val liked = rating == "like"
+                        val disliked = rating == "dislike"
+                        prefs.edit()
+                            .putBoolean("like_" + videoId, liked)
+                            .putBoolean("dislike_" + videoId, disliked)
+                            .apply()
+                        likeAction?.imageTintList = android.content.res.ColorStateList.valueOf(
+                            if (liked) Color.rgb(205, 185, 255) else Color.WHITE
+                        )
+                        dislikeAction?.imageTintList = android.content.res.ColorStateList.valueOf(
+                            if (disliked) Color.rgb(205, 185, 255) else Color.WHITE
+                        )
+                        Toast.makeText(
+                            this,
+                            when (rating) {
+                                "like" -> "Liked on YouTube"
+                                "dislike" -> "Disliked on YouTube"
+                                else -> "YouTube rating removed"
+                            },
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                } else {
+                    val detail = runCatching {
+                        (if (status >= 400) connection.errorStream else connection.inputStream)
+                            ?.bufferedReader()?.use { it.readText() }
+                    }.getOrNull().orEmpty()
+                    runOnUiThread {
+                        if (!isFinishing && !isDestroyed) {
+                            val message = when (status) {
+                                401 -> "YouTube authorization expired. Tap again to reconnect."
+                                403 -> "YouTube could not apply this rating. The video may not allow ratings."
+                                else -> "YouTube rating failed (HTTP $status)."
+                            }
+                            Log.w(TAG, "videos.rate failed: HTTP $status $detail")
+                            Toast.makeText(this, message, Toast.LENGTH_LONG).show()
+                        }
+                    }
+                }
+            } catch (error: Exception) {
+                Log.e(TAG, "YouTube rating request failed", error)
+                runOnUiThread {
+                    if (!isFinishing && !isDestroyed) {
+                        Toast.makeText(this, "Couldn't reach YouTube. Check your connection and try again.", Toast.LENGTH_LONG).show()
+                    }
+                }
+            } finally {
+                connection?.disconnect()
+            }
+        }.start()
     }
 
     private fun loadImage(url: String, target: android.widget.ImageView) {
