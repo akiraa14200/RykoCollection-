@@ -18,6 +18,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import io.github.jan.supabase.SupabaseClient
+import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.auth.providers.Google
 import io.github.jan.supabase.postgrest.postgrest
 import kotlinx.coroutines.launch
 import kotlinx.serialization.SerialName
@@ -66,6 +68,9 @@ internal fun NativeProfilePage(
     var bio by remember { mutableStateOf("") }
     var avatarUrl by remember { mutableStateOf("") }
     var isPublic by remember { mutableStateOf(true) }
+    var youtubeIdentity by remember { mutableStateOf<io.github.jan.supabase.auth.user.UserIdentity?>(null) }
+    var youtubeBusy by remember { mutableStateOf(false) }
+    val authStatus by client.auth.sessionStatus.collectAsState()
 
     fun copyProfileToFields(value: RykoProfileRecord) {
         displayName = value.displayName
@@ -75,7 +80,10 @@ internal fun NativeProfilePage(
         isPublic = value.isPublic
     }
 
-    LaunchedEffect(userId) {
+    LaunchedEffect(userId, authStatus) {
+        youtubeIdentity = runCatching {
+            client.auth.currentIdentitiesOrNull()?.firstOrNull { it.provider == "google" }
+        }.getOrNull()
         loading = true
         error = null
         try {
@@ -187,6 +195,87 @@ internal fun NativeProfilePage(
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(containerColor = ProfileAccent, contentColor = Color(0xFF17151F))
                 ) { Text("Open Admin Workspace", fontWeight = FontWeight.Bold) }
+            }
+
+
+            Column(
+                Modifier.fillMaxWidth().rykoGlass(20.dp, Color(0xC51B1925), 0.38f).padding(17.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Box(
+                        Modifier.size(42.dp).clip(RoundedCornerShape(13.dp)).background(Color(0xFF282431)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("▶", color = Color(0xFFFF365D), fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                    }
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text("YouTube account", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                        Text(
+                            if (youtubeIdentity != null) "Connected to RykoCollection"
+                            else "Optional connection for your YouTube identity",
+                            color = ProfileMuted, fontSize = 10.sp
+                        )
+                    }
+                    if (youtubeIdentity != null) {
+                        Text("CONNECTED", color = Color(0xFF8EDDB0), fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+                Text(
+                    "Connect securely with Google using a read-only YouTube permission. This links your account identity; it does not bypass YouTube playback verification or guarantee every embed will play.",
+                    color = ProfileMuted, fontSize = 11.sp, lineHeight = 16.sp
+                )
+                if (youtubeIdentity == null) {
+                    Button(
+                        onClick = {
+                            scope.launch {
+                                youtubeBusy = true
+                                error = null
+                                notice = null
+                                try {
+                                    client.auth.linkIdentity(Google) {
+                                        scopes.add("https://www.googleapis.com/auth/youtube.readonly")
+                                    }
+                                    notice = "Continue in the secure Google sign-in tab. RykoCollection will reopen after approval."
+                                } catch (t: Throwable) {
+                                    error = t.message ?: "Couldn't start YouTube account connection."
+                                } finally { youtubeBusy = false }
+                            }
+                        },
+                        enabled = !youtubeBusy,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(containerColor = ProfileAccent, contentColor = Color(0xFF17151F))
+                    ) {
+                        if (youtubeBusy) CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
+                        else Text("Connect YouTube account", fontWeight = FontWeight.Bold)
+                    }
+                } else {
+                    OutlinedButton(
+                        onClick = {
+                            scope.launch {
+                                youtubeBusy = true
+                                error = null
+                                try {
+                                    val identityId = youtubeIdentity?.identityId
+                                    if (identityId.isNullOrBlank()) error = "Google identity could not be identified."
+                                    else {
+                                        client.auth.unlinkIdentity(identityId)
+                                        youtubeIdentity = null
+                                        notice = "YouTube account disconnected."
+                                    }
+                                } catch (t: Throwable) {
+                                    error = t.message ?: "Couldn't disconnect YouTube account."
+                                } finally { youtubeBusy = false }
+                            }
+                        },
+                        enabled = !youtubeBusy,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)
+                    ) {
+                        if (youtubeBusy) CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
+                        else Text("Disconnect YouTube account")
+                    }
+                }
             }
 
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
