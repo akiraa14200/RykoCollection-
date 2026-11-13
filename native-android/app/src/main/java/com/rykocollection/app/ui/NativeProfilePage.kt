@@ -198,6 +198,7 @@ internal fun NativeProfilePage(
             }
 
 
+            // The OAuth callback returns through the registered ryko://auth-callback deep link.
             Column(
                 Modifier.fillMaxWidth().rykoGlass(20.dp, Color(0xC51B1925), 0.38f).padding(17.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
