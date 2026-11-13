@@ -18,10 +18,21 @@ class MainActivity : ComponentActivity() {
             window.isNavigationBarContrastEnforced = false
         }
         SupabaseProvider.initialize()
+        if (com.rykocollection.app.BuildConfig.SUPABASE_PUBLISHABLE_KEY.isNotBlank()) {
+            runCatching { SupabaseProvider.client.handleDeeplinks(intent) }
+        }
         setContent {
             RykoTheme {
                 RykoApp()
             }
+        }
+    }
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        if (com.rykocollection.app.BuildConfig.SUPABASE_PUBLISHABLE_KEY.isNotBlank()) {
+            runCatching { SupabaseProvider.client.handleDeeplinks(intent) }
         }
     }
 }
