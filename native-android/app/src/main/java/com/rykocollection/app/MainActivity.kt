@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import com.rykocollection.app.data.SupabaseProvider
+import io.github.jan.supabase.auth.handleDeeplinks
 import com.rykocollection.app.ui.RykoApp
 import com.rykocollection.app.ui.theme.RykoTheme
 
