@@ -70,25 +70,31 @@ class TubePlayerActivity : ComponentActivity() {
     private val youtubeAuthorizationLauncher = registerForActivityResult(
         ActivityResultContracts.StartIntentSenderForResult()
     ) { result ->
-        if (result.resultCode != Activity.RESULT_OK) {
+        try {
+            val authorization = Identity.getAuthorizationClient(this)
+                .getAuthorizationResultFromIntent(result.data)
+            val token = authorization.accessToken
+            val rating = pendingYouTubeRating
             pendingYouTubeRating = null
-            Toast.makeText(this, "YouTube permission was not granted.", Toast.LENGTH_SHORT).show()
-        } else {
-            try {
-                val authorization = Identity.getAuthorizationClient(this)
-                    .getAuthorizationResultFromIntent(result.data)
-                val token = authorization.accessToken
-                val rating = pendingYouTubeRating
-                pendingYouTubeRating = null
-                if (token.isNullOrBlank() || rating == null) {
-                    Toast.makeText(this, "YouTube authorization did not return an access token.", Toast.LENGTH_LONG).show()
-                } else {
-                    submitYouTubeRating(token, rating)
-                }
-            } catch (error: Exception) {
-                pendingYouTubeRating = null
-                Toast.makeText(this, error.message ?: "YouTube authorization failed.", Toast.LENGTH_LONG).show()
+            if (token.isNullOrBlank() || rating == null) {
+                Log.w(TAG, "YouTube authorization completed without an access token. resultCode=${result.resultCode}")
+                Toast.makeText(this, "Google didn't return YouTube permission. Check the OAuth setup and try again.", Toast.LENGTH_LONG).show()
+            } else {
+                submitYouTubeRating(token, rating)
             }
+        } catch (error: com.google.android.gms.common.api.ApiException) {
+            pendingYouTubeRating = null
+            Log.e(TAG, "YouTube authorization result failed: statusCode=${error.statusCode}, message=${error.message}, resultCode=${result.resultCode}", error)
+            val message = when (error.statusCode) {
+                12501 -> "Google sign-in was cancelled. Choose an account and approve YouTube access."
+                10 -> "Google OAuth configuration error. Check package name and SHA-1 in Google Cloud."
+                else -> "Google authorization failed (${error.statusCode}). Check OAuth consent settings and try again."
+            }
+            Toast.makeText(this, message, Toast.LENGTH_LONG).show()
+        } catch (error: Exception) {
+            pendingYouTubeRating = null
+            Log.e(TAG, "Unexpected YouTube authorization result error", error)
+            Toast.makeText(this, error.message ?: "YouTube authorization failed.", Toast.LENGTH_LONG).show()
         }
     }
 
