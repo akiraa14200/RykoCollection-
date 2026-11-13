@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.sp
 import com.rykocollection.app.BuildConfig
 import com.rykocollection.app.data.SupabaseProvider
 import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.auth.providers.Google
 import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.auth.status.SessionStatus
 import io.github.jan.supabase.postgrest.postgrest
@@ -169,6 +170,52 @@ fun NativeAccountPage() {
                 ) {
                     Text(if (createAccount) "CREATE ACCOUNT" else "WELCOME BACK", color = AccountAccent, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                     Text(if (createAccount) "Join the Ryko community" else "Sign in to Ryko", color = Color.White, fontSize = 19.sp, fontWeight = FontWeight.Bold)
+                    OutlinedButton(
+                        modifier = Modifier.fillMaxWidth().height(50.dp),
+                        enabled = !busy,
+                        onClick = {
+                            scope.launch {
+                                busy = true
+                                message = null
+                                try {
+                                    client.auth.signInWith(Google)
+                                    message = "Continue with Google in the secure sign-in tab. RykoCollection will reopen when sign-in is complete."
+                                } catch (t: Throwable) {
+                                    message = t.message ?: "Google sign-in couldn't start. Please try again."
+                                } finally { busy = false }
+                            }
+                        },
+                        shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)
+                    ) {
+                        if (busy) {
+                            CircularProgressIndicator(Modifier.size(17.dp), color = AccountAccent, strokeWidth = 2.dp)
+                        } else {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    Modifier.size(23.dp).background(Color.White, RoundedCornerShape(7.dp)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text("G", color = Color(0xFF4285F4), fontSize = 15.sp, fontWeight = FontWeight.ExtraBold)
+                                }
+                                Spacer(Modifier.width(10.dp))
+                                Text("Continue with Google", fontWeight = FontWeight.SemiBold)
+                            }
+                        }
+                    }
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        HorizontalDivider(Modifier.weight(1f), color = Color(0xFF34313D))
+                        Text("OR CONTINUE WITH EMAIL", color = AccountMuted, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                        HorizontalDivider(Modifier.weight(1f), color = Color(0xFF34313D))
+                    }
                     OutlinedTextField(
                         value = email, onValueChange = { email = it.trim() },
                         modifier = Modifier.fillMaxWidth(), singleLine = true,
