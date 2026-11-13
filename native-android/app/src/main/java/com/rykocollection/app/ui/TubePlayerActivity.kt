@@ -705,10 +705,12 @@ class TubePlayerActivity : ComponentActivity() {
     private fun requestYouTubeRating(rating: String) {
         // YouTube authorization is completed in the system browser through Supabase Auth.
         // The resulting Google provider token is attached to the authenticated Supabase session.
-        val token = runCatching {
-            SupabaseProvider.client.auth.currentSessionOrNull()?.providerToken
+        val session = runCatching {
+            SupabaseProvider.client.auth.currentSessionOrNull()
         }.getOrNull()
-        if (token.isNullOrBlank()) {
+        val token = session?.providerToken
+        val supabaseToken = session?.accessToken
+        if (token.isNullOrBlank() || supabaseToken.isNullOrBlank()) {
             Toast.makeText(
                 this,
                 "Connect YouTube from Account first, then try Like again.",
@@ -716,28 +718,33 @@ class TubePlayerActivity : ComponentActivity() {
             ).show()
             return
         }
-        submitYouTubeRating(token, rating)
+        submitYouTubeRating(token, supabaseToken, rating)
     }
 
-    /** Performs the real YouTube Data API videos.rate request off the main thread. */
-    private fun submitYouTubeRating(accessToken: String, rating: String) {
+    /** Sends the rating through an authenticated Supabase Edge Function. */
+    private fun submitYouTubeRating(googleAccessToken: String, supabaseAccessToken: String, rating: String) {
         val videoId = currentVideoId
         Thread {
             var connection: java.net.HttpURLConnection? = null
             try {
-                val url = java.net.URL(
-                    "https://www.googleapis.com/youtube/v3/videos/rate?id=" +
-                        java.net.URLEncoder.encode(videoId, "UTF-8") +
-                        "&rating=" + java.net.URLEncoder.encode(rating, "UTF-8")
-                )
+                val endpoint = BuildConfig.SUPABASE_URL.trimEnd('/') + "/functions/v1/youtube-rate"
+                val url = java.net.URL(endpoint)
                 val activeConnection = (url.openConnection() as java.net.HttpURLConnection).apply {
                     requestMethod = "POST"
                     connectTimeout = 15000
                     readTimeout = 15000
-                    setRequestProperty("Authorization", "Bearer $accessToken")
+                    setRequestProperty("Authorization", "Bearer $supabaseAccessToken")
+                    setRequestProperty("apikey", BuildConfig.SUPABASE_PUBLISHABLE_KEY)
+                    setRequestProperty("Content-Type", "application/json")
                     setRequestProperty("Accept", "application/json")
                     doOutput = true
                 }
+                val payload = org.json.JSONObject()
+                    .put("videoId", videoId)
+                    .put("rating", rating)
+                    .put("googleAccessToken", googleAccessToken)
+                    .toString()
+                activeConnection.outputStream.use { it.write(payload.toByteArray(Charsets.UTF_8)) }
                 connection = activeConnection
                 val status = activeConnection.responseCode
                 if (status in 200..299) {
