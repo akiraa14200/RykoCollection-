@@ -748,7 +748,7 @@ class TubePlayerActivity : ComponentActivity() {
         // Reuse the same native player instance; do not rebuild the iframe.
         // Animate the player and bottom metadata together like a vertical Shorts strip.
         playerView.animate().cancel()
-        val metadata = (shortTitleOverlay?.parent as? View)?.parent as? View
+        val metadata = shortTitleOverlay?.parent as? View
         metadata?.animate()?.cancel()
         val travel = dp(34).toFloat() * if (direction > 0) 1f else -1f
         playerView.translationY = travel
