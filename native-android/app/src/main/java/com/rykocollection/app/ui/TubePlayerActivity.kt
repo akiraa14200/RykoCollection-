@@ -82,6 +82,8 @@ class TubePlayerActivity : ComponentActivity() {
     private var recommendCreators = arrayListOf<String>()
     private var recommendThumbs = arrayListOf<String>()
     private var subscribeAction: TextView? = null
+    private var shortTitleOverlay: TextView? = null
+    private var shortCreatorOverlay: TextView? = null
     private var isShort = false
     private var shortQueue = arrayListOf<String>()
     private var shortTitles = arrayListOf<String>()
@@ -497,6 +499,42 @@ class TubePlayerActivity : ComponentActivity() {
             root.addView(shortGestureLayer, FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT
             ))
+
+            // Native Shorts metadata sits at the bottom, outside the YouTube iframe.
+            // This recreates the earlier bottom-aligned presentation without exposing
+            // YouTube's transient in-player title / playback feedback overlay.
+            val shortMetadata = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = Gravity.BOTTOM
+                setPadding(dp(18), dp(48), dp(84), dp(28))
+                background = android.graphics.drawable.GradientDrawable(
+                    android.graphics.drawable.GradientDrawable.Orientation.BOTTOM_TOP,
+                    intArrayOf(Color.BLACK, Color.argb(0, 0, 0, 0))
+                )
+                isClickable = false
+                isFocusable = false
+            }
+            shortTitleOverlay = TextView(this).apply {
+                text = currentTitle.ifBlank { "Short video" }
+                setTextColor(Color.WHITE)
+                textSize = 16f
+                setTypeface(null, android.graphics.Typeface.BOLD)
+                maxLines = 2
+                ellipsize = android.text.TextUtils.TruncateAt.END
+                setShadowLayer(dp(3).toFloat(), 0f, dp(1).toFloat(), Color.BLACK)
+            }
+            shortCreatorOverlay = TextView(this).apply {
+                text = currentCreator.ifBlank { "YouTube" }
+                setTextColor(Color.WHITE)
+                textSize = 13f
+                setPadding(0, dp(6), 0, 0)
+                setShadowLayer(dp(3).toFloat(), 0f, dp(1).toFloat(), Color.BLACK)
+            }
+            shortMetadata.addView(shortTitleOverlay)
+            shortMetadata.addView(shortCreatorOverlay)
+            root.addView(shortMetadata, FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(180), Gravity.BOTTOM
+            ))
         } else {
             val scroll = ScrollView(this).apply { isFillViewport = true }
             scroll.addView(page)
@@ -704,14 +742,24 @@ class TubePlayerActivity : ComponentActivity() {
         mainHandler.postDelayed(playbackFallbackRunnable, 18_000L)
         currentTitle = shortTitles.getOrNull(next).orEmpty().ifBlank { "Short video" }
         currentCreator = shortCreators.getOrNull(next).orEmpty()
-        // Reuse the same native player instance; loadVideo switches clips without WebView reload.
-        player.loadVideo(currentVideoId, 0f)
+        shortTitleOverlay?.text = currentTitle
+        shortCreatorOverlay?.text = currentCreator.ifBlank { "YouTube" }
+
+        // Reuse the same native player instance; do not rebuild the iframe.
+        // Animate the player and bottom metadata together like a vertical Shorts strip.
         playerView.animate().cancel()
-        playerView.translationY = if (direction > 0) dp(18).toFloat() else -dp(18).toFloat()
-        playerView.alpha = 0.92f
-        playerView.animate().translationY(0f).alpha(1f).setDuration(120L)
-            .withEndAction { swipeHandled = false }
-            .start()
+        val metadata = (shortTitleOverlay?.parent as? View)?.parent as? View
+        metadata?.animate()?.cancel()
+        val travel = dp(34).toFloat() * if (direction > 0) 1f else -1f
+        playerView.translationY = travel
+        playerView.alpha = 0.94f
+        metadata?.translationY = travel
+        metadata?.alpha = 0.72f
+        player.loadVideo(currentVideoId, 0f)
+        playerView.animate().translationY(0f).alpha(1f).setDuration(190L).start()
+        metadata?.animate()?.translationY(0f)?.alpha(1f)?.setDuration(190L)?.withEndAction {
+            swipeHandled = false
+        }?.start() ?: run { mainHandler.postDelayed({ swipeHandled = false }, 190L) }
     }
 
     private fun heightPx(): Int = resources.displayMetrics.heightPixels
