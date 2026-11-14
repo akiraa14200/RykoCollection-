@@ -1,9 +1,6 @@
 package com.rykocollection.app.ui
 
 import com.rykocollection.app.R
-import com.rykocollection.app.BuildConfig
-import com.rykocollection.app.data.SupabaseProvider
-import io.github.jan.supabase.auth.auth
 
 import android.annotation.SuppressLint
 import android.app.Activity
@@ -84,8 +81,6 @@ class TubePlayerActivity : ComponentActivity() {
     private var recommendTitles = arrayListOf<String>()
     private var recommendCreators = arrayListOf<String>()
     private var recommendThumbs = arrayListOf<String>()
-    private var likeAction: ImageView? = null
-    private var dislikeAction: ImageView? = null
     private var subscribeAction: TextView? = null
     private var isShort = false
     private var shortQueue = arrayListOf<String>()
@@ -341,25 +336,6 @@ class TubePlayerActivity : ComponentActivity() {
             gravity = Gravity.CENTER_VERTICAL
             setPadding(0, dp(12), 0, dp(16))
         }
-        likeAction = iconAction(R.drawable.ic_thumb_up, "Like").apply {
-            imageTintList = android.content.res.ColorStateList.valueOf(
-                if (getSharedPreferences(PREFS, MODE_PRIVATE).getBoolean("like_" + currentVideoId, false)) Color.rgb(205, 185, 255) else Color.WHITE
-            )
-            setOnClickListener {
-                val prefs = getSharedPreferences(PREFS, MODE_PRIVATE)
-                val nextRating = if (prefs.getBoolean("like_" + currentVideoId, false)) "none" else "like"
-                requestYouTubeRating(nextRating)
-            }
-        }
-        dislikeAction = iconAction(R.drawable.ic_thumb_down, "Dislike").apply {
-            setOnClickListener {
-                val prefs = getSharedPreferences(PREFS, MODE_PRIVATE)
-                val nextRating = if (prefs.getBoolean("dislike_" + currentVideoId, false)) "none" else "dislike"
-                requestYouTubeRating(nextRating)
-            }
-        }
-        actions.addView(likeAction, LinearLayout.LayoutParams(0, dp(48), 1f))
-        actions.addView(dislikeAction, LinearLayout.LayoutParams(0, dp(48), 1f))
         actions.addView(iconAction(R.drawable.ic_share, "Share").apply { setOnClickListener { shareVideo() } }, LinearLayout.LayoutParams(0, dp(48), 1f))
         saveAction = iconAction(if (isSaved()) R.drawable.ic_bookmark_filled else R.drawable.ic_bookmark, "Save video").apply {
             imageTintList = android.content.res.ColorStateList.valueOf(if (isSaved()) Color.rgb(205, 185, 255) else Color.WHITE)
@@ -697,111 +673,6 @@ class TubePlayerActivity : ComponentActivity() {
             (Color.green(a) + (Color.green(b) - Color.green(a)) * t).toInt().coerceIn(0, 255),
             (Color.blue(a) + (Color.blue(b) - Color.blue(a)) * t).toInt().coerceIn(0, 255)
         )
-    }
-
-    /**
-     * Requests YouTube's official OAuth permission only after the user taps Like/Dislike.
-     * Google Identity Services reuses a valid grant and refreshes short-lived access tokens.
-     */
-    private fun requestYouTubeRating(rating: String) {
-        // YouTube authorization is completed in the system browser through Supabase Auth.
-        // The resulting Google provider token is attached to the authenticated Supabase session.
-        val session = runCatching {
-            SupabaseProvider.client.auth.currentSessionOrNull()
-        }.getOrNull()
-        val token = session?.providerToken
-        val supabaseToken = session?.accessToken
-        if (token.isNullOrBlank() || supabaseToken.isNullOrBlank()) {
-            Toast.makeText(
-                this,
-                "Connect YouTube from Account first, then try Like again.",
-                Toast.LENGTH_LONG
-            ).show()
-            return
-        }
-        submitYouTubeRating(token, supabaseToken, rating)
-    }
-
-    /** Sends the rating through an authenticated Supabase Edge Function. */
-    private fun submitYouTubeRating(googleAccessToken: String, supabaseAccessToken: String, rating: String) {
-        val videoId = currentVideoId
-        Thread {
-            var connection: java.net.HttpURLConnection? = null
-            try {
-                val endpoint = BuildConfig.SUPABASE_URL.trimEnd('/') + "/functions/v1/youtube-rate"
-                val url = java.net.URL(endpoint)
-                val activeConnection = (url.openConnection() as java.net.HttpURLConnection).apply {
-                    requestMethod = "POST"
-                    connectTimeout = 15000
-                    readTimeout = 15000
-                    setRequestProperty("Authorization", "Bearer $supabaseAccessToken")
-                    setRequestProperty("apikey", BuildConfig.SUPABASE_PUBLISHABLE_KEY)
-                    setRequestProperty("Content-Type", "application/json")
-                    setRequestProperty("Accept", "application/json")
-                    doOutput = true
-                }
-                val payload = org.json.JSONObject()
-                    .put("videoId", videoId)
-                    .put("rating", rating)
-                    .put("googleAccessToken", googleAccessToken)
-                    .toString()
-                activeConnection.outputStream.use { it.write(payload.toByteArray(Charsets.UTF_8)) }
-                connection = activeConnection
-                val status = activeConnection.responseCode
-                if (status in 200..299) {
-                    runOnUiThread {
-                        if (isFinishing || isDestroyed) return@runOnUiThread
-                        val prefs = getSharedPreferences(PREFS, MODE_PRIVATE)
-                        val liked = rating == "like"
-                        val disliked = rating == "dislike"
-                        prefs.edit()
-                            .putBoolean("like_" + videoId, liked)
-                            .putBoolean("dislike_" + videoId, disliked)
-                            .apply()
-                        likeAction?.imageTintList = android.content.res.ColorStateList.valueOf(
-                            if (liked) Color.rgb(205, 185, 255) else Color.WHITE
-                        )
-                        dislikeAction?.imageTintList = android.content.res.ColorStateList.valueOf(
-                            if (disliked) Color.rgb(205, 185, 255) else Color.WHITE
-                        )
-                        Toast.makeText(
-                            this,
-                            when (rating) {
-                                "like" -> "Liked on YouTube"
-                                "dislike" -> "Disliked on YouTube"
-                                else -> "YouTube rating removed"
-                            },
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    }
-                } else {
-                    val detail = runCatching {
-                        (if (status >= 400) connection?.errorStream else connection?.inputStream)
-                            ?.bufferedReader()?.use { it.readText() }
-                    }.getOrNull().orEmpty()
-                    runOnUiThread {
-                        if (!isFinishing && !isDestroyed) {
-                            val message = when (status) {
-                                401 -> "YouTube authorization expired. Tap again to reconnect."
-                                403 -> "YouTube could not apply this rating. The video may not allow ratings."
-                                else -> "YouTube rating failed (HTTP $status)."
-                            }
-                            Log.w(TAG, "videos.rate failed: HTTP $status $detail")
-                            Toast.makeText(this, message, Toast.LENGTH_LONG).show()
-                        }
-                    }
-                }
-            } catch (error: Exception) {
-                Log.e(TAG, "YouTube rating request failed", error)
-                runOnUiThread {
-                    if (!isFinishing && !isDestroyed) {
-                        Toast.makeText(this, "Couldn't reach YouTube. Check your connection and try again.", Toast.LENGTH_LONG).show()
-                    }
-                }
-            } finally {
-                connection?.disconnect()
-            }
-        }.start()
     }
 
     private fun loadImage(url: String, target: android.widget.ImageView) {
