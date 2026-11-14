@@ -496,11 +496,7 @@ class TubePlayerActivity : ComponentActivity() {
                     }
                 }
             }
-            root.addView(shortGestureLayer, FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT
-            ))
-
-            // Native Shorts metadata sits at the bottom, outside the YouTube iframe.
+// Native Shorts metadata sits at the bottom, outside the YouTube iframe.
             // This recreates the earlier bottom-aligned presentation without exposing
             // YouTube's transient in-player title / playback feedback overlay.
             val shortMetadata = LinearLayout(this).apply {
@@ -534,6 +530,12 @@ class TubePlayerActivity : ComponentActivity() {
             shortMetadata.addView(shortCreatorOverlay)
             root.addView(shortMetadata, FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, dp(180), Gravity.BOTTOM
+            ))
+
+            // Keep the gesture interceptor as the topmost Shorts layer, matching build #293.
+            // This ensures touches cannot fall through to the YouTube iframe during a swipe.
+            root.addView(shortGestureLayer, FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT
             ))
         } else {
             val scroll = ScrollView(this).apply { isFillViewport = true }
